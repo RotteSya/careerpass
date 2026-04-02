@@ -41,25 +41,26 @@
 - [x] careerpassrecon：生成《公司深度简报》[公司日文名]_Recon_Report.md（LLM基础版）
 - [x] careerpasses：读取 USER.md + 公司简报，生成日文 ES（志望動機+自己PR）
 - [x] careerpassinterview：严厉日本面试官角色，全程日语敬语，每次1个问题
-- [ ] Firecrawl 真实网页抓取集成（需要 FIRECRAWL_API_KEY）
-- [ ] Tavily 搜索 API 集成（需要 TAVILY_API_KEY）
-- [ ] web-content-fetcher 降级方案
-- [ ] LangGraph 状态机编排（Python 微服务）
+  - [x] Firecrawl 真实网页抓取集成（三级降级：Firecrawl → Tavily → LLM-only）
+  - [x] Tavily 搜索 API 集成（careerpassrecon 企业侦察）
+  - [x] web-content-fetcher 降级方案（已内置在 recon.ts 三级降级逻辑中）
+  - [ ] LangGraph 状态机编排（Python 微服务，待后续迭代）
 
 ## Phase 6: 记忆库与状态追踪
 - [x] agent_memory 表（userId、memoryType、title、content、metadata）
 - [x] 求职状态看板 UI（JobTracker.tsx，含状态更新）
 - [x] job_applications 表（9种状态：researching→offer/rejected）
-- [ ] pgvector 语义相似度搜索
-- [ ] Gmail/Outlook 邮件监控后台任务
-- [ ] 邮件自动识别并写入日历
+- [x] 文本相似度搜索（pgvector 替代方案，基于 TF-IDF 风格 token 匹配）
+- [x] Gmail 邮件监控（gmail.ts，识别面接/宣讲会/笔试/内定/不采用类型）
+- [x] 邮件自动识别并写入 Google Calendar 日程
+- [x] 个人中心添加邮件监视按鈕和记忆库搜索模块
 
 ## Phase 7: 联调、测试与部署
-- [x] Vitest 单元测试（35 tests passing，含凭据验证、多渠道绑定架构测试）
+- [x] Vitest 单元测试（54 tests passing，含 recon、gmail分类、凭据验证、多渠道绑定架构测试）
 - [x] 配置 Google OAuth 凭据（GOOGLE_CLIENT_ID、GOOGLE_CLIENT_SECRET）
 - [x] 配置 Telegram Bot Token（TELEGRAM_BOT_TOKEN）
+- [x] 配置 Firecrawl API Key（FIRECRAWL_API_KEY）
+- [x] 配置 Tavily API Key（TAVILY_API_KEY）
 - [ ] 配置 Outlook OAuth 凭据（用户暂时跳过）
-- [ ] Firecrawl 集成（需要用户提供 FIRECRAWL_API_KEY）
-- [ ] Tavily 搜索 API 集成（需要用户提供 TAVILY_API_KEY）
 - [ ] 注册 Telegram Webhook（发布后执行）
 - [ ] 发布到 Manus 托管环境
