@@ -32,7 +32,7 @@
 - [x] Webhook 解析 /start user_xxx 并绑定账号
 - [x] 多语言欢迎消息（ja/zh/en）
 - [x] Telegram 绑定状态展示（已绑定/未绑定，5秒轮询）
-- [ ] 后续扩展 Line/WhatsApp/WeChat（预留架构）
+- [x] 后续扩展 Line/WhatsApp/WeChat（messaging_bindings 表已实现 provider 抽象，支持 telegram/line/whatsapp/wechat）
 
 ## Phase 5: LangGraph 多 Agent 工作流（基础版）
 - [x] careerpass 中枢 Agent：多语言打招呼（ja/zh/en）
@@ -55,10 +55,11 @@
 - [ ] 邮件自动识别并写入日历
 
 ## Phase 7: 联调、测试与部署
-- [x] Vitest 单元测试（13 tests passing）
-- [ ] 配置 Google OAuth 凭据（GOOGLE_CLIENT_ID、GOOGLE_CLIENT_SECRET）
-- [ ] 配置 Outlook OAuth 凭据（OUTLOOK_CLIENT_ID、OUTLOOK_CLIENT_SECRET）
-- [ ] 配置 Telegram Bot Token（TELEGRAM_BOT_TOKEN）
-- [ ] Vercel 前端部署
-- [ ] Render 后端部署
-- [ ] 注册 Telegram Webhook（生产环境 URL）
+- [x] Vitest 单元测试（35 tests passing，含凭据验证、多渠道绑定架构测试）
+- [x] 配置 Google OAuth 凭据（GOOGLE_CLIENT_ID、GOOGLE_CLIENT_SECRET）
+- [x] 配置 Telegram Bot Token（TELEGRAM_BOT_TOKEN）
+- [ ] 配置 Outlook OAuth 凭据（用户暂时跳过）
+- [ ] Firecrawl 集成（需要用户提供 FIRECRAWL_API_KEY）
+- [ ] Tavily 搜索 API 集成（需要用户提供 TAVILY_API_KEY）
+- [ ] 注册 Telegram Webhook（发布后执行）
+- [ ] 发布到 Manus 托管环境

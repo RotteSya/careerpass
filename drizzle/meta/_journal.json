@@ -15,6 +15,13 @@
       "when": 1775144755634,
       "tag": "0001_dazzling_jamie_braddock",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775147798368,
+      "tag": "0002_brief_maddog",
+      "breakpoints": true
     }
   ]
 }

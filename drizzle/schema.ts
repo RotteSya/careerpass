@@ -13,7 +13,6 @@ import {
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
-  // Basic profile (collected at registration)
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
@@ -29,9 +28,7 @@ export const users = mysqlTable("users", {
     "other",
   ]),
   universityName: varchar("universityName", { length: 255 }),
-  // Preferred language for AI coaching
   preferredLanguage: mysqlEnum("preferredLanguage", ["zh", "ja", "en"]).default("ja"),
-  // Profile completion flag
   profileCompleted: boolean("profileCompleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -57,7 +54,34 @@ export const oauthTokens = mysqlTable("oauth_tokens", {
 export type OauthToken = typeof oauthTokens.$inferSelect;
 export type InsertOauthToken = typeof oauthTokens.$inferInsert;
 
-// ─── Telegram Bindings ────────────────────────────────────────────────────────
+// ─── Messaging Channel Bindings (Telegram / Line / WhatsApp / WeChat) ─────────
+/**
+ * Unified multi-channel messaging binding table.
+ * Supports Telegram (active), and is pre-architected for Line, WhatsApp, WeChat.
+ * Each user can have at most one active binding per provider.
+ * provider enum can be extended without schema changes to existing rows.
+ */
+export const messagingBindings = mysqlTable("messaging_bindings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  // Extensible provider enum: add 'line' | 'whatsapp' | 'wechat' when ready
+  provider: mysqlEnum("provider", ["telegram", "line", "whatsapp", "wechat"]).notNull(),
+  // Provider-specific external user ID (telegramId / lineUserId / waId / openid)
+  externalId: varchar("externalId", { length: 128 }).notNull(),
+  // Optional display handle (username, display name, phone number, etc.)
+  externalHandle: varchar("externalHandle", { length: 256 }),
+  boundAt: timestamp("boundAt").defaultNow().notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+});
+
+export type MessagingBinding = typeof messagingBindings.$inferSelect;
+export type InsertMessagingBinding = typeof messagingBindings.$inferInsert;
+
+/**
+ * @deprecated Use messagingBindings with provider='telegram' instead.
+ * Kept for backward compatibility with existing Telegram Webhook code.
+ * Will be removed in a future migration once all references are updated.
+ */
 export const telegramBindings = mysqlTable("telegram_bindings", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
@@ -74,22 +98,22 @@ export type InsertTelegramBinding = typeof telegramBindings.$inferInsert;
 export const jobApplications = mysqlTable("job_applications", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  companyNameJa: varchar("companyNameJa", { length: 255 }).notNull(), // Japanese company name
+  companyNameJa: varchar("companyNameJa", { length: 255 }).notNull(),
   companyNameEn: varchar("companyNameEn", { length: 255 }),
   position: varchar("position", { length: 255 }),
   status: mysqlEnum("status", [
-    "researching",   // 調査中
-    "es_preparing",  // ES準備中
-    "es_submitted",  // ES提出済
-    "interview_1",   // 一次面接
-    "interview_2",   // 二次面接
-    "interview_final",// 最終面接
-    "offer",         // 内定
-    "rejected",      // 不採用
-    "withdrawn",     // 辞退
+    "researching",
+    "es_preparing",
+    "es_submitted",
+    "interview_1",
+    "interview_2",
+    "interview_final",
+    "offer",
+    "rejected",
+    "withdrawn",
   ]).default("researching").notNull(),
-  reconReportPath: varchar("reconReportPath", { length: 512 }), // path to Recon_Report.md
-  esFilePath: varchar("esFilePath", { length: 512 }),           // path to ES file
+  reconReportPath: varchar("reconReportPath", { length: 512 }),
+  esFilePath: varchar("esFilePath", { length: 512 }),
   notes: text("notes"),
   nextActionAt: timestamp("nextActionAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -99,20 +123,20 @@ export const jobApplications = mysqlTable("job_applications", {
 export type JobApplication = typeof jobApplications.$inferSelect;
 export type InsertJobApplication = typeof jobApplications.$inferInsert;
 
-// ─── Agent Memory (记忆库 - text content, vector handled separately) ──────────
+// ─── Agent Memory (記憶庫) ────────────────────────────────────────────────────
 export const agentMemory = mysqlTable("agent_memory", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   memoryType: mysqlEnum("memoryType", [
-    "resume",         // USER_<SessionID>.md content
-    "company_report", // [公司日文名]_Recon_Report.md content
-    "conversation",   // STAR conversation history
-    "es_draft",       // Entry Sheet draft
-    "interview_log",  // Interview simulation log
+    "resume",
+    "company_report",
+    "conversation",
+    "es_draft",
+    "interview_log",
   ]).notNull(),
   title: varchar("title", { length: 512 }).notNull(),
   content: text("content").notNull(),
-  metadata: json("metadata"), // { sessionId, companyName, jobId, etc. }
+  metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -131,9 +155,9 @@ export const agentSessions = mysqlTable("agent_sessions", {
     "careerpasses",
     "careerpassinterview",
   ]).default("careerpass").notNull(),
-  sessionState: json("sessionState"), // LangGraph state snapshot
+  sessionState: json("sessionState"),
   interviewMode: boolean("interviewMode").default(false).notNull(),
-  targetCompanyId: int("targetCompanyId"), // FK to job_applications
+  targetCompanyId: int("targetCompanyId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
