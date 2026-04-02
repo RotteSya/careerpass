@@ -49,9 +49,12 @@ function verifySignedState(state: string): { userId: number; provider: string } 
   return { userId: payload.userId, provider: payload.provider };
 }
 
-function buildGoogleOAuthUrl(userId: number, origin: string): string {
+function buildGoogleOAuthUrl(userId: number, _origin: string): string {
   const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
-  const redirectUri = `${origin}/api/calendar/callback`;
+  // Always use the canonical production domain to avoid redirect_uri_mismatch
+  // when users access via alternate URLs (e.g. Cloud Run preview domains)
+  const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.manus.space";
+  const redirectUri = `${appDomain}/api/calendar/callback`;
   const scope = encodeURIComponent(
     "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly"
   );

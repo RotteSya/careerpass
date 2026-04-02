@@ -58,19 +58,18 @@ export function registerCalendarOAuthRoute(app: Express) {
   app.get("/api/calendar/callback", async (req: Request, res: Response) => {
     const { code, state, error } = req.query as Record<string, string>;
 
-    // Determine the origin for redirect
-    const proto = req.headers["x-forwarded-proto"] ?? req.protocol ?? "https";
-    const host = req.headers["x-forwarded-host"] ?? req.headers.host ?? "";
-    const origin = `${proto}://${host}`;
+    // Always use the canonical production domain for redirect_uri (must match Google Console registration)
+    // and for post-auth redirect, so users land on the correct domain regardless of which URL they used.
+    const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.manus.space";
 
     if (error) {
       console.error("[CalendarOAuth] Google returned error:", error);
-      return res.redirect(`${origin}/dashboard?calendar=error&reason=${encodeURIComponent(error)}`);
+      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=${encodeURIComponent(error)}`);
     }
 
     if (!code || !state) {
       console.error("[CalendarOAuth] Missing code or state. query:", req.query);
-      return res.redirect(`${origin}/dashboard?calendar=error&reason=missing_code`);
+      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=missing_code`);
     }
 
     let stateData: { userId: number; provider: string };
@@ -78,10 +77,11 @@ export function registerCalendarOAuthRoute(app: Express) {
       stateData = verifySignedState(state);
     } catch (e) {
       console.error("[CalendarOAuth] State verification failed:", e);
-      return res.redirect(`${origin}/dashboard?calendar=error&reason=invalid_state`);
+      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=invalid_state`);
     }
 
-    const redirectUri = `${origin}/api/calendar/callback`;
+    // Must match exactly what was used to generate the auth URL
+    const redirectUri = `${appDomain}/api/calendar/callback`;
 
     try {
       const tokenData = await exchangeGoogleCode(code, redirectUri);
@@ -95,11 +95,11 @@ export function registerCalendarOAuthRoute(app: Express) {
         scope: tokenData.scope ?? null,
       });
       console.log(`[CalendarOAuth] Google calendar linked for user ${stateData.userId}`);
-      return res.redirect(`${origin}/dashboard?calendar=success`);
+      return res.redirect(`${appDomain}/dashboard?calendar=success`);
     } catch (e) {
       console.error("[CalendarOAuth] Token exchange error:", e);
       const reason = encodeURIComponent((e as Error).message ?? "token_exchange_failed");
-      return res.redirect(`${origin}/dashboard?calendar=error&reason=${reason}`);
+      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=${reason}`);
     }
   });
 }

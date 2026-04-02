@@ -179,15 +179,17 @@ describe("calendar.getAuthUrl", () => {
     expect(result.url).toContain("Calendars");
   });
 
-  it("encodes redirectUri in OAuth URL", async () => {
+  it("encodes redirectUri in OAuth URL using fixed production domain", async () => {
     const ctx = createMockContext();
     const caller = appRouter.createCaller(ctx);
     const result = await caller.calendar.getAuthUrl({
       provider: "google",
-      origin: "https://myapp.example.com",
+      origin: "https://myapp.example.com", // origin is now ignored; fixed domain is always used
     });
     expect(result.url).toContain("redirect_uri");
-    expect(result.url).toContain("myapp.example.com");
+    // redirect_uri must always point to the canonical production domain
+    // to prevent redirect_uri_mismatch when users access via alternate URLs (e.g. Cloud Run preview)
+    expect(result.url).toContain("careerpax.manus.space");
   });
 });
 
