@@ -43,9 +43,13 @@ export default function Register() {
   });
   const [step, setStep] = useState(1);
 
+  const utils = trpc.useUtils();
+
   const completeRegistration = trpc.user.completeRegistration.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("登録が完了しました！ / 注册成功！");
+      // Invalidate profile cache BEFORE navigating so Dashboard reads updated profileCompleted=true
+      await utils.user.getProfile.invalidate();
       navigate("/dashboard");
     },
     onError: (err) => {

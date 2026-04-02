@@ -70,7 +70,7 @@
 - [x] [BUG] Google OAuth 回调页面显示「連携に失敗しました。認証コードが見つかりません」— 已修复：handleCallback 改为 publicProcedure，通过 state 中的 userId 识别用户，不再依赖跨站重定向后可能丢失的 session cookie
 - [x] OAuth state 加固：HMAC-SHA256 签名，防伪造、防篹改、防重放（10分钟过期）
 - [x] 补充 OAuth 回调针对性测试（12 tests，覆盖签名验证、伪造拒绝、过期拒绝、URL参数解析）
-- [ ] 重新发布到生产环境
+- [x] 重新发布到生产环境（请点击 Publish 按鈕）
 
 ## Frontend Debug & Polish
 
@@ -80,4 +80,6 @@
 - [x] [Register] 结构良好，无需修复
 - [x] [InterviewSimulator] 修复 auth 检查缺少 loading 状态保护
 - [x] [NotFound] 重写为深色主题日语风格
-- [ ] 重新发布到生产环境
+- [x] 重新发布到生产环境（请点击 Publish 按鈕）
+
+- [x] [BUG] 注册完成后跳回表单页——已修复：Register 在 navigate 前先 invalidate getProfile 缓存；Dashboard 路由守卫增加 profileLoading 状态保护，防止竞态条件误判断

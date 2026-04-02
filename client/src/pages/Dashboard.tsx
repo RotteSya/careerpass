@@ -35,7 +35,7 @@ export default function Dashboard() {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const [currentPath, navigate] = useLocation();
 
-  const { data: profile, refetch: refetchProfile } = trpc.user.getProfile.useQuery(undefined, {
+  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = trpc.user.getProfile.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
@@ -94,8 +94,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) navigate("/");
-    if (!loading && isAuthenticated && profile && !profile.profileCompleted) navigate("/register");
-  }, [loading, isAuthenticated, profile]);
+    // Only redirect to /register when profile has fully loaded AND profileCompleted is false
+    // profileLoading guard prevents race condition when navigating from /register
+    if (!loading && isAuthenticated && !profileLoading && profile && !profile.profileCompleted) navigate("/register");
+  }, [loading, isAuthenticated, profile, profileLoading]);
 
   // Poll Telegram binding status every 5s after page load
   useEffect(() => {
