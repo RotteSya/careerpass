@@ -24,24 +24,48 @@ import { monitorGmailAndSync, sendTelegramMessage } from "./gmail";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// ── HMAC-signed state helpers ─────────────────────────────────────────────────
+function getStateSecret(): string {
+  return process.env.JWT_SECRET ?? "careerpass-oauth-state-secret";
+}
+function buildSignedState(payload: { userId: number; provider: string; exp: number }): string {
+  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = crypto.createHmac("sha256", getStateSecret()).update(data).digest("base64url");
+  return `${data}.${sig}`;
+}
+function verifySignedState(state: string): { userId: number; provider: string } {
+  const [data, sig] = state.split(".");
+  if (!data || !sig) throw new Error("Malformed state");
+  const expected = crypto.createHmac("sha256", getStateSecret()).update(data).digest("base64url");
+  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+    throw new Error("State signature mismatch");
+  }
+  const payload = JSON.parse(Buffer.from(data, "base64url").toString()) as {
+    userId: number;
+    provider: string;
+    exp: number;
+  };
+  if (Date.now() > payload.exp) throw new Error("State expired");
+  return { userId: payload.userId, provider: payload.provider };
+}
+
 function buildGoogleOAuthUrl(userId: number, origin: string): string {
   const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
   const redirectUri = `${origin}/dashboard/calendar/callback`;
   const scope = encodeURIComponent(
     "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly"
   );
-  const state = Buffer.from(JSON.stringify({ userId, provider: "google" })).toString("base64");
-  return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${state}`;
+  const state = buildSignedState({ userId, provider: "google", exp: Date.now() + 10 * 60 * 1000 });
+  return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
 }
-
 function buildOutlookOAuthUrl(userId: number, origin: string): string {
   const clientId = process.env.OUTLOOK_CLIENT_ID ?? "";
   const redirectUri = `${origin}/dashboard/calendar/callback`;
   const scope = encodeURIComponent(
     "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/Mail.Read offline_access"
   );
-  const state = Buffer.from(JSON.stringify({ userId, provider: "outlook" })).toString("base64");
-  return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${state}`;
+  const state = buildSignedState({ userId, provider: "outlook", exp: Date.now() + 10 * 60 * 1000 });
+  return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
 }
 
 async function exchangeGoogleCode(code: string, redirectUri: string) {
@@ -164,7 +188,7 @@ export const appRouter = router({
         return { url };
       }),
 
-    handleCallback: protectedProcedure
+     handleCallback: publicProcedure
       .input(
         z.object({
           code: z.string(),
@@ -172,33 +196,29 @@ export const appRouter = router({
           redirectUri: z.string(),
         })
       )
-      .mutation(async ({ ctx, input }) => {
+      .mutation(async ({ input }) => {
+        // Verify HMAC-signed state — prevents forged callbacks since handleCallback is public
         let stateData: { userId: number; provider: string };
         try {
-          stateData = JSON.parse(Buffer.from(input.state, "base64").toString());
-        } catch {
-          throw new Error("Invalid OAuth state");
+          stateData = verifySignedState(input.state);
+        } catch (e) {
+          throw new Error(`Invalid OAuth state: ${(e as Error).message}`);
         }
-
-        if (stateData.userId !== ctx.user.id) throw new Error("State mismatch");
-
+        if (!stateData.userId || !stateData.provider) throw new Error("Invalid state payload");
         const provider = stateData.provider as "google" | "outlook";
         const tokenData =
           provider === "google"
             ? await exchangeGoogleCode(input.code, input.redirectUri)
             : await exchangeOutlookCode(input.code, input.redirectUri);
-
         const expiresAt = new Date(Date.now() + (tokenData.expires_in ?? 3600) * 1000);
-
         await upsertOauthToken({
-          userId: ctx.user.id,
+          userId: stateData.userId,
           provider,
           accessToken: tokenData.access_token,
           refreshToken: tokenData.refresh_token ?? null,
           expiresAt,
           scope: tokenData.scope ?? null,
         });
-
         return { success: true, provider };
       }),
 

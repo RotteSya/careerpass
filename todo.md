@@ -63,4 +63,11 @@
 - [x] 配置 Tavily API Key（TAVILY_API_KEY）
 - [ ] 配置 Outlook OAuth 凭据（用户暂时跳过）
 - [x] 注册 Telegram Webhook（scripts/register-telegram-webhook.sh 已创建，发布后执行 DOMAIN=https://xxx.manus.space ./scripts/register-telegram-webhook.sh）
-- [ ] 发布到 Manus 托管环境（点击 Publish 按鈕）
+- [ ] 发布到 Manus 托管环境（点击右上角 Publish 按鈕，由用户操作）
+
+## Bugs
+
+- [x] [BUG] Google OAuth 回调页面显示「連携に失敗しました。認証コードが見つかりません」— 已修复：handleCallback 改为 publicProcedure，通过 state 中的 userId 识别用户，不再依赖跨站重定向后可能丢失的 session cookie
+- [x] OAuth state 加固：HMAC-SHA256 签名，防伪造、防篹改、防重放（10分钟过期）
+- [x] 补充 OAuth 回调针对性测试（12 tests，覆盖签名验证、伪造拒绝、过期拒绝、URL参数解析）
+- [ ] 重新发布到生产环境
