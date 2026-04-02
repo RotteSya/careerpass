@@ -9,11 +9,9 @@ import {
   FileText,
   Loader2,
   LogOut,
-  Mail,
   MessageSquare,
   Mic,
   RefreshCw,
-  Search,
   Send,
   User,
   XCircle,
@@ -62,28 +60,6 @@ export default function Dashboard() {
     { provider: "outlook", origin: typeof window !== "undefined" ? window.location.origin : "" },
     { enabled: isAuthenticated }
   );
-
-  const [memoryQuery, setMemoryQuery] = useState("");
-  const [memoryQueryInput, setMemoryQueryInput] = useState("");
-
-  const monitorEmails = trpc.agent.monitorEmails.useMutation({
-    onSuccess: (result) => {
-      if (result.detected === 0) {
-        toast.info(`${result.scanned}件のメールをスキャン。就活関連メールは見つかりませんでした。`);
-      } else {
-        toast.success(
-          `${result.detected}件の就活メールを検出！カレンダーに${result.calendarEvents}件登録しました。`
-        );
-      }
-    },
-    onError: () => toast.error("メール監視に失敗しました。Googleカレンダーと連携してください。"),
-  });
-
-  const { data: memoryResults, refetch: searchMemory, isFetching: isSearching } =
-    trpc.agent.searchMemory.useQuery(
-      { query: memoryQuery, topK: 5 },
-      { enabled: isAuthenticated && memoryQuery.length > 0 }
-    );
 
   const disconnectCalendar = trpc.calendar.disconnect.useMutation({
     onSuccess: () => {
@@ -396,102 +372,6 @@ export default function Dashboard() {
                     </a>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Module 3: Email Monitor */}
-          {calendarStatus?.google && (
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h2 className="text-lg font-bold flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-primary" />
-                    メール自動監視
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Gmailをスキャンして面接・説明会メールをカレンダーに自動登録します
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => monitorEmails.mutate()}
-                  disabled={monitorEmails.isPending}
-                  className="gap-2"
-                >
-                  {monitorEmails.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-4 h-4" />
-                  )}
-                  {monitorEmails.isPending ? "スキャン中..." : "今すぐスキャン"}
-                </Button>
-                {monitorEmails.data && (
-                  <p className="text-sm text-muted-foreground">
-                    最終スキャン: {monitorEmails.data.scanned}件確認 /{" "}
-                    {monitorEmails.data.detected}件検出 /{" "}
-                    {monitorEmails.data.calendarEvents}件登録
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Module 4: Memory Search */}
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <BrainCircuit className="w-5 h-5 text-primary" />
-                記憶ライブラリ検索
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                AIが蓄積した履歴書・企業レポート・ESを検索できます
-              </p>
-            </div>
-            <div className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={memoryQueryInput}
-                onChange={(e) => setMemoryQueryInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && memoryQueryInput.trim()) {
-                    setMemoryQuery(memoryQueryInput.trim());
-                  }
-                }}
-                placeholder="例: トヨタ 企業レポート / 自己PR / 面接"
-                className="flex-1 px-3 py-2 rounded-lg border border-border bg-secondary/30 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <Button
-                size="sm"
-                onClick={() => memoryQueryInput.trim() && setMemoryQuery(memoryQueryInput.trim())}
-                disabled={isSearching}
-                className="gap-1.5"
-              >
-                {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                検索
-              </Button>
-            </div>
-            {memoryResults && memoryQuery && (
-              <div className="space-y-2">
-                {memoryResults.results.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">該当する記憶が見つかりませんでした</p>
-                ) : (
-                  memoryResults.results.map((item, i) => (
-                    <div key={i} className="p-3 rounded-lg border border-border bg-secondary/20 hover:border-primary/30 transition-colors">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium truncate">{item.title}</p>
-                        <span className="text-xs text-muted-foreground shrink-0 ml-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                          {memoryTypeLabel(item.memoryType)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{item.content.slice(0, 120)}...</p>
-                    </div>
-                  ))
-                )}
-                <p className="text-xs text-muted-foreground text-right">
-                  記憶ライブラリ合計: {memoryResults.total}件
-                </p>
               </div>
             )}
           </div>

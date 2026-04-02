@@ -337,6 +337,47 @@ export const appRouter = router({
         const user = await getUserById(ctx.user.id);
         const lang = user?.preferredLanguage ?? "ja";
 
+        // Build user profile context — injected into system prompt so Agent never re-asks known info
+        const educationMapJa: Record<string, string> = {
+          high_school: "高校卒", associate: "短大・専門卒", bachelor: "大学卒（学士）",
+          master: "大学院修士課程", doctor: "大学院博士課程", other: "その他",
+        };
+        const educationMapZh: Record<string, string> = {
+          high_school: "高中毕业", associate: "专科/短大", bachelor: "本科",
+          master: "硕士研究生", doctor: "博士研究生", other: "其他",
+        };
+        const birthYear = user?.birthDate ? parseInt(user.birthDate.split("-")[0]) : null;
+        const age = birthYear ? new Date().getFullYear() - birthYear : null;
+        const eduJa = user?.education ? (educationMapJa[user.education] ?? user.education) : "未記入";
+        const eduZh = user?.education ? (educationMapZh[user.education] ?? user.education) : "未填写";
+
+        const profileContextZh = `
+【用户已知信息 — 禁止重复询问以下任何内容】
+- 姓名: ${user?.name ?? "未填写"}
+- 年龄: ${age ? `${age}岁` : "未填写"}
+- 最终学历: ${eduZh}
+- 学校名称: ${user?.universityName ?? "未填写"}
+- 沟通语言偏好: 中文
+以上信息已从用户注册档案中获取，对话中无需再次询问这些基本信息。`;
+
+        const profileContextEn = `
+[User's Known Profile — DO NOT ask about any of the following]
+- Name: ${user?.name ?? "not provided"}
+- Age: ${age ? `${age} years old` : "not provided"}
+- Education: ${user?.education ? (user.education === "master" ? "Master's degree" : user.education === "bachelor" ? "Bachelor's degree" : user.education) : "not provided"}
+- University: ${user?.universityName ?? "not provided"}
+- Language preference: English
+This information is already known from the user's registration profile. Do NOT ask about these basic details during conversation.`;
+
+        const profileContextJa = `
+【ユーザーの既知情報 — 以下の情報は絶対に再度質問しないこと】
+- 氏名: ${user?.name ?? "未記入"}
+- 年齢: ${age ? `${age}歳` : "未記入"}
+- 最終学歴: ${eduJa}
+- 大学・学校名: ${user?.universityName ?? "未記入"}
+- 希望言語: 日本語
+これらの情報はユーザーの登録プロフィールから取得済みです。対話中にこれらの基本情報を再度尋ねてはいけません。`;
+
         const systemPrompt =
           lang === "zh"
             ? `你是"就活パス"的专属AI求职顾问，专注于日本就职活动辅导。你的名字叫CareerPass。
@@ -344,20 +385,23 @@ export const appRouter = router({
 1. 用STAR法则（Situation, Task, Action, Result）深挖用户的实习、打工、项目、研究经历
 2. 帮助用户准备日本企业的ES（Entry Sheet）和面试
 3. 监控求职进度并提供专业建议
-请用中文与用户交流。`
+请用中文与用户交流。
+${profileContextZh}`
             : lang === "en"
             ? `You are CareerPass, a dedicated AI career advisor specializing in Japanese job hunting (就職活動).
 Your core responsibilities:
 1. Use the STAR method (Situation, Task, Action, Result) to deeply explore the user's internship, part-time, project, and research experiences
 2. Help users prepare ES (Entry Sheet) and interviews for Japanese companies
 3. Track job hunting progress and provide professional advice
-Please communicate in English.`
+Please communicate in English.
+${profileContextEn}`
             : `あなたは「就活パス」専属のAIキャリアアドバイザーです。日本の就職活動に特化したサポートを提供します。
 あなたの主な役割：
 1. STAR法（Situation, Task, Action, Result）を使って、ユーザーのインターン・アルバイト・プロジェクト・研究経験を深堀りする
 2. 日本企業のES（エントリーシート）と面接の準備をサポートする
 3. 就活の進捗を管理し、専門的なアドバイスを提供する
-日本語でユーザーとコミュニケーションしてください。`;
+日本語でユーザーとコミュニケーションしてください。
+${profileContextJa}`;
 
         const messages = [
           { role: "system" as const, content: systemPrompt },

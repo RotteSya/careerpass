@@ -89,3 +89,8 @@
 - [x] 删除移动端底部导航栏（Dashboard.tsx 中的 Mobile Bottom Nav 区块）
 - [x] Telegram 绑定成功后自动将用户注册信息写入 USER.md（agent_memory 表）
 - [x] Telegram Bot 对话逻辑：检测已有 USER.md 则跳过重复收集信息环节，直接进入主菜单
+
+## v2.0 Agent 优化
+- [x] 移除前端 Dashboard 中的「メール自動監視」模块（UI + 相关 tRPC 调用）
+- [x] 移除前端 Dashboard 中的「記憶ライブラリ検索」模块（UI + 相关 tRPC 调用）
+- [x] 修复 Agent 重复询问已知信息：在 agent.chat 系统提示词中注入用户档案（姓名/年龄/学历/大学/语言偏好），明确禁止 Agent 重复询问已知信息
