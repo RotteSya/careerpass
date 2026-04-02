@@ -62,5 +62,5 @@
 - [x] 配置 Firecrawl API Key（FIRECRAWL_API_KEY）
 - [x] 配置 Tavily API Key（TAVILY_API_KEY）
 - [ ] 配置 Outlook OAuth 凭据（用户暂时跳过）
-- [ ] 注册 Telegram Webhook（发布后执行）
-- [ ] 发布到 Manus 托管环境
+- [x] 注册 Telegram Webhook（scripts/register-telegram-webhook.sh 已创建，发布后执行 DOMAIN=https://xxx.manus.space ./scripts/register-telegram-webhook.sh）
+- [ ] 发布到 Manus 托管环境（点击 Publish 按鈕）
