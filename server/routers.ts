@@ -51,7 +51,7 @@ function verifySignedState(state: string): { userId: number; provider: string } 
 
 function buildGoogleOAuthUrl(userId: number, origin: string): string {
   const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
-  const redirectUri = `${origin}/dashboard/calendar/callback`;
+  const redirectUri = `${origin}/api/calendar/callback`;
   const scope = encodeURIComponent(
     "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly"
   );

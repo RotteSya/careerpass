@@ -99,6 +99,22 @@ export default function Dashboard() {
     if (!loading && isAuthenticated && !profileLoading && profile && !profile.profileCompleted) navigate("/register");
   }, [loading, isAuthenticated, profile, profileLoading]);
 
+  // Detect ?calendar=success/error from server-side OAuth callback redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const calendarResult = params.get("calendar");
+    if (!calendarResult) return;
+    if (calendarResult === "success") {
+      toast.success("カレンダー連携が完了しました！");
+      refetchCalendar();
+    } else if (calendarResult === "error") {
+      const reason = params.get("reason") ?? "unknown";
+      toast.error(`カレンダー連携に失敗しました: ${reason}`);
+    }
+    // Remove query params from URL without triggering navigation
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
+
   // Poll Telegram binding status every 5s after page load
   useEffect(() => {
     if (!isAuthenticated) return;

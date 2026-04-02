@@ -83,3 +83,4 @@
 - [x] 重新发布到生产环境（请点击 Publish 按鈕）
 
 - [x] [BUG] 注册完成后跳回表单页——已修复：Register 在 navigate 前先 invalidate getProfile 缓存；Dashboard 路由守卫增加 profileLoading 状态保护，防止竞态条件误判断
+- [ ] [BUG] Google OAuth 回调依然显示「認証コードが見つかりません」— code 参数未能传递到前端，需改为服务端回调
