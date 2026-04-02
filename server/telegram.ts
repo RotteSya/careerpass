@@ -1,10 +1,91 @@
 import express from "express";
-import { createTelegramBinding, getUserById, getOrCreateAgentSession } from "./db";
+import {
+  createTelegramBinding,
+  getUserById,
+  getOrCreateAgentSession,
+  saveAgentMemory,
+  getAgentMemory,
+} from "./db";
+import type { User } from "../drizzle/schema";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "8789422574:AAGg--HXTl5Gxm0EmkeDjv8XmT5YLnuIKrU";
 const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
 export const telegramRouter = express.Router();
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Generate a basic USER.md from the user's registration profile.
+ * This is the "seed" resume created automatically on Telegram binding.
+ */
+function generateProfileResume(user: User, sessionId: string): string {
+  const educationMap: Record<string, string> = {
+    high_school: "高校卒",
+    associate: "短大・専門卒",
+    bachelor: "大学卒（学士）",
+    master: "大学院修士課程",
+    doctor: "大学院博士課程",
+    other: "その他",
+  };
+  const langMap: Record<string, string> = {
+    ja: "日本語",
+    zh: "中国語（普通話）",
+    en: "英語",
+  };
+  const edu = user.education ? (educationMap[user.education] ?? user.education) : "未記入";
+  const lang = user.preferredLanguage ? (langMap[user.preferredLanguage] ?? user.preferredLanguage) : "日本語";
+  const birthYear = user.birthDate ? user.birthDate.split("-")[0] : null;
+  const age = birthYear ? `${new Date().getFullYear() - parseInt(birthYear)}歳` : "未記入";
+
+  return `# USER_${sessionId} - 個人プロフィール（自動生成）
+
+## 基本情報
+- 氏名: ${user.name ?? "未記入"}
+- 年齢: ${age}
+- 生年月日: ${user.birthDate ?? "未記入"}
+- 希望コミュニケーション言語: ${lang}
+
+## 学歴
+- 最終学歴: ${edu}
+- 大学・学校名: ${user.universityName ?? "未記入"}
+
+## 職務・インターン経験（STAR形式）
+※ AIチャットで経験を詳しく話すと、ここが自動的に更新されます。
+
+## スキル・強み
+※ AIチャットで詳しく教えてください。
+
+## 自己分析
+※ AIチャットで深掘りします。
+
+---
+*このファイルはCareerPassへの登録情報から自動生成されました。*
+*AIチャット機能でさらに詳しい情報を入力すると、ES生成・面接対策の精度が向上します。*
+`;
+}
+
+function educationLabelJa(edu?: string | null): string {
+  const map: Record<string, string> = {
+    high_school: "高校卒", associate: "短大・専門卒", bachelor: "大学卒",
+    master: "修士課程", doctor: "博士課程", other: "その他",
+  };
+  return edu ? (map[edu] ?? edu) : "学歴未記入";
+}
+function educationLabelZh(edu?: string | null): string {
+  const map: Record<string, string> = {
+    high_school: "高中毕业", associate: "专科/短大", bachelor: "本科",
+    master: "硕士", doctor: "博士", other: "其他",
+  };
+  return edu ? (map[edu] ?? edu) : "学历未填写";
+}
+function educationLabelEn(edu?: string | null): string {
+  const map: Record<string, string> = {
+    high_school: "High School", associate: "Associate", bachelor: "Bachelor's",
+    master: "Master's", doctor: "Doctorate", other: "Other",
+  };
+  return edu ? (map[edu] ?? edu) : "Education not specified";
+}
 
 // Send a message via Telegram Bot API
 async function sendTelegramMessage(chatId: string | number, text: string, parseMode = "Markdown") {
@@ -62,13 +143,28 @@ telegramRouter.post("/webhook", async (req, res) => {
             });
 
             // Create or update agent session
-            await getOrCreateAgentSession(userId, String(chatId));
+            const session = await getOrCreateAgentSession(userId, String(chatId));
+            const sessionId = String(session?.id ?? userId);
+
+            // Auto-generate USER.md from registration profile if not already exists
+            const existingResumes = await getAgentMemory(userId, "resume");
+            if (existingResumes.length === 0) {
+              const resumeContent = generateProfileResume(user, sessionId);
+              await saveAgentMemory({
+                userId,
+                memoryType: "resume",
+                title: `USER_${sessionId}.md`,
+                content: resumeContent,
+                metadata: { sessionId, source: "auto_from_profile" },
+              });
+              console.log(`[Telegram] Auto-generated USER.md for user ${userId}`);
+            }
 
             const lang = user.preferredLanguage ?? "ja";
             const greetings: Record<string, string> = {
-              ja: `こんにちは、${user.name ?? "ユーザー"}さん！🎉\n\n就活パスへようこそ！私はあなた専属のAIキャリアアドバイザーです。\n\n*CareerPass* があなたの日本就活を全力でサポートします。\n\nまず、あなたのこれまでの経験（インターン・アルバイト・プロジェクト・研究など）を教えてください。STAR法則で一緒に整理していきましょう！`,
-              zh: `你好，${user.name ?? "用户"}！🎉\n\n欢迎来到就活パス！我是你的专属AI求职顾问。\n\n*CareerPass* 将全力支持你的日本求职活动。\n\n首先，请告诉我你的经历（实习、兼职、项目、研究等）。我们一起用STAR法则来整理！`,
-              en: `Hello, ${user.name ?? "User"}! 🎉\n\nWelcome to CareerPass! I'm your dedicated AI career advisor.\n\n*CareerPass* will fully support your Japanese job hunting.\n\nFirst, please tell me about your experiences (internships, part-time jobs, projects, research, etc.). Let's organize them using the STAR method!`,
+              ja: `こんにちは、${user.name ?? "ユーザー"}さん！🎉\n\n就活パスへようこそ！\n\n✅ あなたのプロフィール（${user.universityName ?? "大学"}・${educationLabelJa(user.education)}）は既に登録済みです。\n\n以下のメニューから始めましょう：\n\n📝 *経験を話す* — AIと対話して履歴書を充実させる\n🔍 *企業を調べる* — 企業の深層情報をリサーチ\n📄 *ES生成* — 志望動機・自己PRを自動生成\n🎤 *模擬面接* — 厳しい面接官AIと練習\n\n何から始めますか？`,
+              zh: `你好，${user.name ?? "用户"}！🎉\n\n欢迎来到就活パス！\n\n✅ 你的个人信息（${user.universityName ?? "大学"}・${educationLabelZh(user.education)}）已自动导入。\n\n请选择接下来要做的事：\n\n📝 *讲述经历* — 与AI对话，丰富你的简历\n🔍 *企业调查* — 深度研究目标企业\n📄 *生成ES* — 自动生成志望動機・自己PR\n🎤 *模拟面试* — 与严格的面试官AI练习\n\n从哪里开始？`,
+              en: `Hello, ${user.name ?? "User"}! 🎉\n\nWelcome to CareerPass!\n\n✅ Your profile (${user.universityName ?? "University"} · ${educationLabelEn(user.education)}) has been imported automatically.\n\nChoose what to do next:\n\n📝 *Share experiences* — Chat with AI to enrich your resume\n🔍 *Research companies* — Deep-dive into target companies\n📄 *Generate ES* — Auto-create 志望動機 & 自己PR\n🎤 *Mock interview* — Practice with a strict interviewer AI\n\nWhere would you like to start?`,
             };
 
             await sendTelegramMessage(chatId, greetings[lang] ?? greetings.ja);

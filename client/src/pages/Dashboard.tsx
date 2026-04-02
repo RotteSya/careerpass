@@ -186,7 +186,7 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto pb-20 md:pb-0">
+      <main className="flex-1 overflow-auto">
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card/50">
           <div className="flex items-center gap-2">
@@ -520,23 +520,7 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
-      {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur border-t border-border flex items-center justify-around px-2 py-2">
-        {navItems.map((item) => (
-          <button
-            key={item.path}
-            onClick={() => navigate(item.path)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors ${
-              currentPath === item.path
-                ? "text-primary"
-                : "text-muted-foreground"
-            }`}
-          >
-            <item.icon className="w-5 h-5" />
-            <span className="text-[10px]">{item.label}</span>
-          </button>
-        ))}
-      </nav>
+
     </div>
   );
 }

@@ -84,3 +84,8 @@
 
 - [x] [BUG] 注册完成后跳回表单页——已修复：Register 在 navigate 前先 invalidate getProfile 缓存；Dashboard 路由守卫增加 profileLoading 状态保护，防止竞态条件误判断
 - [x] [BUG] Google OAuth 回调依然显示「認証コードが見つかりません」— 已修复：新增 server/calendarOAuth.ts 服务端 Express 路由 /api/calendar/callback，直接处理 token 交换并重定向到 /dashboard?calendar=success，彻底绕过 SPA 路由冲突
+
+## UI Polish v1.9
+- [x] 删除移动端底部导航栏（Dashboard.tsx 中的 Mobile Bottom Nav 区块）
+- [x] Telegram 绑定成功后自动将用户注册信息写入 USER.md（agent_memory 表）
+- [x] Telegram Bot 对话逻辑：检测已有 USER.md 则跳过重复收集信息环节，直接进入主菜单
