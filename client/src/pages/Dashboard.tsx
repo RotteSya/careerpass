@@ -19,7 +19,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -33,7 +33,7 @@ const navItems = [
 
 export default function Dashboard() {
   const { user, isAuthenticated, loading, logout } = useAuth();
-  const [, navigate] = useLocation();
+  const [currentPath, navigate] = useLocation();
 
   const { data: profile, refetch: refetchProfile } = trpc.user.getProfile.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -135,7 +135,7 @@ export default function Dashboard() {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                location.pathname === item.path
+                currentPath === item.path
                   ? "bg-primary/15 text-primary font-medium"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
@@ -168,7 +168,7 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pb-20 md:pb-0">
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card/50">
           <div className="flex items-center gap-2">
@@ -268,8 +268,8 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Outlook Calendar */}
-              <div className="p-4 rounded-xl border border-border bg-secondary/20">
+              {/* Outlook Calendar - Coming Soon */}
+              <div className="p-4 rounded-xl border border-border bg-secondary/20 opacity-60">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
@@ -279,37 +279,13 @@ export default function Dashboard() {
                     </div>
                     <span className="font-medium text-sm">Outlook Calendar</span>
                   </div>
-                  {calendarStatus?.outlook ? (
-                    <span className="flex items-center gap-1 text-xs text-green-400">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> 連携済
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <XCircle className="w-3.5 h-3.5" /> 未連携
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1 text-xs text-amber-400">
+                    準備中
+                  </span>
                 </div>
-                {calendarStatus?.outlook ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full bg-transparent text-destructive border-destructive/30 hover:bg-destructive/10"
-                    onClick={() => disconnectCalendar.mutate({ provider: "outlook" })}
-                    disabled={disconnectCalendar.isPending}
-                  >
-                    連携解除
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    onClick={() => outlookAuthUrl && (window.location.href = outlookAuthUrl.url)}
-                    disabled={!outlookAuthUrl}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                    Outlook と連携する
-                  </Button>
-                )}
+                <Button size="sm" className="w-full" disabled>
+                  近日公開予定
+                </Button>
               </div>
             </div>
           </div>
@@ -526,6 +502,23 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+      {/* Mobile Bottom Nav */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur border-t border-border flex items-center justify-around px-2 py-2">
+        {navItems.map((item) => (
+          <button
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors ${
+              currentPath === item.path
+                ? "text-primary"
+                : "text-muted-foreground"
+            }`}
+          >
+            <item.icon className="w-5 h-5" />
+            <span className="text-[10px]">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

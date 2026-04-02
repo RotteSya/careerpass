@@ -71,3 +71,13 @@
 - [x] OAuth state 加固：HMAC-SHA256 签名，防伪造、防篹改、防重放（10分钟过期）
 - [x] 补充 OAuth 回调针对性测试（12 tests，覆盖签名验证、伪造拒绝、过期拒绝、URL参数解析）
 - [ ] 重新发布到生产环境
+
+## Frontend Debug & Polish
+
+- [x] [Home] 移除「デモを見る」按鈕
+- [x] [Home] 重写为非对称布局，添加 Framer Motion 入场动画，右侧统计卡片
+- [x] [Dashboard] 修复侧边栏高亮失效（useLocation），Outlook 改为准备中状态，添加移动端底部导航栏
+- [x] [Register] 结构良好，无需修复
+- [x] [InterviewSimulator] 修复 auth 检查缺少 loading 状态保护
+- [x] [NotFound] 重写为深色主题日语风格
+- [ ] 重新发布到生产环境

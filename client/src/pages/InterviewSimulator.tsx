@@ -12,7 +12,7 @@ import { Streamdown } from "streamdown";
 type Message = { role: "user" | "assistant"; content: string };
 
 export default function InterviewSimulator() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
   const [companyName, setCompanyName] = useState("");
   const [position, setPosition] = useState("");
@@ -29,8 +29,8 @@ export default function InterviewSimulator() {
   });
 
   useEffect(() => {
-    if (!isAuthenticated) navigate("/");
-  }, [isAuthenticated]);
+    if (!loading && !isAuthenticated) navigate("/");
+  }, [loading, isAuthenticated]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
