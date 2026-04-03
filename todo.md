@@ -115,3 +115,11 @@
 
 ## v2.4 域名修复
 - [x] [BUG] 验证邮件链接指向 careerpax.manus.space 而非 careerpax.com — 已修复：APP_DOMAIN 环境变量更新为 https://careerpax.com
+
+## v2.5 移除不需要的页面（用户请求）
+- [x] 移除 /dashboard/es 页面文件及路由
+- [x] 移除 /dashboard/interview 页面文件及路由
+- [x] 移除 /dashboard/jobs 页面文件及路由
+- [x] 移除 /dashboard/chat 页面文件及路由
+- [x] 移除 Dashboard.tsx 中对应的导航入口和 Quick Actions 区块
+- [x] 移除 App.tsx 中对应的路由注册

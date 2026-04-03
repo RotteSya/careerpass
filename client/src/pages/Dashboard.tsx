@@ -6,27 +6,19 @@ import {
   Calendar,
   CheckCircle2,
   ExternalLink,
-  FileText,
   Loader2,
   LogOut,
   MessageSquare,
-  Mic,
-  RefreshCw,
-  Send,
   User,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useLocation, Link } from "wouter";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
 const navItems = [
   { icon: User, label: "プロフィール", labelZh: "个人资料", path: "/dashboard" },
-  { icon: MessageSquare, label: "AIチャット", labelZh: "AI对话", path: "/dashboard/chat" },
-  { icon: FileText, label: "ES生成", labelZh: "ES生成", path: "/dashboard/es" },
-  { icon: Mic, label: "模擬面接", labelZh: "模拟面试", path: "/dashboard/interview" },
-  { icon: Send, label: "就活管理", labelZh: "求职管理", path: "/dashboard/jobs" },
 ];
 
 export default function Dashboard() {
@@ -183,21 +175,6 @@ export default function Dashboard() {
             <p className="text-muted-foreground text-sm mt-1">
               就活の準備を続けましょう。AIエージェントがサポートします。
             </p>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {navItems.slice(1).map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className="p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:bg-card/80 transition-all text-left group"
-              >
-                <item.icon className="w-5 h-5 text-primary mb-2 group-hover:scale-110 transition-transform" />
-                <p className="text-sm font-medium">{item.label}</p>
-                <p className="text-xs text-muted-foreground">{item.labelZh}</p>
-              </button>
-            ))}
           </div>
 
           {/* Module 1: Calendar OAuth */}
@@ -422,13 +399,4 @@ function langLabel(lang?: string | null) {
   return lang ? (map[lang] ?? lang) : "-";
 }
 
-function memoryTypeLabel(type?: string | null) {
-  const map: Record<string, string> = {
-    resume: "履歴書",
-    company_report: "企業レポート",
-    conversation: "会話",
-    es_draft: "ES下書き",
-    interview_log: "面接ログ",
-  };
-  return type ? (map[type] ?? type) : "";
-}
+

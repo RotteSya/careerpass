@@ -11,10 +11,6 @@ import Login from "./pages/Login";
 import EmailVerified from "./pages/EmailVerified";
 import Dashboard from "./pages/Dashboard";
 import CalendarCallback from "./pages/CalendarCallback";
-import AgentChat from "./pages/AgentChat";
-import JobTracker from "./pages/JobTracker";
-import ESGenerator from "./pages/ESGenerator";
-import InterviewSimulator from "./pages/InterviewSimulator";
 
 function Router() {
   return (
@@ -26,10 +22,6 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/calendar/callback" component={CalendarCallback} />
-      <Route path="/dashboard/chat" component={AgentChat} />
-      <Route path="/dashboard/jobs" component={JobTracker} />
-      <Route path="/dashboard/es" component={ESGenerator} />
-      <Route path="/dashboard/interview" component={InterviewSimulator} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
