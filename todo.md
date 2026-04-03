@@ -123,3 +123,6 @@
 - [x] 移除 /dashboard/chat 页面文件及路由
 - [x] 移除 Dashboard.tsx 中对应的导航入口和 Quick Actions 区块
 - [x] 移除 App.tsx 中对应的路由注册
+
+## v2.6 Bug 修复
+- [x] [BUG] /login 登录后无法跳转至 /register — 已修复：1) index.ts 添加 trust proxy:1；2) cookies.ts 生产环境强制 secure:true + sameSite:none；3) Login.tsx 改用 utils.auth.me.fetch() 等待 session 确认后再跳转

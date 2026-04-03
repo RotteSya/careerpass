@@ -1,14 +1,14 @@
 import type { CookieOptions, Request } from "express";
 
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
-
-function isIpAddress(host: string) {
-  // Basic IPv4 check and IPv6 presence detection.
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return true;
-  return host.includes(":");
-}
-
-function isSecureRequest(req: Request) {
+/**
+ * Determine whether the current request arrived over HTTPS.
+ *
+ * With `app.set("trust proxy", 1)` in place, Express sets req.protocol to
+ * "https" when the upstream proxy forwards the original scheme via the
+ * x-forwarded-proto header.  We also fall back to reading that header
+ * directly for environments where trust proxy is not yet active.
+ */
+function isSecureRequest(req: Request): boolean {
   if (req.protocol === "https") return true;
 
   const forwardedProto = req.headers["x-forwarded-proto"];
@@ -24,25 +24,17 @@ function isSecureRequest(req: Request) {
 export function getSessionCookieOptions(
   req: Request
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
-  // const hostname = req.hostname;
-  // const shouldSetDomain =
-  //   hostname &&
-  //   !LOCAL_HOSTS.has(hostname) &&
-  //   !isIpAddress(hostname) &&
-  //   hostname !== "127.0.0.1" &&
-  //   hostname !== "::1";
-
-  // const domain =
-  //   shouldSetDomain && !hostname.startsWith(".")
-  //     ? `.${hostname}`
-  //     : shouldSetDomain
-  //       ? hostname
-  //       : undefined;
+  // In production the app is always served over HTTPS.
+  // Force secure:true so that sameSite:"none" is accepted by modern browsers.
+  // (sameSite:"none" + secure:false is rejected by Chrome/Firefox/Safari.)
+  const isProduction = process.env.NODE_ENV === "production";
+  const secure = isProduction ? true : isSecureRequest(req);
 
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    // sameSite:"none" requires secure:true; fall back to "lax" for local dev
+    sameSite: secure ? "none" : "lax",
+    secure,
   };
 }
