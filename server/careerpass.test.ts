@@ -189,7 +189,7 @@ describe("calendar.getAuthUrl", () => {
     expect(result.url).toContain("redirect_uri");
     // redirect_uri must always point to the canonical production domain
     // to prevent redirect_uri_mismatch when users access via alternate URLs (e.g. Cloud Run preview)
-    expect(result.url).toContain("careerpax.manus.space");
+    expect(result.url).toContain("careerpax.com");
   });
 });
 

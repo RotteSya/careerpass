@@ -60,7 +60,7 @@ export function registerCalendarOAuthRoute(app: Express) {
 
     // Always use the canonical production domain for redirect_uri (must match Google Console registration)
     // and for post-auth redirect, so users land on the correct domain regardless of which URL they used.
-    const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.manus.space";
+    const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
     if (error) {
       console.error("[CalendarOAuth] Google returned error:", error);

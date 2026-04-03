@@ -112,3 +112,6 @@
 
 ## v2.3 Bug 修复
 - [x] [BUG] 邮箱验证后跳转到 /login 而非 /register — 已修复：sdk.ts 中 authenticateRequest 对 email: 前缀的 openId 跳过 Manus OAuth 同步，直接从数据库查找用户
+
+## v2.4 域名修复
+- [x] [BUG] 验证邮件链接指向 careerpax.manus.space 而非 careerpax.com — 已修复：APP_DOMAIN 环境变量更新为 https://careerpax.com
