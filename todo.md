@@ -115,15 +115,3 @@
 
 ## v2.4 域名修复
 - [x] [BUG] 验证邮件链接指向 careerpax.manus.space 而非 careerpax.com — 已修复：APP_DOMAIN 环境变量更新为 https://careerpax.com
-
-## v2.5 跳转逻辑修复
-- [x] [BUG] 登录后未跳转到个人信息表单 — 已修复：登录成功后先 fetch auth.me 确认 session 建立再跳转
-- [x] [BUG] 验证邮件点击后应直接跳转到 /register — 已修复：验证成功后先 fetch auth.me 再跳转，新用户直接进入个人信息表单
-
-## v2.6 彻底修复跳转问题
-- [x] [BUG] 邮件验证后仍跳转到登录页 — 已修复：新增 server/emailVerifyRoute.ts，邮件链接改为 /api/verify-email，服务端直接设置 cookie 并 HTTP 302 重定向到 /register
-- [x] [BUG] Login.tsx 跳转不稳定 — 已修复：改用轮询方式（最多 10 次，每次 300ms）确认 auth.me 返回用户后再跳转
-
-## v2.7 彻底修复跳转（再次）
-- [x] [BUG] 登录后仍跳转不到 /register — 已修复：生产环境强制 secure:true，添加 trust proxy，修复 sameSite:none+secure:false 导致 cookie 被浏览器拒绝的问题
-- [x] [BUG] 邮件验证后仍跳转不到 /register — 已修复：同上，服务端路由设置 cookie 后直接 302 重定向到 /register

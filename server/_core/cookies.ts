@@ -24,18 +24,25 @@ function isSecureRequest(req: Request) {
 export function getSessionCookieOptions(
   req: Request
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
-  const hostname = req.hostname ?? "";
-  const isLocalhost = !hostname || LOCAL_HOSTS.has(hostname) || isIpAddress(hostname);
+  // const hostname = req.hostname;
+  // const shouldSetDomain =
+  //   hostname &&
+  //   !LOCAL_HOSTS.has(hostname) &&
+  //   !isIpAddress(hostname) &&
+  //   hostname !== "127.0.0.1" &&
+  //   hostname !== "::1";
 
-  // In production (behind reverse proxy), always treat as secure HTTPS.
-  // In local development, detect from protocol headers.
-  // sameSite:"none" requires secure:true — modern browsers reject the cookie otherwise.
-  const secure = isLocalhost ? isSecureRequest(req) : true;
+  // const domain =
+  //   shouldSetDomain && !hostname.startsWith(".")
+  //     ? `.${hostname}`
+  //     : shouldSetDomain
+  //       ? hostname
+  //       : undefined;
 
   return {
     httpOnly: true,
     path: "/",
-    sameSite: secure ? "none" : "lax",
-    secure,
+    sameSite: "none",
+    secure: isSecureRequest(req),
   };
 }

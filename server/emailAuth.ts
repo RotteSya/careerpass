@@ -165,7 +165,7 @@ export async function resendVerificationEmail(email: string) {
 // ── Email Templates ───────────────────────────────────────────────────────────
 
 async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${APP_DOMAIN}/api/verify-email?token=${token}`;
+  const verifyUrl = `${APP_DOMAIN}/email-verified?token=${token}`;
   await resend.emails.send({
     from: FROM_EMAIL,
     to: email,
