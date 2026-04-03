@@ -1,4 +1,5 @@
 import { getLoginUrl } from "@/const";
+import { clearSessionToken } from "@/lib/session";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -36,6 +37,8 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
+      // Clear localStorage session token (primary auth mechanism)
+      clearSessionToken();
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }
@@ -67,7 +70,7 @@ export function useAuth(options?: UseAuthOptions) {
     if (typeof window === "undefined") return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    window.location.href = redirectPath;
   }, [
     redirectOnUnauthenticated,
     redirectPath,
