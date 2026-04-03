@@ -3,7 +3,6 @@ import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { saveSessionToken } from "@/lib/session";
 
 export default function EmailVerified() {
   const search = useSearch();
@@ -18,12 +17,7 @@ export default function EmailVerified() {
 
   const verifyEmail = trpc.auth.verifyEmail.useMutation({
     onSuccess: async (data) => {
-      // Store session token in localStorage so subsequent requests are authenticated
-      if (data.sessionToken) {
-        saveSessionToken(data.sessionToken);
-      }
-      // Force re-fetch auth.me so route guards see isAuthenticated=true
-      await utils.auth.me.fetch();
+      await utils.auth.me.invalidate();
       setStatus("success");
       setTimeout(() => {
         if (data.profileCompleted) {

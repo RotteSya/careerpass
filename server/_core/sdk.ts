@@ -115,6 +115,8 @@ class SDKServer {
 
   /**
    * Exchange OAuth authorization code for access token
+   * @example
+   * const tokenResponse = await sdk.exchangeCodeForToken(code, state);
    */
   async exchangeCodeForToken(
     code: string,
@@ -125,6 +127,8 @@ class SDKServer {
 
   /**
    * Get user information using access token
+   * @example
+   * const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
    */
   async getUserInfo(accessToken: string): Promise<GetUserInfoResponse> {
     const data = await this.oauthService.getUserInfoByToken({
@@ -156,8 +160,9 @@ class SDKServer {
   }
 
   /**
-   * Create a session token for a user openId.
-   * Returns a signed JWT that can be stored in localStorage or a cookie.
+   * Create a session token for a Manus user openId
+   * @example
+   * const sessionToken = await sdk.createSessionToken(userInfo.openId);
    */
   async createSessionToken(
     openId: string,
@@ -196,6 +201,7 @@ class SDKServer {
     cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
+      console.warn("[Auth] Missing session cookie");
       return null;
     }
 
@@ -251,24 +257,13 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<User> {
-    // 1. Try Authorization: Bearer <token> header first (localStorage-based auth)
-    const authHeader = req.headers["authorization"];
-    let sessionToken: string | undefined;
-
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      sessionToken = authHeader.slice(7).trim();
-    }
-
-    // 2. Fall back to cookie-based auth
-    if (!sessionToken) {
-      const cookies = this.parseCookies(req.headers.cookie);
-      sessionToken = cookies.get(COOKIE_NAME);
-    }
-
-    const session = await this.verifySession(sessionToken);
+    // Regular authentication flow
+    const cookies = this.parseCookies(req.headers.cookie);
+    const sessionCookie = cookies.get(COOKIE_NAME);
+    const session = await this.verifySession(sessionCookie);
 
     if (!session) {
-      throw ForbiddenError("Invalid session");
+      throw ForbiddenError("Invalid session cookie");
     }
 
     const sessionUserId = session.openId;
@@ -279,7 +274,7 @@ class SDKServer {
     // Skip OAuth sync for email-based users (openId starts with "email:")
     if (!user && !sessionUserId.startsWith("email:")) {
       try {
-        const userInfo = await this.getUserInfoWithJwt(sessionToken ?? "");
+        const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
         await db.upsertUser({
           openId: userInfo.openId,
           name: userInfo.name || null,

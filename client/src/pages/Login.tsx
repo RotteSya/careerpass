@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BrainCircuit } from "lucide-react";
-import { saveSessionToken } from "@/lib/session";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -17,14 +16,7 @@ export default function Login() {
 
   const emailLogin = trpc.auth.emailLogin.useMutation({
     onSuccess: async (data) => {
-      // Store session token in localStorage — this is the primary auth mechanism.
-      // The server also sets a cookie as fallback, but localStorage is more reliable
-      // across reverse-proxy / SameSite cookie restrictions.
-      if (data.sessionToken) {
-        saveSessionToken(data.sessionToken);
-      }
-      // Force re-fetch auth.me so route guards see isAuthenticated=true
-      await utils.auth.me.fetch();
+      await utils.auth.me.invalidate();
       if (data.profileCompleted) {
         navigate("/dashboard");
       } else {

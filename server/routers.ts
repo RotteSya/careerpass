@@ -166,12 +166,11 @@ export const appRouter = router({
         try {
           const user = await loginWithEmail(input.email, input.password);
           if (!user) throw new Error("INVALID_CREDENTIALS");
-          // Issue session token — also set cookie as fallback
+          // Issue session cookie
           const cookieOptions = getSessionCookieOptions(ctx.req);
           const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name ?? "", expiresInMs: 7 * 24 * 60 * 60 * 1000 });
           ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
-          // Return token so frontend can store it in localStorage (primary auth method)
-          return { success: true, profileCompleted: user.profileCompleted, sessionToken };
+          return { success: true, profileCompleted: user.profileCompleted };
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : "UNKNOWN";
           if (msg === "EMAIL_NOT_VERIFIED") {
@@ -186,14 +185,13 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         try {
           const { userId } = await verifyEmailToken(input.token);
-          // Fetch user and issue session token — also set cookie as fallback
+          // Fetch user and issue session cookie
           const user = await getUserById(userId);
           if (!user) throw new Error("USER_NOT_FOUND");
           const cookieOptions = getSessionCookieOptions(ctx.req);
           const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name ?? "", expiresInMs: 7 * 24 * 60 * 60 * 1000 });
           ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
-          // Return token so frontend can store it in localStorage (primary auth method)
-          return { success: true, profileCompleted: user.profileCompleted, sessionToken };
+          return { success: true, profileCompleted: user.profileCompleted };
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : "UNKNOWN";
           if (msg === "TOKEN_EXPIRED") throw new Error("リンクの有効期限が切れました。再送信してください。");
