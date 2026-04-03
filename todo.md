@@ -115,3 +115,7 @@
 
 ## v2.4 域名修复
 - [x] [BUG] 验证邮件链接指向 careerpax.manus.space 而非 careerpax.com — 已修复：APP_DOMAIN 环境变量更新为 https://careerpax.com
+
+## v2.5 跳转逻辑修复
+- [x] [BUG] 登录后未跳转到个人信息表单 — 已修复：登录成功后先 fetch auth.me 确认 session 建立再跳转
+- [x] [BUG] 验证邮件点击后应直接跳转到 /register — 已修复：验证成功后先 fetch auth.me 再跳转，新用户直接进入个人信息表单

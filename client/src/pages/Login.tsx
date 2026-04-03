@@ -16,7 +16,9 @@ export default function Login() {
 
   const emailLogin = trpc.auth.emailLogin.useMutation({
     onSuccess: async (data) => {
+      // Wait for auth.me to refetch so session cookie is recognized before navigating
       await utils.auth.me.invalidate();
+      await utils.auth.me.fetch();
       if (data.profileCompleted) {
         navigate("/dashboard");
       } else {

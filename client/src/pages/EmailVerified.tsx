@@ -17,9 +17,13 @@ export default function EmailVerified() {
 
   const verifyEmail = trpc.auth.verifyEmail.useMutation({
     onSuccess: async (data) => {
+      // Wait for auth.me to refetch so session cookie is recognized before navigating
       await utils.auth.me.invalidate();
+      await utils.auth.me.fetch();
       setStatus("success");
       setTimeout(() => {
+        // New users always go to /register to complete profile
+        // Returning users who re-verified go to /dashboard
         if (data.profileCompleted) {
           navigate("/dashboard");
         } else {
