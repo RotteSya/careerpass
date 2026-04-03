@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { telegramRouter } from "../telegram";
 import { appRouter } from "../routers";
 import { registerCalendarOAuthRoute } from "../calendarOAuth";
+import { registerEmailVerifyRoute } from "../emailVerifyRoute";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -39,6 +40,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Google Calendar OAuth callback — server-side Express route to avoid SPA routing issues
   registerCalendarOAuthRoute(app);
+  // Email verification — server-side Express route to set cookie before redirect
+  registerEmailVerifyRoute(app);
   // Telegram Bot Webhook under /api/telegram
   app.use("/api/telegram", telegramRouter);
   // tRPC API

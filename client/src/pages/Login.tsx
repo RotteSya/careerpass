@@ -16,16 +16,39 @@ export default function Login() {
 
   const emailLogin = trpc.auth.emailLogin.useMutation({
     onSuccess: async (data) => {
-      // Wait for auth.me to refetch so session cookie is recognized before navigating
-      await utils.auth.me.invalidate();
-      await utils.auth.me.fetch();
-      if (data.profileCompleted) {
-        navigate("/dashboard");
+      // Poll auth.me until session is confirmed, then navigate
+      // This avoids race conditions where the cookie isn't recognized yet
+      const targetPath = data.profileCompleted ? "/dashboard" : "/register";
+      let attempts = 0;
+      const maxAttempts = 10;
+      const poll = async () => {
+        attempts++;
+        try {
+          const me = await utils.auth.me.fetch();
+          if (me) {
+            navigate(targetPath);
+            return;
+          }
+        } catch {
+          // ignore fetch errors during polling
+        }
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 300);
+        } else {
+          // Fallback: navigate anyway after timeout
+          navigate(targetPath);
+        }
+      };
+      await poll();
+    },
+    onError: (err) => {
+      const msg = err.message;
+      if (msg.includes("確認")) {
+        setError(msg);
       } else {
-        navigate("/register");
+        setError("メールアドレスまたはパスワードが正しくありません。");
       }
     },
-    onError: (err) => setError(err.message),
   });
 
   function handleSubmit(e: React.FormEvent) {
