@@ -1,6 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import {
@@ -101,7 +100,7 @@ export default function Home() {
     if (isAuthenticated) {
       navigate("/dashboard");
     } else {
-      window.location.href = getLoginUrl();
+      navigate("/signup");
     }
   };
 
@@ -129,7 +128,7 @@ export default function Home() {
                   variant="ghost"
                   size="sm"
                   className="h-8 text-xs px-3 text-muted-foreground"
-                  onClick={() => (window.location.href = getLoginUrl())}
+                  onClick={() => navigate("/login")}
                 >
                   ログイン
                 </Button>

@@ -94,3 +94,18 @@
 - [x] 移除前端 Dashboard 中的「メール自動監視」模块（UI + 相关 tRPC 调用）
 - [x] 移除前端 Dashboard 中的「記憶ライブラリ検索」模块（UI + 相关 tRPC 调用）
 - [x] 修复 Agent 重复询问已知信息：在 agent.chat 系统提示词中注入用户档案（姓名/年龄/学历/大学/语言偏好），明确禁止 Agent 重复询问已知信息
+
+## v2.1 邮箱注册/登录体系（替换 Manus OAuth）
+- [x] 数据库：新增 email_auth 表（email/passwordHash/verifyToken/verifiedAt/userId），执行迁移
+- [x] 后端：auth.register 过程（邮箱+密码注册，发送验证邮件）
+- [x] 后端：auth.verifyEmail 过程（token 验证，标记已验证，创建 session）
+- [x] 后端：auth.emailLogin 过程（邮箱+密码登录，返回 session）
+- [x] 后端：auth.resendVerification 过程（重发验证邮件）
+- [x] 配置 Resend API Key 环境变量
+- [x] 前端：SignUp.tsx（/signup）邮箱+密码注册表单
+- [x] 前端：Login.tsx（/login）邮箱+密码登录页
+- [x] 前端：注册成功后 SignUp.tsx 内联显示「请查收邮件」提示
+- [x] 前端：EmailVerified.tsx（/email-verified）验证成功后跳转个人信息表单
+- [x] 前端：首页 CTA「今すぐ無料で始める」改为跳转 /signup
+- [x] 前端：移除 Manus OAuth 登录入口（Header 的「ログイン」按钮改为跳转 /login）
+- [x] 更新 useAuth hook 兼容新的 session 机制（沿用 auth.me tRPC 查询，无需修改）

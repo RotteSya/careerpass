@@ -6,6 +6,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Register from "./pages/Register";
+import SignUp from "./pages/SignUp";
+import Login from "./pages/Login";
+import EmailVerified from "./pages/EmailVerified";
 import Dashboard from "./pages/Dashboard";
 import CalendarCallback from "./pages/CalendarCallback";
 import AgentChat from "./pages/AgentChat";
@@ -17,6 +20,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/signup" component={SignUp} />
+      <Route path="/login" component={Login} />
+      <Route path="/email-verified" component={EmailVerified} />
       <Route path="/register" component={Register} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/calendar/callback" component={CalendarCallback} />

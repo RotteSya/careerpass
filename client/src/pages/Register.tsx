@@ -59,7 +59,7 @@ export default function Register() {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      navigate("/");
+      navigate("/login");
     }
     if (!loading && isAuthenticated && user) {
       // Pre-fill name from OAuth

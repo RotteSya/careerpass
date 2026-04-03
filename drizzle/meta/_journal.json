@@ -22,6 +22,13 @@
       "when": 1775147798368,
       "tag": "0002_brief_maddog",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1775188673506,
+      "tag": "0003_cuddly_mercury",
+      "breakpoints": true
     }
   ]
 }

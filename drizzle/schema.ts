@@ -37,8 +37,24 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+// ─── Email Auth (自建邮筱注册/登录) ──────────────────────────────────────────────────
+export const emailAuth = mysqlTable("email_auth", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  verifyToken: varchar("verifyToken", { length: 128 }),
+  verifyTokenExpiresAt: timestamp("verifyTokenExpiresAt"),
+  verifiedAt: timestamp("verifiedAt"),
+  resetToken: varchar("resetToken", { length: 128 }),
+  resetTokenExpiresAt: timestamp("resetTokenExpiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type EmailAuth = typeof emailAuth.$inferSelect;
+export type InsertEmailAuth = typeof emailAuth.$inferInsert;
 
-// ─── OAuth Tokens (Google / Outlook Calendar) ─────────────────────────────────
+// ─── OAuth Tokens (Google / Outlook Calendar) ──────────────────────────────
 export const oauthTokens = mysqlTable("oauth_tokens", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),

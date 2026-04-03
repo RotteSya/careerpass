@@ -21,6 +21,13 @@ import { invokeLLM } from "./_core/llm";
 import crypto from "crypto";
 import { reconCompany as runRecon, searchMemories } from "./recon";
 import { monitorGmailAndSync, sendTelegramMessage } from "./gmail";
+import {
+  registerWithEmail,
+  loginWithEmail,
+  verifyEmail as verifyEmailToken,
+  resendVerificationEmail,
+} from "./emailAuth";
+import { sdk } from "./_core/sdk";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -127,6 +134,84 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    // ── Email Registration ────────────────────────────────────────────────────────────────────────
+    register: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(8).max(128),
+        })
+      )
+      .mutation(async ({ input }) => {
+        try {
+          const result = await registerWithEmail(input.email, input.password);
+          return { success: true, email: result.email };
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "UNKNOWN";
+          if (msg === "EMAIL_ALREADY_EXISTS") {
+            throw new Error("このメールアドレスは既に登録済みです。");
+          }
+          throw new Error("登録に失敗しました。もう一度お試しください。");
+        }
+      }),
+    // ── Email Login ─────────────────────────────────────────────────────────────────────────────
+    emailLogin: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(1),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const user = await loginWithEmail(input.email, input.password);
+          if (!user) throw new Error("INVALID_CREDENTIALS");
+          // Issue session cookie
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name ?? "", expiresInMs: 7 * 24 * 60 * 60 * 1000 });
+          ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+          return { success: true, profileCompleted: user.profileCompleted };
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "UNKNOWN";
+          if (msg === "EMAIL_NOT_VERIFIED") {
+            throw new Error("メールアドレスの確認が完了していません。メールをご確認ください。");
+          }
+          throw new Error("メールアドレスまたはパスワードが正しくありません。");
+        }
+      }),
+    // ── Verify Email Token ─────────────────────────────────────────────────────────────────────
+    verifyEmail: publicProcedure
+      .input(z.object({ token: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const { userId } = await verifyEmailToken(input.token);
+          // Fetch user and issue session cookie
+          const user = await getUserById(userId);
+          if (!user) throw new Error("USER_NOT_FOUND");
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name ?? "", expiresInMs: 7 * 24 * 60 * 60 * 1000 });
+          ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
+          return { success: true, profileCompleted: user.profileCompleted };
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "UNKNOWN";
+          if (msg === "TOKEN_EXPIRED") throw new Error("リンクの有効期限が切れました。再送信してください。");
+          if (msg === "INVALID_TOKEN") throw new Error("無効な確認リンクです。");
+          throw new Error("確認に失敗しました。");
+        }
+      }),
+    // ── Resend Verification Email ─────────────────────────────────────────────────────────────
+    resendVerification: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        try {
+          await resendVerificationEmail(input.email);
+          return { success: true };
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "UNKNOWN";
+          if (msg === "ALREADY_VERIFIED") throw new Error("既に確認済みです。ログインしてください。");
+          throw new Error("再送信に失敗しました。もう一度お試しください。");
+        }
+      }),
   }),
 
   // ── User Profile ─────────────────────────────────────────────────────────────
