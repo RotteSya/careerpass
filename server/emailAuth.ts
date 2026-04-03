@@ -9,7 +9,7 @@ import { emailAuth, users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = "CareerPass <noreply@careerpax.manus.space>";
+const FROM_EMAIL = "CareerPass <noreply@careerpax.com>";
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.manus.space";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
