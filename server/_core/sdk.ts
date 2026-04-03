@@ -271,7 +271,8 @@ class SDKServer {
     let user = await db.getUserByOpenId(sessionUserId);
 
     // If user not in DB, sync from OAuth server automatically
-    if (!user) {
+    // Skip OAuth sync for email-based users (openId starts with "email:")
+    if (!user && !sessionUserId.startsWith("email:")) {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
         await db.upsertUser({

@@ -109,3 +109,6 @@
 - [x] 前端：首页 CTA「今すぐ無料で始める」改为跳转 /signup
 - [x] 前端：移除 Manus OAuth 登录入口（Header 的「ログイン」按钮改为跳转 /login）
 - [x] 更新 useAuth hook 兼容新的 session 机制（沿用 auth.me tRPC 查询，无需修改）
+
+## v2.3 Bug 修复
+- [x] [BUG] 邮箱验证后跳转到 /login 而非 /register — 已修复：sdk.ts 中 authenticateRequest 对 email: 前缀的 openId 跳过 Manus OAuth 同步，直接从数据库查找用户
