@@ -367,7 +367,7 @@ export default function Home() {
 
       {/* ── Footer ── */}
       <footer className="py-6 px-4 border-t border-border/40">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <BrainCircuit className="w-3.5 h-3.5 text-primary" />
             <span className="text-xs font-medium">就活パス CareerPass</span>
@@ -375,6 +375,10 @@ export default function Home() {
           <p className="text-xs text-muted-foreground/60">
             © 2025 CareerPass. 日本就活AIサポートプラットフォーム
           </p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground/60">
+            <a href="/privacy" className="hover:text-muted-foreground transition-colors">プライバシーポリシー</a>
+            <a href="/terms" className="hover:text-muted-foreground transition-colors">利用規約</a>
+          </div>
         </div>
       </footer>
     </div>

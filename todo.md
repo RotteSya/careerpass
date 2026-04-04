@@ -123,3 +123,9 @@
 - [x] 移除 /dashboard/chat 页面文件及路由
 - [x] 移除 Dashboard.tsx 中对应的导航入口和 Quick Actions 区块
 - [x] 移除 App.tsx 中对应的路由注册
+
+## v2.8 隐私政策与服务条款页面（Google OAuth 审核要求）
+- [x] 撰写隐私政策（Privacy Policy）页面内容，满足 Google OAuth 审核要求
+- [x] 撰写服务条款（Terms of Service）页面内容
+- [x] 创建 /privacy 和 /terms 前端页面并注册路由
+- [x] 在首页页脚添加隐私政策和服务条款链接

@@ -11,6 +11,8 @@ import Login from "./pages/Login";
 import EmailVerified from "./pages/EmailVerified";
 import Dashboard from "./pages/Dashboard";
 import CalendarCallback from "./pages/CalendarCallback";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 function Router() {
   return (
@@ -22,6 +24,8 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/dashboard/calendar/callback" component={CalendarCallback} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
