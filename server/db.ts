@@ -97,11 +97,43 @@ export async function getUserByEmail(email: string) {
 
 export async function updateUserProfile(
   userId: number,
-  data: Partial<Pick<InsertUser, "name" | "birthDate" | "education" | "universityName" | "preferredLanguage" | "profileCompleted">>
+  data: Partial<Pick<InsertUser, "name" | "birthDate" | "education" | "universityName" | "preferredLanguage" | "profileCompleted" | "calendarColorBriefing" | "calendarColorInterview" | "calendarColorDeadline">>
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(users).set({ ...data, updatedAt: new Date() }).where(eq(users.id, userId));
+}
+
+export interface UserCalendarColorPrefs {
+  briefing: string;
+  interview: string;
+  deadline: string;
+}
+
+export async function getUserCalendarColorPrefs(userId: number): Promise<UserCalendarColorPrefs> {
+  const user = await getUserById(userId);
+  return {
+    briefing: user?.calendarColorBriefing ?? "9",
+    interview: user?.calendarColorInterview ?? "6",
+    deadline: user?.calendarColorDeadline ?? "11",
+  };
+}
+
+export async function updateUserCalendarColorPrefs(
+  userId: number,
+  updates: Partial<UserCalendarColorPrefs>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(users)
+    .set({
+      calendarColorBriefing: updates.briefing,
+      calendarColorInterview: updates.interview,
+      calendarColorDeadline: updates.deadline,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
 }
 
 // ─── OAuth Tokens ──────────────────────────────────────────────────────────

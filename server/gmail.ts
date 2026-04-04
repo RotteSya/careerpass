@@ -11,7 +11,7 @@
  *       access_token の有効期限切れ時は refresh_token で自動更新。
  */
 
-import { getOauthToken, saveAgentMemory, upsertOauthToken } from "./db";
+import { getOauthToken, getUserCalendarColorPrefs, saveAgentMemory, upsertOauthToken } from "./db";
 import { invokeLLM } from "./_core/llm";
 import {
   reconCompany as runAgentRecon,
@@ -26,7 +26,7 @@ export interface EmailEvent {
   from: string;
   date: string;
   body: string;
-  eventType: "interview" | "briefing" | "test" | "offer" | "rejection" | "other";
+  eventType: "interview" | "briefing" | "test" | "deadline" | "offer" | "rejection" | "other";
   companyName: string | null;
   eventDate: string | null; // ISO 8601 if detected
   eventTime: string | null;
@@ -213,15 +213,29 @@ const typeLabels: Record<EmailEvent["eventType"], string> = {
   interview: "【面接】",
   briefing: "【説明会】",
   test: "【試験】",
+  deadline: "【締切】",
   offer: "【内定】",
   rejection: "【結果通知】",
   other: "【就活】",
 };
 
+// Only events that represent a real appointment should be written to calendar.
+const CALENDAR_WRITABLE_TYPES: EmailEvent["eventType"][] = ["interview", "briefing", "test", "deadline"];
+
 interface CareerpassmailDecision extends Partial<EmailEvent> {
   isJobRelated: boolean;
   confidence: number;
   reason: string;
+}
+
+function calendarColorForEventType(
+  eventType: EmailEvent["eventType"],
+  prefs: { briefing: string; interview: string; deadline: string }
+): string | undefined {
+  if (eventType === "briefing") return prefs.briefing;
+  if (eventType === "interview") return prefs.interview;
+  if (eventType === "deadline" || eventType === "test") return prefs.deadline;
+  return undefined;
 }
 
 const FREE_MAIL_DOMAINS = new Set([
@@ -335,7 +349,7 @@ async function runCareerpassmailAgent(input: {
   "isJobRelated": boolean,
   "confidence": number,
   "reason": string,
-  "eventType": "interview" | "briefing" | "test" | "offer" | "rejection" | "other",
+  "eventType": "interview" | "briefing" | "test" | "deadline" | "offer" | "rejection" | "other",
   "companyName": string | null,
   "eventDate": "YYYY-MM-DD" | null,
   "eventTime": "HH:MM" | null,
@@ -475,7 +489,7 @@ async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<
 
   try {
     // 1) Always keep company intelligence fresh for actionable events.
-    if (["interview", "briefing", "test", "offer", "rejection"].includes(event.eventType)) {
+    if (["interview", "briefing", "test", "deadline", "offer", "rejection"].includes(event.eventType)) {
       await runAgentRecon(userId, companyName);
       actions.push(`recon:${companyName}`);
     }
@@ -508,6 +522,7 @@ export async function monitorGmailAndSync(
     return { scanned: 0, detected: 0, calendarEvents: 0, events: [] };
   }
 
+  const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
   const messages = await fetchRecentEmails(accessToken, 20);
   const detectedEvents: EmailEvent[] = [];
   let calendarCount = 0;
@@ -571,18 +586,20 @@ export async function monitorGmailAndSync(
       await sendTelegramMessage(telegramChatId, notifText);
     }
 
-    // Write to Google Calendar if date is detected.
-    if (date) {
+    // Write to Google Calendar only for schedulable event types.
+    if (date && CALENDAR_WRITABLE_TYPES.includes(eventType)) {
       const startDateTime = time ? `${date}T${time}:00` : `${date}T09:00:00`;
       const endDateTime = time
         ? `${date}T${String(parseInt(time.split(":")[0]) + 1).padStart(2, "0")}:${time.split(":")[1]}:00`
         : `${date}T10:00:00`;
 
-      const calEvent: CalendarEvent = {
+      const colorId = calendarColorForEventType(eventType, calendarColorPrefs);
+      const calEvent: CalendarEvent & { colorId?: string } = {
         summary: `${typeLabels[eventType]}${companyName ?? ""} - ${detail.subject.slice(0, 40)}`,
         description: `CareerPass自動登録\n\n場所/リンク: ${emailEvent.location ?? "未記入"}\n\nやるべきこと:\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}\n\n送信元: ${detail.from}\n\n${detail.body.slice(0, 300)}`,
         start: { dateTime: `${startDateTime}+09:00`, timeZone: "Asia/Tokyo" },
         end: { dateTime: `${endDateTime}+09:00`, timeZone: "Asia/Tokyo" },
+        colorId,
       };
 
       const written = await writeToGoogleCalendar(accessToken, calEvent);

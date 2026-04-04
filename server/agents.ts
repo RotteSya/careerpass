@@ -6,9 +6,33 @@ import {
   updateJobApplicationStatus,
   createJobApplication,
   getJobApplications,
+  updateUserCalendarColorPrefs,
 } from "./db";
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
+
+function normalizeCalendarColor(input: string): string | null {
+  const v = input.trim().toLowerCase();
+  const map: Record<string, string> = {
+    blue: "9",
+    蓝色: "9",
+    藍色: "9",
+    青: "9",
+    orange: "6",
+    橙色: "6",
+    オレンジ: "6",
+    red: "11",
+    红色: "11",
+    紅色: "11",
+    赤: "11",
+  };
+  if (map[v]) return map[v];
+  if (/^\d+$/.test(v)) {
+    const n = Number(v);
+    if (n >= 1 && n <= 11) return String(n);
+  }
+  return null;
+}
 
 const AGENT_TOOLS: Tool[] = [
   {
@@ -50,6 +74,28 @@ const AGENT_TOOLS: Tool[] = [
           companyName: { type: "string", description: "Name of the company to research" },
         },
         required: ["companyName"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "setCalendarColor",
+      description: "Set user's auto-created calendar event color preference by category",
+      parameters: {
+        type: "object",
+        properties: {
+          category: {
+            type: "string",
+            enum: ["briefing", "interview", "deadline"],
+            description: "Event category to update color for",
+          },
+          color: {
+            type: "string",
+            description: "Color name or Google Calendar colorId (1-11)",
+          },
+        },
+        required: ["category", "color"],
       },
     },
   },
@@ -180,6 +226,7 @@ export async function handleAgentChat(userId: number, message: string, sessionId
 3. 当用户提到面试或投递进度时，调用 updateJobStatus 工具更新数据库。
 4. 当用户想要了解某家公司时，调用 runRecon 工具进行侦察。
 5. 不要重复询问用户语言偏好和/register里已有的基础信息（姓名、生日、学历、学校）。
+6. 当用户要求修改自动日程颜色时，调用 setCalendarColor（类别: 说明会/面试/締切）。
 请用中文与用户交流。
 ${profileContextZh}`
       : lang === "en"
@@ -189,6 +236,7 @@ ${profileContextZh}`
 3. Update job status via updateJobStatus tool when progress is mentioned.
 4. Research companies via runRecon tool when requested.
 5. Never re-ask language preference or basic profile fields already filled in /register.
+6. If user asks to change auto-calendar event colors, call setCalendarColor.
 Please communicate in English.
 ${profileContextEn}`
       : `あなたは「就活パス」専属のAIキャリアアドバイザーです。
@@ -197,6 +245,7 @@ ${profileContextEn}`
 2. 面接やエントリーの進捗が語られたら、updateJobStatusツールでデータベースを更新する。
 3. 企業について知りたいと言われたら、runReconツールで調査を行う。
 4. /registerで入力済みの言語設定・基本プロフィール（氏名、生年月日、学歴、学校名）を再質問しない。
+5. 自動作成カレンダー予定の色変更を依頼されたら、setCalendarColorを使う（説明会/面接/締切）。
 日本語でユーザーとコミュニケーションしてください。
 ${profileContextJa}`;
 
@@ -231,6 +280,15 @@ ${profileContextJa}`;
       } else if (toolCall.function.name === "runRecon") {
         const report = await reconCompany(userId, args.companyName);
         results.push(`Generated recon report for ${args.companyName}:\n${report.slice(0, 500)}...`);
+      } else if (toolCall.function.name === "setCalendarColor") {
+        const category = args.category as "briefing" | "interview" | "deadline";
+        const colorId = normalizeCalendarColor(String(args.color ?? ""));
+        if (!colorId) {
+          results.push(`Invalid color: ${args.color}. Use blue/orange/red or colorId(1-11).`);
+        } else {
+          await updateUserCalendarColorPrefs(userId, { [category]: colorId });
+          results.push(`Updated ${category} calendar color to ${colorId}`);
+        }
       }
     }
 

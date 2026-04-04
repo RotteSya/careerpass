@@ -36,6 +36,13 @@
       "when": 1775292000000,
       "tag": "0004_real_time_gmail_mapping",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1775302800000,
+      "tag": "0005_calendar_color_preferences",
+      "breakpoints": true
     }
   ]
 }

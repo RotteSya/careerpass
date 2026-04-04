@@ -29,6 +29,11 @@ export const users = mysqlTable("users", {
   ]),
   universityName: varchar("universityName", { length: 255 }),
   preferredLanguage: mysqlEnum("preferredLanguage", ["zh", "ja", "en"]).default("ja"),
+  // Google Calendar colorId defaults:
+  // blue=9, orange=6, red=11
+  calendarColorBriefing: varchar("calendarColorBriefing", { length: 2 }).default("9"),
+  calendarColorInterview: varchar("calendarColorInterview", { length: 2 }).default("6"),
+  calendarColorDeadline: varchar("calendarColorDeadline", { length: 2 }).default("11"),
   profileCompleted: boolean("profileCompleted").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
