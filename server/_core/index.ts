@@ -6,6 +6,9 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { telegramRouter } from "../telegram";
 import { registerTelegramWebhook } from "../telegram";
+import { gmailPushRouter } from "../gmailPush";
+import { registerGmailPushWatch } from "../gmail";
+import { listUserIdsByOauthProvider } from "../db";
 import { appRouter } from "../routers";
 import { registerCalendarOAuthRoute } from "../calendarOAuth";
 import { createContext } from "./context";
@@ -42,6 +45,8 @@ async function startServer() {
   registerCalendarOAuthRoute(app);
   // Telegram Bot Webhook under /api/telegram
   app.use("/api/telegram", telegramRouter);
+  // Gmail push notifications (Google Pub/Sub push endpoint)
+  app.use("/api/gmail", gmailPushRouter);
 
   // Auto-register Telegram webhook on startup to avoid silent bot inactivity.
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -52,6 +57,19 @@ async function startServer() {
     registerTelegramWebhook(webhookUrl).catch(err => {
       console.error("[Telegram] Webhook auto-registration failed:", err);
     });
+  }
+
+  // Renew Gmail push watches for already-linked users on startup.
+  const gmailTopic = process.env.GMAIL_PUBSUB_TOPIC;
+  if (gmailTopic) {
+    listUserIdsByOauthProvider("google")
+      .then(async userIds => {
+        await Promise.allSettled(userIds.map(userId => registerGmailPushWatch(userId)));
+        console.log(`[Gmail] Push watch renewal attempted for ${userIds.length} user(s).`);
+      })
+      .catch(err => {
+        console.error("[Gmail] Failed to renew push watches on startup:", err);
+      });
   }
 
   // tRPC API

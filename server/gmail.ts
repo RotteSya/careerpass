@@ -13,6 +13,11 @@
 
 import { getOauthToken, upsertOauthToken } from "./db";
 import { invokeLLM } from "./_core/llm";
+import {
+  reconCompany as runAgentRecon,
+  generateES as runAgentES,
+  startInterview as runAgentInterview,
+} from "./agents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,7 +64,7 @@ async function refreshGoogleToken(refreshToken: string): Promise<string | null> 
 
 // ─── Gmail API ────────────────────────────────────────────────────────────────
 
-async function getValidAccessToken(userId: number): Promise<string | null> {
+export async function getValidAccessToken(userId: number): Promise<string | null> {
   const tokenRow = await getOauthToken(userId, "google");
   if (!tokenRow) return null;
 
@@ -86,6 +91,49 @@ async function getValidAccessToken(userId: number): Promise<string | null> {
   }
 
   return null;
+}
+
+export async function registerGmailPushWatch(userId: number): Promise<boolean> {
+  const accessToken = await getValidAccessToken(userId);
+  if (!accessToken) return false;
+
+  const topicName = process.env.GMAIL_PUBSUB_TOPIC;
+  if (!topicName) {
+    console.warn("[Gmail] GMAIL_PUBSUB_TOPIC is not configured. Skipping Gmail push watch registration.");
+    return false;
+  }
+
+  try {
+    const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/watch", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        topicName,
+        labelIds: ["INBOX"],
+        labelFilterAction: "include",
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[Gmail] Failed to register watch:", errText);
+      return false;
+    }
+
+    const data = await res.json();
+    console.log("[Gmail] Push watch registered:", {
+      userId,
+      expiration: data?.expiration,
+      historyId: data?.historyId,
+    });
+    return true;
+  } catch (err) {
+    console.error("[Gmail] Failed to register watch:", err);
+    return false;
+  }
 }
 
 async function fetchRecentEmails(
@@ -170,6 +218,15 @@ const TIME_PATTERNS = [
   /(\d{1,2})時(\d{2})?分?/,
   /(\d{1,2}):(\d{2})/,
 ];
+
+const typeLabels: Record<EmailEvent["eventType"], string> = {
+  interview: "【面接】",
+  briefing: "【説明会】",
+  test: "【試験】",
+  offer: "【内定】",
+  rejection: "【結果通知】",
+  other: "【就活】",
+};
 
 function classifyEmail(email: { subject: string; body: string; from: string }): EmailEvent["eventType"] {
   const text = `${email.subject} ${email.body}`;
@@ -303,6 +360,37 @@ export interface MonitorResult {
   events: EmailEvent[];
 }
 
+async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<string[]> {
+  const actions: string[] = [];
+  const companyName = event.companyName?.trim();
+  if (!companyName) return actions;
+
+  try {
+    // 1) Always keep company intelligence fresh for actionable events.
+    if (["interview", "briefing", "test", "offer", "rejection"].includes(event.eventType)) {
+      await runAgentRecon(userId, companyName);
+      actions.push(`recon:${companyName}`);
+    }
+
+    // 2) Interview-related mail should prepare interview mode immediately.
+    if (event.eventType === "interview" || event.eventType === "test") {
+      await runAgentInterview(userId, companyName, "総合職");
+      actions.push(`interview:${companyName}`);
+    }
+
+    // 3) Briefing/intern related mail can prebuild ES draft for faster turnaround.
+    if (event.eventType === "briefing") {
+      const sid = `gmail-${Date.now()}`;
+      await runAgentES(userId, companyName, "総合職", sid);
+      actions.push(`es:${companyName}`);
+    }
+  } catch (err) {
+    console.error("[Gmail] Sub-agent orchestration failed:", err);
+  }
+
+  return actions;
+}
+
 export async function monitorGmailAndSync(
   userId: number,
   telegramChatId?: string
@@ -344,21 +432,38 @@ export async function monitorGmailAndSync(
 
     detectedEvents.push(emailEvent);
 
-    // Write to Google Calendar if date is detected
+    // Notify Telegram as soon as a valid event is detected (no longer blocked by calendar write success).
+    let orchestrationActions: string[] = [];
+    if (telegramChatId) {
+      orchestrationActions = await orchestrateSubAgents(userId, emailEvent);
+      const todoText =
+        emailEvent.todoItems.length > 0
+          ? `\n📝 *やるべきこと:*\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}`
+          : "";
+      const scheduleText = date
+        ? `📆 ${date}${time ? ` ${time}` : ""}`
+        : "📆 日時抽出: 失敗（メール本文に日時が明示されていない可能性があります）";
+      const actionsText =
+        orchestrationActions.length > 0
+          ? `\n🤖 Agent調度: ${orchestrationActions.join(", ")}`
+          : "";
+      const notifText =
+        `📨 *就活関連メール検出*\n\n` +
+        `${typeLabels[eventType]} ${companyName ?? "企業"}\n` +
+        `${scheduleText}\n` +
+        `📍 場所/リンク: ${emailEvent.location ?? "未記入"}\n` +
+        `📧 件名: ${detail.subject.slice(0, 80)}` +
+        todoText +
+        actionsText;
+      await sendTelegramMessage(telegramChatId, notifText);
+    }
+
+    // Write to Google Calendar if date is detected.
     if (date) {
       const startDateTime = time ? `${date}T${time}:00` : `${date}T09:00:00`;
       const endDateTime = time
         ? `${date}T${String(parseInt(time.split(":")[0]) + 1).padStart(2, "0")}:${time.split(":")[1]}:00`
         : `${date}T10:00:00`;
-
-      const typeLabels: Record<EmailEvent["eventType"], string> = {
-        interview: "【面接】",
-        briefing: "【説明会】",
-        test: "【試験】",
-        offer: "【内定】",
-        rejection: "【結果通知】",
-        other: "【就活】",
-      };
 
       const calEvent: CalendarEvent = {
         summary: `${typeLabels[eventType]}${companyName ?? ""} - ${detail.subject.slice(0, 40)}`,
@@ -370,20 +475,11 @@ export async function monitorGmailAndSync(
       const written = await writeToGoogleCalendar(accessToken, calEvent);
       if (written) {
         calendarCount++;
-
-        // Send Telegram notification
-        if (telegramChatId) {
-          const todoText = emailEvent.todoItems.length > 0 ? `\n📝 *やるべきこと:*\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}` : "";
-          const notifText =
-            `📅 *就活スケジュール自動登録*\n\n` +
-            `${typeLabels[eventType]} ${companyName ?? "企業"}\n` +
-            `📆 ${date}${time ? ` ${time}` : ""}\n` +
-            `📍 場所/リンク: ${emailEvent.location ?? "未記入"}\n` +
-            `📧 件名: ${detail.subject.slice(0, 50)}\n` +
-            todoText + `\n\n` +
-            `Googleカレンダーに登録しました。`;
-          await sendTelegramMessage(telegramChatId, notifText);
-        }
+      } else if (telegramChatId) {
+        await sendTelegramMessage(
+          telegramChatId,
+          `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`
+        );
       }
     }
   }

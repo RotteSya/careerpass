@@ -87,6 +87,13 @@ export async function getUserById(id: number) {
   return result[0] ?? undefined;
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result[0] ?? undefined;
+}
+
 export async function updateUserProfile(
   userId: number,
   data: Partial<Pick<InsertUser, "name" | "birthDate" | "education" | "universityName" | "preferredLanguage" | "profileCompleted">>
@@ -124,6 +131,16 @@ export async function deleteOauthToken(userId: number, provider: "google" | "out
   await db
     .delete(oauthTokens)
     .where(and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, provider)));
+}
+
+export async function listUserIdsByOauthProvider(provider: "google" | "outlook"): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ userId: oauthTokens.userId })
+    .from(oauthTokens)
+    .where(eq(oauthTokens.provider, provider));
+  return Array.from(new Set(rows.map(r => r.userId)));
 }
 
 // ─── Telegram Bindings ─────────────────────────────────────────────────────

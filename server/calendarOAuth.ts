@@ -6,6 +6,7 @@
 import type { Express, Request, Response } from "express";
 import crypto from "crypto";
 import { upsertOauthToken } from "./db";
+import { registerGmailPushWatch } from "./gmail";
 
 function getStateSecret(): string {
   return process.env.JWT_SECRET ?? "careerpass-oauth-state-secret";
@@ -94,6 +95,7 @@ export function registerCalendarOAuthRoute(app: Express) {
         expiresAt,
         scope: tokenData.scope ?? null,
       });
+      await registerGmailPushWatch(stateData.userId);
       console.log(`[CalendarOAuth] Google calendar linked for user ${stateData.userId}`);
       return res.redirect(`${appDomain}/dashboard?calendar=success`);
     } catch (e) {
