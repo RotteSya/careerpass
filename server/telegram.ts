@@ -29,6 +29,8 @@ if (!TELEGRAM_BOT_TOKEN) {
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
 export const telegramRouter = express.Router();
+const processedUpdateIds = new Map<number, number>();
+const TELEGRAM_UPDATE_TTL_MS = 10 * 60 * 1000;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -191,6 +193,23 @@ export async function sendTelegramMessage(chatId: string | number, text: string,
 telegramRouter.post("/webhook", async (req, res) => {
   try {
     const update = req.body;
+    const updateId =
+      typeof update?.update_id === "number" ? update.update_id : null;
+    const now = Date.now();
+    // Cleanup old dedupe entries
+    processedUpdateIds.forEach((ts, id) => {
+      if (now - ts > TELEGRAM_UPDATE_TTL_MS) processedUpdateIds.delete(id);
+    });
+    if (updateId !== null) {
+      const existingTs = processedUpdateIds.get(updateId);
+      if (existingTs) {
+        // Telegram retries the same update when webhook processing is slow;
+        // acknowledge duplicates immediately to prevent repeated side effects.
+        res.json({ ok: true, deduped: true });
+        return;
+      }
+      processedUpdateIds.set(updateId, now);
+    }
     console.log("[Telegram] Received update:", JSON.stringify(update).slice(0, 200));
 
     const message = update?.message;
@@ -315,18 +334,26 @@ telegramRouter.post("/webhook", async (req, res) => {
         /检查.*邮箱|查看.*邮箱|check.*mail|check.*inbox/i.test(text)
       ) {
         await sendTelegramMessage(chatId, "正在检查您的邮箱并同步关键事件，请稍候...");
-        const result = await monitorGmailAndSync(userId, String(chatId));
-        if (result.detected > 0) {
-          await sendTelegramMessage(
-            chatId,
-            `✅ 检查完成：扫描 ${result.scanned} 封，识别 ${result.detected} 个有效事件，写入日历 ${result.calendarEvents} 个。`
-          );
-        } else {
-          await sendTelegramMessage(
-            chatId,
-            `ℹ️ 检查完成：扫描 ${result.scanned} 封，但未识别到“说明会/面试/结果通知”等有效事件。\n请确保测试邮件包含明确关键词与时间。`
-          );
-        }
+        // Run asynchronously and return webhook response quickly.
+        void (async () => {
+          try {
+            const result = await monitorGmailAndSync(userId!, String(chatId));
+            if (result.detected > 0) {
+              await sendTelegramMessage(
+                chatId,
+                `✅ 检查完成：扫描 ${result.scanned} 封，识别 ${result.detected} 个有效事件，写入日历 ${result.calendarEvents} 个。`
+              );
+            } else {
+              await sendTelegramMessage(
+                chatId,
+                `ℹ️ 检查完成：扫描 ${result.scanned} 封，但未识别到“说明会/面试/结果通知”等有效事件。`
+              );
+            }
+          } catch (err) {
+            console.error("[Telegram] /checkmail async monitor failed:", err);
+            await sendTelegramMessage(chatId, "⚠️ 邮箱检查失败，请稍后重试。");
+          }
+        })();
       } else {
         // Natural Language Processing via Orchestrator
         const memories = await getAgentMemory(userId, "conversation");
