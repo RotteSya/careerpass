@@ -11,7 +11,7 @@
  *       access_token の有効期限切れ時は refresh_token で自動更新。
  */
 
-import { getOauthToken, upsertOauthToken } from "./db";
+import { getOauthToken, saveAgentMemory, upsertOauthToken } from "./db";
 import { invokeLLM } from "./_core/llm";
 import {
   reconCompany as runAgentRecon,
@@ -141,9 +141,8 @@ async function fetchRecentEmails(
   maxResults = 20
 ): Promise<Array<{ id: string; snippet: string }>> {
   try {
-    const query = encodeURIComponent(
-      "is:unread (面接 OR インタビュー OR 説明会 OR 選考 OR 内定 OR interview OR 採用)"
-    );
+    // Broad pull (without hard keyword gate). Actual job-related decision is delegated to monitor agent.
+    const query = encodeURIComponent("newer_than:30d -category:social -category:promotions");
     const res = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${query}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -197,16 +196,7 @@ async function fetchEmailDetail(
   }
 }
 
-// ─── Email Classification ─────────────────────────────────────────────────────
-
-const EVENT_PATTERNS: Record<EmailEvent["eventType"], RegExp[]> = {
-  interview: [/面接/, /インタビュー/, /interview/i, /面談/],
-  briefing: [/説明会/, /セミナー/, /インターン/, /intern/i, /briefing/i],
-  test: [/筆記試験/, /適性検査/, /SPI/, /webテスト/, /テスト/],
-  offer: [/内定/, /採用通知/, /offer/i, /合格/],
-  rejection: [/不採用/, /選考結果/, /残念/, /お見送り/],
-  other: [],
-};
+// ─── Mail Monitor Agent ────────────────────────────────────────────────────────
 
 const DATE_PATTERNS = [
   /(\d{4})年(\d{1,2})月(\d{1,2})日/,
@@ -228,13 +218,47 @@ const typeLabels: Record<EmailEvent["eventType"], string> = {
   other: "【就活】",
 };
 
-function classifyEmail(email: { subject: string; body: string; from: string }): EmailEvent["eventType"] {
-  const text = `${email.subject} ${email.body}`;
-  for (const [type, patterns] of Object.entries(EVENT_PATTERNS) as [EmailEvent["eventType"], RegExp[]][]) {
-    if (type === "other") continue;
-    if (patterns.some((p) => p.test(text))) return type;
-  }
-  return "other";
+interface CareerpassmailDecision extends Partial<EmailEvent> {
+  isJobRelated: boolean;
+  confidence: number;
+  reason: string;
+}
+
+const FREE_MAIL_DOMAINS = new Set([
+  "gmail.com",
+  "yahoo.co.jp",
+  "yahoo.com",
+  "outlook.com",
+  "hotmail.com",
+  "icloud.com",
+  "qq.com",
+  "163.com",
+]);
+
+const JOB_RELATED_DOMAIN_HINTS = [
+  "recruit",
+  "career",
+  "saiyo",
+  "hr",
+  "job",
+  "talent",
+  "mypage",
+  "rikunabi",
+  "mynavi",
+  "wantedly",
+];
+
+function getSenderDomain(from: string): string | null {
+  const m = from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  return m?.[1]?.toLowerCase() ?? null;
+}
+
+function senderDomainScore(from: string): number {
+  const domain = getSenderDomain(from);
+  if (!domain) return 0;
+  if (FREE_MAIL_DOMAINS.has(domain)) return 0.1;
+  if (JOB_RELATED_DOMAIN_HINTS.some(hint => domain.includes(hint))) return 0.95;
+  return 0.6;
 }
 
 function extractCompanyName(from: string, subject: string): string | null {
@@ -278,35 +302,119 @@ function extractDate(text: string): { date: string | null; time: string | null }
   return { date, time };
 }
 
-async function extractEmailInfo(subject: string, body: string): Promise<Partial<EmailEvent>> {
-  const systemPrompt = `あなたは就活アシスタントです。メールの内容から、就活に関する情報を抽出してください。
-出力形式（JSONのみ）:
-{
+function extractJapaneseTimeRange(text: string): { date: string | null; time: string | null } {
+  // Examples:
+  // 2026年4月10日(金) 14:00〜15:00
+  // 2026/04/10 14:00-15:00
+  const m = text.match(
+    /(\d{4})[\/年.-](\d{1,2})[\/月.-](\d{1,2})日?(?:\([^)]+\))?\s*(\d{1,2})[:：時](\d{2})?\s*[~〜\-－]\s*(\d{1,2})[:：時]?(\d{2})?/
+  );
+  if (!m) return { date: null, time: null };
+  const date = `${m[1]}-${String(m[2]).padStart(2, "0")}-${String(m[3]).padStart(2, "0")}`;
+  const time = `${String(m[4]).padStart(2, "0")}:${String(m[5] ?? "00").padStart(2, "0")}`;
+  return { date, time };
+}
+
+async function runCareerpassmailAgent(input: {
+  subject: string;
+  body: string;
+  from: string;
+}): Promise<CareerpassmailDecision> {
+  const domain = getSenderDomain(input.from);
+  const domainSignal = senderDomainScore(input.from);
+  const localized = extractJapaneseTimeRange(`${input.subject}\n${input.body}`);
+  const basic = extractDate(`${input.subject}\n${input.body}`);
+
+  const systemPrompt = `你是 CareerPass 的“邮件监控 Agent”。
+任务：判断这封邮件是否与用户求职行为相关（面试邀请、说明会、测试、结果通知、offer、流程更新等），并抽取结构化字段。
+判断要求：
+- 以语义理解为主，不依赖固定关键词匹配。
+- 结合发件人域名可信度、邮件语气、流程信息、行动要求来判断。
+- 对日本求职邮件格式做本地化：例如“2026年4月10日(金) 14:00〜15:00”“【日時】”“■日時”。
+输出必须是 JSON：{
+  "isJobRelated": boolean,
+  "confidence": number,
+  "reason": string,
   "eventType": "interview" | "briefing" | "test" | "offer" | "rejection" | "other",
-  "companyName": "企業名",
-  "eventDate": "YYYY-MM-DD",
-  "eventTime": "HH:MM",
-  "location": "場所またはリンク",
-  "todoItems": ["やるべきこと1", "やるべきこと2"]
+  "companyName": string | null,
+  "eventDate": "YYYY-MM-DD" | null,
+  "eventTime": "HH:MM" | null,
+  "location": string | null,
+  "todoItems": string[]
 }`;
 
   try {
     const response = await invokeLLM({
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `件名: ${subject}\n\n本文: ${body.slice(0, 2000)}` },
+        {
+          role: "user",
+          content:
+            `件名: ${input.subject}\n\n` +
+            `送信者: ${input.from}\n` +
+            `送信者ドメイン: ${domain ?? "unknown"}\n` +
+            `送信者ドメイン信号: ${domainSignal}\n` +
+            `本地化时间提示: ${localized.date ?? basic.date ?? "none"} ${localized.time ?? basic.time ?? "none"}\n\n` +
+            `正文:\n${input.body.slice(0, 2500)}`,
+        },
       ],
       response_format: { type: "json_object" },
     });
 
     const content = response.choices?.[0]?.message?.content;
     if (typeof content === "string") {
-      return JSON.parse(content);
+      const parsed = JSON.parse(content) as CareerpassmailDecision;
+      const eventDate = parsed.eventDate ?? localized.date ?? basic.date ?? null;
+      const eventTime = parsed.eventTime ?? localized.time ?? basic.time ?? null;
+      return {
+        isJobRelated: !!parsed.isJobRelated,
+        confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.5,
+        reason: parsed.reason ?? "LLM semantic decision",
+        eventType: parsed.eventType ?? "other",
+        companyName: parsed.companyName ?? null,
+        eventDate,
+        eventTime,
+        location: parsed.location ?? null,
+        todoItems: Array.isArray(parsed.todoItems) ? parsed.todoItems : [],
+      };
     }
   } catch (err) {
-    console.error("[Gmail] LLM extraction failed:", err);
+    console.error("[careerpassmail] semantic monitor failed:", err);
   }
-  return {};
+
+  // Fallback: conservative domain/time heuristic.
+  return {
+    isJobRelated: domainSignal >= 0.8 && !!(localized.date ?? basic.date),
+    confidence: domainSignal,
+    reason: "fallback domain-localized-time heuristic",
+    eventType: "other",
+    companyName: extractCompanyName(input.from, input.subject),
+    eventDate: localized.date ?? basic.date ?? null,
+    eventTime: localized.time ?? basic.time ?? null,
+    location: null,
+    todoItems: [],
+  };
+}
+
+async function reportToCareerpassAgent(userId: number, event: EmailEvent, reason: string) {
+  try {
+    const summary =
+      `System: careerpassmail detected job-related mail.\n` +
+      `Type: ${event.eventType}\n` +
+      `Company: ${event.companyName ?? "unknown"}\n` +
+      `DateTime: ${event.eventDate ?? "unknown"} ${event.eventTime ?? ""}\n` +
+      `Subject: ${event.subject}\n` +
+      `Reason: ${reason}`;
+    await saveAgentMemory({
+      userId,
+      memoryType: "conversation",
+      title: `careerpassmail ${new Date().toISOString()}`,
+      content: summary,
+      metadata: { source: "careerpassmail", eventType: event.eventType },
+    });
+  } catch (err) {
+    console.error("[careerpassmail] Failed to report event to CareerPass memory:", err);
+  }
 }
 
 // ─── Google Calendar Write ────────────────────────────────────────────────────
@@ -408,14 +516,18 @@ export async function monitorGmailAndSync(
     const detail = await fetchEmailDetail(accessToken, msg.id);
     if (!detail) continue;
 
-    // Use LLM for extraction
-    const extracted = await extractEmailInfo(detail.subject, detail.body);
-    const eventType = extracted.eventType ?? "other";
-    if (eventType === "other") continue;
+    // Dedicated careerpassmail agent: semantic decision + localized time parsing + domain signal.
+    const decision = await runCareerpassmailAgent({
+      subject: detail.subject,
+      body: detail.body,
+      from: detail.from,
+    });
+    if (!decision.isJobRelated) continue;
 
-    const date = extracted.eventDate ?? null;
-    const time = extracted.eventTime ?? null;
-    const companyName = extracted.companyName ?? extractCompanyName(detail.from, detail.subject);
+    const eventType = decision.eventType ?? "other";
+    const date = decision.eventDate ?? null;
+    const time = decision.eventTime ?? null;
+    const companyName = decision.companyName ?? extractCompanyName(detail.from, detail.subject);
 
     const emailEvent: EmailEvent = {
       subject: detail.subject,
@@ -426,11 +538,12 @@ export async function monitorGmailAndSync(
       companyName,
       eventDate: date,
       eventTime: time,
-      location: extracted.location ?? null,
-      todoItems: extracted.todoItems ?? [],
+      location: decision.location ?? null,
+      todoItems: decision.todoItems ?? [],
     };
 
     detectedEvents.push(emailEvent);
+    await reportToCareerpassAgent(userId, emailEvent, decision.reason);
 
     // Notify Telegram as soon as a valid event is detected (no longer blocked by calendar write success).
     let orchestrationActions: string[] = [];
