@@ -55,12 +55,6 @@ const AGENT_TOOLS: Tool[] = [
   },
 ];
 
-function preferredLanguageLabel(lang?: string | null): string {
-  if (lang === "zh") return "中文";
-  if (lang === "en") return "English";
-  return "日本語";
-}
-
 function educationLabel(lang: "ja" | "zh" | "en", edu?: string | null): string {
   const mapJa: Record<string, string> = {
     high_school: "高校卒",
@@ -94,29 +88,31 @@ function educationLabel(lang: "ja" | "zh" | "en", edu?: string | null): string {
   return mapJa[edu] ?? edu;
 }
 
-function buildFixedOpening(user: Awaited<ReturnType<typeof getUserById>>) {
+function buildFixedOpening(
+  user: Awaited<ReturnType<typeof getUserById>>,
+  sessionId: string
+) {
   const lang = (user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
   const name =
-    user?.name ??
-    (lang === "zh" ? "同学" : lang === "en" ? "there" : "ユーザーさん");
+    user?.name ?? (lang === "zh" ? "同学" : lang === "en" ? "there" : "ユーザーさん");
+  const birthDate =
+    user?.birthDate ??
+    (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
   const education = educationLabel(lang, user?.education);
   const university =
     user?.universityName ??
     (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
-  const birthDate =
-    user?.birthDate ??
-    (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
-  const preferredLang = preferredLanguageLabel(user?.preferredLanguage);
+  const profileId = `user_${sessionId}`;
 
   if (lang === "zh") {
-    return `你好，${name}。我是就活パス，已经为你准备好服务。\n\n我已自动导入你在 /register 填写的信息：\n- 姓名：${user?.name ?? "未填写"}\n- 出生日期：${birthDate}\n- 最终学历：${education}\n- 学校名称：${university}\n- 语言偏好：${preferredLang}\n\n接下来你想先做哪一项？\n1. 履历挖掘\n2. ES撰写\n3. 模拟面试`;
+    return `您好，${name}。我是就活パス。我知道您正处于一个开始迈入社会的特殊阶段，请让我和您一起努力。\n\n您的档案ID是：*${profileId}*、您是*${birthDate}*出生的*${name}*，*${education}*，来自*${university}*，没错吧？\n\n您是新卒，还是有过工作经验呢？`;
   }
 
   if (lang === "en") {
-    return `Hello ${name}, I am CareerPass and I'm ready to support you.\n\nI have imported your /register profile into this Telegram session:\n- Name: ${user?.name ?? "not provided"}\n- Birth date: ${birthDate}\n- Education: ${education}\n- University: ${university}\n- Language preference: ${preferredLang}\n\nWhich would you like to start with?\n1. Experience mining\n2. ES drafting\n3. Mock interview`;
+    return `Hello, ${name}. I am CareerPass. I understand you are at a special stage of stepping into society, and I would like to work hard together with you.\n\nYour profile ID is: *${profileId}*. You were born on *${birthDate}*, your name is *${name}*, your education is *${education}*, and you are from *${university}*, correct?\n\nAre you a new graduate, or do you already have work experience?`;
   }
 
-  return `こんにちは、${name}。就活パスです。サポートの準備ができています。\n\n/register で入力した情報をこのTelegram会話に自動反映しました：\n- 氏名：${user?.name ?? "未記入"}\n- 生年月日：${birthDate}\n- 最終学歴：${education}\n- 学校名：${university}\n- 言語設定：${preferredLang}\n\nまず何から始めますか？\n1. 履歴の深掘り\n2. ES作成\n3. 模擬面接`;
+  return `こんにちは、${name}さん。私は就活パスです。社会に踏み出す大切な時期だと理解しています。ぜひ一緒に頑張りましょう。\n\nあなたのプロフィールIDは *${profileId}* です。*${birthDate}* 生まれの *${name}* さんで、*${education}*、*${university}* ご出身でお間違いないですか？\n\nあなたは新卒ですか？それとも就業経験がありますか？`;
 }
 
 export async function handleAgentChat(userId: number, message: string, sessionId?: string, history: any[] = []) {
@@ -127,7 +123,7 @@ export async function handleAgentChat(userId: number, message: string, sessionId
 
   // Keep first-turn greeting deterministic across all accounts.
   if (history.length === 0) {
-    const opening = buildFixedOpening(user);
+    const opening = buildFixedOpening(user, sid);
     await saveAgentMemory({
       userId,
       memoryType: "conversation",
