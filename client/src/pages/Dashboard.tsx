@@ -3,16 +3,20 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import {
   BrainCircuit,
+  BriefcaseBusiness,
   Calendar,
   CheckCircle2,
   ExternalLink,
+  FileText,
   Loader2,
   LogOut,
   MessageSquare,
+  Mic,
+  ShieldCheck,
   User,
   XCircle,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
@@ -24,6 +28,8 @@ const navItems = [
 export default function Dashboard() {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const [currentPath, navigate] = useLocation();
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [companyQuery, setCompanyQuery] = useState("");
 
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = trpc.user.getProfile.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -59,6 +65,31 @@ export default function Dashboard() {
       refetchCalendar();
     },
   });
+  const updateJobStatusMutation = trpc.jobs.updateStatus.useMutation({
+    onSuccess: () => {
+      toast.success("进度已更新");
+      refetchJobs();
+    },
+    onError: (err) => {
+      toast.error(`更新失败: ${err.message}`);
+    },
+  });
+
+  const { data: jobs = [], isLoading: jobsLoading, refetch: refetchJobs } = trpc.jobs.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const { data: reconMemories = [] } = trpc.memory.list.useQuery(
+    { type: "company_report" },
+    { enabled: isAuthenticated }
+  );
+  const { data: esMemories = [] } = trpc.memory.list.useQuery(
+    { type: "es_draft" },
+    { enabled: isAuthenticated }
+  );
+  const { data: interviewMemories = [] } = trpc.memory.list.useQuery(
+    { type: "interview_log" },
+    { enabled: isAuthenticated }
+  );
 
   useEffect(() => {
     if (!loading && !isAuthenticated) navigate("/");
@@ -91,6 +122,56 @@ export default function Dashboard() {
     }, 5000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(() => {
+      refetchJobs();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, refetchJobs]);
+
+  const boardCards = useMemo(() => {
+    const normalized = (s?: string | null) => (s ?? "").toLowerCase();
+    const q = normalized(companyQuery);
+    return jobs
+      .map((job) => {
+      const companyJa = normalized(job.companyNameJa);
+      const companyEn = normalized(job.companyNameEn);
+      const companyMatch = (text: string) => {
+        const t = normalized(text);
+        return (!!companyJa && t.includes(companyJa)) || (!!companyEn && t.includes(companyEn));
+      };
+      const recon = reconMemories
+        .filter(m => companyMatch(`${m.title}\n${m.content}`))
+        .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0];
+      const es = esMemories
+        .filter(m => companyMatch(`${m.title}\n${m.content}`))
+        .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0];
+      const interview = interviewMemories
+        .filter(m => companyMatch(`${m.title}\n${m.content}`))
+        .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0];
+      return { job, recon, es, interview };
+    })
+      .filter((card) => {
+        if (!q) return true;
+        const target = `${normalized(card.job.companyNameJa)} ${normalized((card.job as { companyNameEn?: string | null }).companyNameEn)}`;
+        return target.includes(q);
+      })
+      .sort((a, b) => +new Date(b.job.updatedAt) - +new Date(a.job.updatedAt));
+  }, [jobs, reconMemories, esMemories, interviewMemories, companyQuery]);
+
+  const columns = useMemo(() => {
+    const inResearch = boardCards.filter(c => ["researching", "applied"].includes(c.job.status));
+    const inES = boardCards.filter(c => ["es_preparing", "es_submitted"].includes(c.job.status));
+    const inInterview = boardCards.filter(c =>
+      ["interview_1", "interview_2", "interview_final"].includes(c.job.status)
+    );
+    const closed = boardCards.filter(c => ["offer", "rejected", "withdrawn"].includes(c.job.status));
+    return { inResearch, inES, inInterview, closed };
+  }, [boardCards]);
+
+  const selectedCard = boardCards.find(c => c.job.id === selectedJobId) ?? null;
 
   if (loading) {
     return (
@@ -353,6 +434,127 @@ export default function Dashboard() {
             )}
           </div>
 
+          {/* Module 3: Career Dashboard Board */}
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <BriefcaseBusiness className="w-5 h-5 text-primary" />
+                  求職進捗ダッシュボード
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  企業調査・ES・面接準備の進み具合を1画面で確認できます
+                </p>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                企業数: {jobs.length} / 進行中: {columns.inResearch.length + columns.inES.length + columns.inInterview.length}
+              </div>
+            </div>
+            <div className="mb-4">
+              <input
+                value={companyQuery}
+                onChange={(e) => setCompanyQuery(e.target.value)}
+                placeholder="搜索公司（中文/日文/英文）"
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+
+            {jobsLoading ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">読み込み中...</div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <BoardColumn
+                  title="企業情报"
+                  subtitle="Research"
+                  count={columns.inResearch.length}
+                  cards={columns.inResearch}
+                  onSelect={setSelectedJobId}
+                />
+                <BoardColumn
+                  title="ES定制"
+                  subtitle="Entry Sheet"
+                  count={columns.inES.length}
+                  cards={columns.inES}
+                  onSelect={setSelectedJobId}
+                />
+                <BoardColumn
+                  title="面试战备"
+                  subtitle="Interview"
+                  count={columns.inInterview.length}
+                  cards={columns.inInterview}
+                  onSelect={setSelectedJobId}
+                />
+                <BoardColumn
+                  title="结果归档"
+                  subtitle="Archive"
+                  count={columns.closed.length}
+                  cards={columns.closed}
+                  onSelect={setSelectedJobId}
+                />
+              </div>
+            )}
+
+            {selectedCard && (
+              <div className="mt-5 p-4 rounded-xl border border-border bg-secondary/20">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="font-semibold">{selectedCard.job.companyNameJa}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2 py-1 rounded-full bg-primary/15 text-primary">
+                      {statusLabel(selectedCard.job.status)}
+                    </span>
+                    <select
+                      value={selectedCard.job.status}
+                      onChange={(e) => {
+                        const status = e.target.value as JobStatusValue;
+                        updateJobStatusMutation.mutate({
+                          id: selectedCard.job.id,
+                          status,
+                        });
+                      }}
+                      className="h-8 rounded-md border border-border bg-background px-2 text-xs"
+                    >
+                      {JOB_STATUS_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    {telegramDeepLink?.deepLink && (
+                      <a
+                        href={telegramDeepLink.deepLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs px-2 py-1 rounded-md border border-border hover:bg-background"
+                      >
+                        去 Telegram
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div className="p-3 rounded-lg border border-border bg-card">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" /> 企业深报
+                    </p>
+                    <p className="line-clamp-3">{selectedCard.recon?.content?.slice(0, 120) ?? "未生成"}</p>
+                  </div>
+                  <div className="p-3 rounded-lg border border-border bg-card">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5" /> ES 草稿
+                    </p>
+                    <p className="line-clamp-3">{selectedCard.es?.content?.slice(0, 120) ?? "未生成"}</p>
+                  </div>
+                  <div className="p-3 rounded-lg border border-border bg-card">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Mic className="w-3.5 h-3.5" /> 面试日志
+                    </p>
+                    <p className="line-clamp-3">{selectedCard.interview?.content?.slice(0, 120) ?? "未生成"}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Profile Summary */}
           <div className="rounded-2xl border border-border bg-card p-6">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -399,4 +601,82 @@ function langLabel(lang?: string | null) {
   return lang ? (map[lang] ?? lang) : "-";
 }
 
+type BoardCard = {
+  job: {
+    id: number;
+    companyNameJa: string;
+    companyNameEn?: string | null;
+    status: string;
+    updatedAt: string | Date;
+  };
+  recon?: { content: string } | undefined;
+  es?: { content: string } | undefined;
+  interview?: { content: string } | undefined;
+};
 
+const JOB_STATUS_OPTIONS = [
+  { value: "researching", label: "调研中" },
+  { value: "es_preparing", label: "ES准备中" },
+  { value: "es_submitted", label: "ES已提交" },
+  { value: "interview_1", label: "一面" },
+  { value: "interview_2", label: "二面" },
+  { value: "interview_final", label: "终面" },
+  { value: "offer", label: "已拿offer" },
+  { value: "rejected", label: "未通过" },
+  { value: "withdrawn", label: "已撤回" },
+] as const;
+
+type JobStatusValue = (typeof JOB_STATUS_OPTIONS)[number]["value"];
+
+function BoardColumn(props: {
+  title: string;
+  subtitle: string;
+  count: number;
+  cards: BoardCard[];
+  onSelect: (id: number) => void;
+}) {
+  const { title, subtitle, count, cards, onSelect } = props;
+  return (
+    <div className="rounded-xl border border-border bg-secondary/20 p-3 min-h-[220px]">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-sm font-semibold">{title}</p>
+          <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+        </div>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-background border border-border">{count}</span>
+      </div>
+      <div className="space-y-2">
+        {cards.length === 0 ? (
+          <div className="text-xs text-muted-foreground py-6 text-center">暂无</div>
+        ) : (
+          cards.map((c) => (
+            <button
+              key={c.job.id}
+              onClick={() => onSelect(c.job.id)}
+              className="w-full text-left p-3 rounded-lg border border-border bg-card hover:bg-card/80 transition-colors"
+            >
+              <p className="text-sm font-medium truncate">{c.job.companyNameJa}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">{statusLabel(c.job.status)}</p>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function statusLabel(status: string): string {
+  const map: Record<string, string> = {
+    researching: "调研中",
+    applied: "已投递",
+    es_preparing: "ES准备中",
+    es_submitted: "ES已提交",
+    interview_1: "一面",
+    interview_2: "二面",
+    interview_final: "终面",
+    offer: "已拿到offer",
+    rejected: "未通过",
+    withdrawn: "已撤回",
+  };
+  return map[status] ?? status;
+}
