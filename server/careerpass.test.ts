@@ -244,10 +244,19 @@ describe("agent.chat", () => {
   it("returns a reply from LLM", async () => {
     const ctx = createMockContext();
     const caller = appRouter.createCaller(ctx);
-    const result = await caller.agent.chat({
+    // First turn (history=[]) returns fixed opening greeting, not LLM
+    const firstResult = await caller.agent.chat({
       message: "こんにちは",
       sessionId: "test-session",
       history: [],
+    });
+    expect(firstResult.reply).toContain("就活パス");
+    expect(firstResult.sessionId).toBeDefined();
+    // Subsequent turns (history non-empty) use LLM
+    const result = await caller.agent.chat({
+      message: "こんにちは",
+      sessionId: "test-session",
+      history: [{ role: "assistant", content: "ウェルカム" }],
     });
     expect(result.reply).toBe("テスト回答です。");
     expect(result.sessionId).toBeDefined();
