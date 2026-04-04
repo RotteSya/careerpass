@@ -137,7 +137,7 @@ ${profileContextJa}`;
   const choice = response.choices?.[0]?.message;
 
   if (choice?.tool_calls && choice.tool_calls.length > 0) {
-    const results = [];
+    const results: string[] = [];
     for (const toolCall of choice.tool_calls) {
       const args = JSON.parse(toolCall.function.arguments);
       if (toolCall.function.name === "updateJobStatus") {
@@ -298,15 +298,26 @@ ${report?.content ?? "（企業情報なし）"}
 ユーザー履歴書：
 ${resume?.content ?? "（履歴書なし）"}`;
 
-  const response = await invokeLLM({
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `${companyName}の${position}向けのESを作成してください。` },
-    ],
-  });
+  const requiredSections = ["志望動機", "自己PR"];
 
-  const rawES = response.choices?.[0]?.message?.content;
-  const esContent = typeof rawES === "string" ? rawES : "Failed to generate ES.";
+  const callLLM = async () => {
+    const res = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `${companyName}の${position}向けのESを作成してください。` },
+      ],
+    });
+    const raw = res.choices?.[0]?.message?.content;
+    return typeof raw === "string" ? raw : "Failed to generate ES.";
+  };
+
+  let esContent = await callLLM();
+
+  // Retry once if required sections are missing
+  const missingSections = requiredSections.filter((s) => !esContent.includes(s));
+  if (missingSections.length > 0) {
+    esContent = await callLLM();
+  }
 
   await saveAgentMemory({
     userId,
