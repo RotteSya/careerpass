@@ -209,7 +209,13 @@ function buildFixedOpening(
   return `こんにちは、${name}さん。私は就活パスです。社会に踏み出す大切な時期だと理解しています。ぜひ一緒に頑張りましょう。\n\nあなたのプロフィールIDは *${profileId}* です。*${birthDate}* 生まれの *${name}* さんで、*${education}*、*${university}* ご出身でお間違いないですか？\n\nあなたは新卒ですか？それとも就業経験がありますか？`;
 }
 
-export async function handleAgentChat(userId: number, message: string, sessionId?: string, history: any[] = []) {
+export async function handleAgentChat(
+  userId: number,
+  message: string,
+  sessionId?: string,
+  history: any[] = [],
+  extraSystemInstruction?: string
+) {
   const user = await getUserById(userId);
   const lang = user?.preferredLanguage ?? "ja";
 
@@ -300,8 +306,12 @@ ${profileContextEn}`
 日本語でユーザーとコミュニケーションしてください。
 ${profileContextJa}`;
 
+  const effectiveSystemPrompt = extraSystemInstruction
+    ? `${systemPrompt}\n\n[运行时附加指令]\n${extraSystemInstruction}`
+    : systemPrompt;
+
   const messages = [
-    { role: "system" as const, content: systemPrompt },
+    { role: "system" as const, content: effectiveSystemPrompt },
     ...history.map((m) => ({
       role: m.role as "user" | "assistant",
       content: m.content,

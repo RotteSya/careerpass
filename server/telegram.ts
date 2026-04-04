@@ -275,6 +275,27 @@ telegramRouter.post("/webhook", async (req, res) => {
               content: `User: /start user_${userId}\nAssistant: ${greeting}`,
               metadata: { sessionId },
             });
+
+            // After Telegram bind/start, begin 5-day mailbox recognition in background.
+            // Do not proactively push result yet; wait until user's next message to nudge via careerpass.
+            void (async () => {
+              try {
+                const result = await monitorGmailAndSync(userId!);
+                await updateAgentSession(userId!, {
+                  sessionState: {
+                    ...(session?.sessionState as Record<string, unknown> | null ?? {}),
+                    mailOnboarding: {
+                      pendingNudge: result.detected > 0,
+                      scanned: result.scanned,
+                      detected: result.detected,
+                      updatedAt: new Date().toISOString(),
+                    },
+                  },
+                });
+              } catch (err) {
+                console.error("[Telegram] /start background mail recognition failed:", err);
+              }
+            })();
           } else {
             await sendTelegramMessage(
               chatId,
@@ -370,8 +391,26 @@ telegramRouter.post("/webhook", async (req, res) => {
           const question = await runAgentInterview(userId, "企業名不明", "総合職", history, text);
           await sendTelegramMessage(chatId, question);
         } else {
+          const sessionState = (session.sessionState as Record<string, any> | null) ?? {};
+          const mailOnboarding = (sessionState.mailOnboarding as Record<string, any> | undefined) ?? undefined;
+          let extraSystemInstruction: string | undefined;
+          if (mailOnboarding?.pendingNudge) {
+            extraSystemInstruction =
+              `你最近已经处理了该用户过去5天内的邮件，识别到${mailOnboarding.detected ?? "若干"}条求职相关事件。` +
+              `请在本次回复中先自然提及你已根据邮件更新了“求职进度看板”并询问用户是否查看，` +
+              `不要使用固定句式或照抄模板；然后再继续回答用户当前这条消息。`;
+            await updateAgentSession(userId, {
+              sessionState: {
+                ...sessionState,
+                mailOnboarding: {
+                  ...mailOnboarding,
+                  pendingNudge: false,
+                },
+              },
+            });
+          }
           // Regular Chat
-          const { reply } = await handleAgentChat(userId, text, sessionId, history);
+          const { reply } = await handleAgentChat(userId, text, sessionId, history, extraSystemInstruction);
           await sendTelegramMessage(chatId, reply);
         }
       }

@@ -141,7 +141,7 @@ async function fetchRecentEmails(
 ): Promise<Array<{ id: string; snippet: string }>> {
   try {
     // Broad pull (without hard keyword gate). Actual job-related decision is delegated to monitor agent.
-    const query = encodeURIComponent("newer_than:30d -category:social -category:promotions");
+    const query = encodeURIComponent("newer_than:5d -category:social -category:promotions");
     const res = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${query}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
