@@ -1,18 +1,30 @@
-import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BrainCircuit } from "lucide-react";
+import { BrainCircuit, Loader2 } from "lucide-react";
 
 export default function Login() {
+  const { user, isAuthenticated, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [, navigate] = useLocation();
 
   const utils = trpc.useUtils();
+
+  useEffect(() => {
+    if (!loading && isAuthenticated && user) {
+      if (user.profileCompleted) {
+        navigate("/dashboard");
+      } else {
+        navigate("/register");
+      }
+    }
+  }, [loading, isAuthenticated, user]);
 
   const emailLogin = trpc.auth.emailLogin.useMutation({
     onSuccess: async (data) => {
@@ -30,6 +42,14 @@ export default function Login() {
     e.preventDefault();
     setError("");
     emailLogin.mutate({ email, password });
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
   }
 
   return (
