@@ -29,6 +29,13 @@
       "when": 1775188673506,
       "tag": "0003_cuddly_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1775292000000,
+      "tag": "0004_real_time_gmail_mapping",
+      "breakpoints": true
     }
   ]
 }

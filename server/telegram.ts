@@ -14,6 +14,7 @@ import {
   generateES as runAgentES,
   startInterview as runAgentInterview,
 } from "./agents";
+import { monitorGmailAndSync } from "./gmail";
 import type { User } from "../drizzle/schema";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
@@ -309,6 +310,23 @@ telegramRouter.post("/webhook", async (req, res) => {
       } else if (text === "/stop") {
         await updateAgentSession(userId, { interviewMode: false, currentAgent: "careerpass" });
         await sendTelegramMessage(chatId, "対話を終了し、メインメニューに戻ります。");
+      } else if (
+        text.startsWith("/checkmail") ||
+        /检查.*邮箱|查看.*邮箱|check.*mail|check.*inbox/i.test(text)
+      ) {
+        await sendTelegramMessage(chatId, "正在检查您的邮箱并同步关键事件，请稍候...");
+        const result = await monitorGmailAndSync(userId, String(chatId));
+        if (result.detected > 0) {
+          await sendTelegramMessage(
+            chatId,
+            `✅ 检查完成：扫描 ${result.scanned} 封，识别 ${result.detected} 个有效事件，写入日历 ${result.calendarEvents} 个。`
+          );
+        } else {
+          await sendTelegramMessage(
+            chatId,
+            `ℹ️ 检查完成：扫描 ${result.scanned} 封，但未识别到“说明会/面试/结果通知”等有效事件。\n请确保测试邮件包含明确关键词与时间。`
+          );
+        }
       } else {
         // Natural Language Processing via Orchestrator
         const memories = await getAgentMemory(userId, "conversation");

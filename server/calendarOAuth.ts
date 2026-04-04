@@ -5,7 +5,7 @@
  */
 import type { Express, Request, Response } from "express";
 import crypto from "crypto";
-import { upsertOauthToken } from "./db";
+import { upsertOauthProviderAccount, upsertOauthToken } from "./db";
 import { registerGmailPushWatch } from "./gmail";
 
 function getStateSecret(): string {
@@ -55,6 +55,19 @@ async function exchangeGoogleCode(code: string, redirectUri: string) {
   }>;
 }
 
+async function fetchGoogleAccountEmail(accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { email?: string };
+    return typeof data.email === "string" ? data.email.trim().toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function registerCalendarOAuthRoute(app: Express) {
   app.get("/api/calendar/callback", async (req: Request, res: Response) => {
     const { code, state, error } = req.query as Record<string, string>;
@@ -95,6 +108,14 @@ export function registerCalendarOAuthRoute(app: Express) {
         expiresAt,
         scope: tokenData.scope ?? null,
       });
+      const accountEmail = await fetchGoogleAccountEmail(tokenData.access_token);
+      if (accountEmail) {
+        await upsertOauthProviderAccount({
+          userId: stateData.userId,
+          provider: "google",
+          accountEmail,
+        });
+      }
       await registerGmailPushWatch(stateData.userId);
       console.log(`[CalendarOAuth] Google calendar linked for user ${stateData.userId}`);
       return res.redirect(`${appDomain}/dashboard?calendar=success`);

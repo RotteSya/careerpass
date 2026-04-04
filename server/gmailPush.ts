@@ -1,5 +1,5 @@
 import express from "express";
-import { getTelegramBinding, getUserByEmail } from "./db";
+import { getTelegramBinding, getUserByEmail, getUserIdByOauthProviderAccount } from "./db";
 import { monitorGmailAndSync } from "./gmail";
 
 export const gmailPushRouter = express.Router();
@@ -42,8 +42,9 @@ gmailPushRouter.post("/push", (req, res) => {
         return;
       }
 
-      const user = await getUserByEmail(emailAddress);
-      if (!user) {
+      const mappedUserId = await getUserIdByOauthProviderAccount("google", emailAddress);
+      const user = mappedUserId ? { id: mappedUserId } : await getUserByEmail(emailAddress);
+      if (!user?.id) {
         console.warn("[GmailPush] No user bound to email:", emailAddress);
         return;
       }

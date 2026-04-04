@@ -70,6 +70,19 @@ export const oauthTokens = mysqlTable("oauth_tokens", {
 export type OauthToken = typeof oauthTokens.$inferSelect;
 export type InsertOauthToken = typeof oauthTokens.$inferInsert;
 
+// ─── OAuth Provider Account Mapping (provider email -> user) ─────────────────
+export const oauthProviderAccounts = mysqlTable("oauth_provider_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
+  accountEmail: varchar("accountEmail", { length: 320 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type OauthProviderAccount = typeof oauthProviderAccounts.$inferSelect;
+export type InsertOauthProviderAccount = typeof oauthProviderAccounts.$inferInsert;
+
 // ─── Messaging Channel Bindings (Telegram / Line / WhatsApp / WeChat) ─────────
 /**
  * Unified multi-channel messaging binding table.

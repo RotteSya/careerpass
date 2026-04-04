@@ -11,6 +11,7 @@ import {
   agentSessions,
   jobApplications,
   oauthTokens,
+  oauthProviderAccounts,
   telegramBindings,
   users,
 } from "../drizzle/schema";
@@ -141,6 +142,41 @@ export async function listUserIdsByOauthProvider(provider: "google" | "outlook")
     .from(oauthTokens)
     .where(eq(oauthTokens.provider, provider));
   return Array.from(new Set(rows.map(r => r.userId)));
+}
+
+export async function upsertOauthProviderAccount(params: {
+  userId: number;
+  provider: "google" | "outlook";
+  accountEmail: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const normalizedEmail = params.accountEmail.trim().toLowerCase();
+
+  await db
+    .delete(oauthProviderAccounts)
+    .where(and(eq(oauthProviderAccounts.provider, params.provider), eq(oauthProviderAccounts.userId, params.userId)));
+
+  await db.insert(oauthProviderAccounts).values({
+    userId: params.userId,
+    provider: params.provider,
+    accountEmail: normalizedEmail,
+  });
+}
+
+export async function getUserIdByOauthProviderAccount(
+  provider: "google" | "outlook",
+  accountEmail: string
+): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const normalizedEmail = accountEmail.trim().toLowerCase();
+  const result = await db
+    .select({ userId: oauthProviderAccounts.userId })
+    .from(oauthProviderAccounts)
+    .where(and(eq(oauthProviderAccounts.provider, provider), eq(oauthProviderAccounts.accountEmail, normalizedEmail)))
+    .limit(1);
+  return result[0]?.userId ?? null;
 }
 
 // ─── Telegram Bindings ─────────────────────────────────────────────────────
