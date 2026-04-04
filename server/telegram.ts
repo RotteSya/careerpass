@@ -16,8 +16,14 @@ import {
 } from "./agents";
 import type { User } from "../drizzle/schema";
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "8789422574:AAGg--HXTl5Gxm0EmkeDjv8XmT5YLnuIKrU";
-const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
+const TELEGRAM_API = TELEGRAM_BOT_TOKEN
+  ? `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`
+  : "";
+
+if (!TELEGRAM_BOT_TOKEN) {
+  console.warn("[Telegram] TELEGRAM_BOT_TOKEN is not set. Telegram features are disabled.");
+}
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
@@ -128,6 +134,11 @@ function buildTelegramFixedOpening(user: User, sessionId: string): string {
 
 // Send a message via Telegram Bot API
 export async function sendTelegramMessage(chatId: string | number, text: string, parseMode = "Markdown") {
+  if (!TELEGRAM_API) {
+    console.error("[Telegram] sendMessage skipped: TELEGRAM_BOT_TOKEN is not configured.");
+    return false;
+  }
+
   try {
     const payload = {
       chat_id: chatId,
@@ -341,6 +352,11 @@ telegramRouter.get("/health", (_req, res) => {
 
 // Register webhook with Telegram (call once during setup)
 export async function registerTelegramWebhook(webhookUrl: string) {
+  if (!TELEGRAM_API) {
+    console.error("[Telegram] setWebhook skipped: TELEGRAM_BOT_TOKEN is not configured.");
+    return;
+  }
+
   try {
     const res = await fetch(`${TELEGRAM_API}/setWebhook`, {
       method: "POST",

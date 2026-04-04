@@ -8,9 +8,14 @@
 #   DOMAIN=https://your-domain.manus.space ./scripts/register-telegram-webhook.sh
 # ============================================================
 
-BOT_TOKEN="8789422574:AAGg--HXTl5Gxm0EmkeDjv8XmT5YLnuIKrU"
-DOMAIN="${DOMAIN:-https://careerpass.manus.space}"
+BOT_TOKEN="${BOT_TOKEN:-${TELEGRAM_BOT_TOKEN:-}}"
+DOMAIN="${DOMAIN:-https://careerpax.com}"
 WEBHOOK_URL="${DOMAIN}/api/telegram/webhook"
+
+if [ -z "$BOT_TOKEN" ]; then
+  echo "ERROR: BOT_TOKEN (or TELEGRAM_BOT_TOKEN) is required."
+  exit 1
+fi
 
 echo "=== CareerPass Telegram Webhook 登録 ==="
 echo "Bot Token: ${BOT_TOKEN:0:20}..."
