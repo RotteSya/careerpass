@@ -12,6 +12,7 @@
  */
 
 import { getOauthToken, upsertOauthToken } from "./db";
+import { invokeLLM } from "./_core/llm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ export interface EmailEvent {
   eventDate: string | null; // ISO 8601 if detected
   eventTime: string | null;
   location: string | null;
+  todoItems: string[];
 }
 
 export interface CalendarEvent {
@@ -219,6 +221,37 @@ function extractDate(text: string): { date: string | null; time: string | null }
   return { date, time };
 }
 
+async function extractEmailInfo(subject: string, body: string): Promise<Partial<EmailEvent>> {
+  const systemPrompt = `あなたは就活アシスタントです。メールの内容から、就活に関する情報を抽出してください。
+出力形式（JSONのみ）:
+{
+  "eventType": "interview" | "briefing" | "test" | "offer" | "rejection" | "other",
+  "companyName": "企業名",
+  "eventDate": "YYYY-MM-DD",
+  "eventTime": "HH:MM",
+  "location": "場所またはリンク",
+  "todoItems": ["やるべきこと1", "やるべきこと2"]
+}`;
+
+  try {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `件名: ${subject}\n\n本文: ${body.slice(0, 2000)}` },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices?.[0]?.message?.content;
+    if (typeof content === "string") {
+      return JSON.parse(content);
+    }
+  } catch (err) {
+    console.error("[Gmail] LLM extraction failed:", err);
+  }
+  return {};
+}
+
 // ─── Google Calendar Write ────────────────────────────────────────────────────
 
 async function writeToGoogleCalendar(
@@ -287,11 +320,14 @@ export async function monitorGmailAndSync(
     const detail = await fetchEmailDetail(accessToken, msg.id);
     if (!detail) continue;
 
-    const eventType = classifyEmail(detail);
+    // Use LLM for extraction
+    const extracted = await extractEmailInfo(detail.subject, detail.body);
+    const eventType = extracted.eventType ?? "other";
     if (eventType === "other") continue;
 
-    const { date, time } = extractDate(`${detail.subject} ${detail.body}`);
-    const companyName = extractCompanyName(detail.from, detail.subject);
+    const date = extracted.eventDate ?? null;
+    const time = extracted.eventTime ?? null;
+    const companyName = extracted.companyName ?? extractCompanyName(detail.from, detail.subject);
 
     const emailEvent: EmailEvent = {
       subject: detail.subject,
@@ -302,7 +338,8 @@ export async function monitorGmailAndSync(
       companyName,
       eventDate: date,
       eventTime: time,
-      location: null,
+      location: extracted.location ?? null,
+      todoItems: extracted.todoItems ?? [],
     };
 
     detectedEvents.push(emailEvent);
@@ -325,7 +362,7 @@ export async function monitorGmailAndSync(
 
       const calEvent: CalendarEvent = {
         summary: `${typeLabels[eventType]}${companyName ?? ""} - ${detail.subject.slice(0, 40)}`,
-        description: `CareerPass自動登録\n\n送信元: ${detail.from}\n\n${detail.body.slice(0, 300)}`,
+        description: `CareerPass自動登録\n\n場所/リンク: ${emailEvent.location ?? "未記入"}\n\nやるべきこと:\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}\n\n送信元: ${detail.from}\n\n${detail.body.slice(0, 300)}`,
         start: { dateTime: `${startDateTime}+09:00`, timeZone: "Asia/Tokyo" },
         end: { dateTime: `${endDateTime}+09:00`, timeZone: "Asia/Tokyo" },
       };
@@ -336,11 +373,14 @@ export async function monitorGmailAndSync(
 
         // Send Telegram notification
         if (telegramChatId) {
+          const todoText = emailEvent.todoItems.length > 0 ? `\n📝 *やるべきこと:*\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}` : "";
           const notifText =
             `📅 *就活スケジュール自動登録*\n\n` +
             `${typeLabels[eventType]} ${companyName ?? "企業"}\n` +
             `📆 ${date}${time ? ` ${time}` : ""}\n` +
-            `📧 件名: ${detail.subject.slice(0, 50)}\n\n` +
+            `📍 場所/リンク: ${emailEvent.location ?? "未記入"}\n` +
+            `📧 件名: ${detail.subject.slice(0, 50)}\n` +
+            todoText + `\n\n` +
             `Googleカレンダーに登録しました。`;
           await sendTelegramMessage(telegramChatId, notifText);
         }

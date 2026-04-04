@@ -5,11 +5,21 @@ import {
   getOrCreateAgentSession,
   saveAgentMemory,
   getAgentMemory,
+  updateAgentSession,
+  getTelegramBindingByTelegramId,
 } from "./db";
+import {
+  handleAgentChat,
+  reconCompany as runAgentRecon,
+  generateES as runAgentES,
+  startInterview as runAgentInterview,
+} from "./agents";
 import type { User } from "../drizzle/schema";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "8789422574:AAGg--HXTl5Gxm0EmkeDjv8XmT5YLnuIKrU";
 const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+
+const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
 export const telegramRouter = express.Router();
 
@@ -88,19 +98,51 @@ function educationLabelEn(edu?: string | null): string {
 }
 
 // Send a message via Telegram Bot API
-async function sendTelegramMessage(chatId: string | number, text: string, parseMode = "Markdown") {
+export async function sendTelegramMessage(chatId: string | number, text: string, parseMode = "Markdown") {
   try {
-    await fetch(`${TELEGRAM_API}/sendMessage`, {
+    const payload = {
+      chat_id: chatId,
+      text: text.length > 4096 ? text.slice(0, 4096) : text,
+      parse_mode: parseMode,
+    };
+
+    const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: parseMode,
-      }),
+      body: JSON.stringify(payload),
     });
+
+    if (res.ok) return true;
+
+    const errText = await res.text();
+    console.error("[Telegram] sendMessage failed:", {
+      status: res.status,
+      body: errText,
+      parseMode,
+    });
+
+    // Fallback: retry without parse_mode so markdown parse errors do not block all replies.
+    if (parseMode) {
+      const fallbackRes = await fetch(`${TELEGRAM_API}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: payload.text,
+        }),
+      });
+      if (fallbackRes.ok) return true;
+      const fallbackErrText = await fallbackRes.text();
+      console.error("[Telegram] sendMessage fallback failed:", {
+        status: fallbackRes.status,
+        body: fallbackErrText,
+      });
+    }
+
+    return false;
   } catch (err) {
     console.error("[Telegram] Failed to send message:", err);
+    return false;
   }
 }
 
@@ -121,13 +163,17 @@ telegramRouter.post("/webhook", async (req, res) => {
     const telegramUsername = message.from?.username ?? null;
     const text: string = message.text ?? "";
 
+    // Find bound user
+    const binding = await getTelegramBindingByTelegramId(telegramId);
+    let userId = binding?.userId;
+
     // Handle /start command with deep link payload
     if (text.startsWith("/start")) {
       const parts = text.split(" ");
       const payload = parts[1]; // e.g. "user_12345"
 
       if (payload && payload.startsWith("user_")) {
-        const userId = parseInt(payload.replace("user_", ""), 10);
+        userId = parseInt(payload.replace("user_", ""), 10);
 
         if (!isNaN(userId)) {
           // Look up user in DB
@@ -171,7 +217,7 @@ telegramRouter.post("/webhook", async (req, res) => {
           } else {
             await sendTelegramMessage(
               chatId,
-              "アカウントが見つかりませんでした。就活パスのウェブサイトで先に登録してください。\n\nhttps://careerpass.manus.space"
+              `アカウントが見つかりませんでした。就活パスのウェブサイトで先に登録してください。\n\n${APP_DOMAIN}`
             );
           }
         } else {
@@ -181,14 +227,73 @@ telegramRouter.post("/webhook", async (req, res) => {
         // /start without payload
         await sendTelegramMessage(
           chatId,
-          "就活パスへようこそ！\n\n就活パスのウェブサイトでアカウントを作成し、QRコードをスキャンしてください。\n\nhttps://careerpass.manus.space"
+          `就活パスへようこそ！\n\n就活パスのウェブサイトでアカウントを作成し、QRコードをスキャンしてください。\n\n${APP_DOMAIN}`
         );
       }
+    } else if (userId) {
+      // Agent Session Handling
+      const session = await getOrCreateAgentSession(userId, String(chatId));
+      const sessionId = String(session.id);
+
+      // Simple routing based on session state or commands
+      if (text.startsWith("/recon")) {
+        const companyName = text.replace("/recon", "").trim();
+        if (!companyName) {
+          await sendTelegramMessage(chatId, "企業名を入力してください。例: `/recon トヨタ`", "Markdown");
+        } else {
+          await sendTelegramMessage(chatId, `🔍 ${companyName} の情報を調査しています... しばらくお待ちください。`);
+          const report = await runAgentRecon(userId, companyName);
+          await sendTelegramMessage(chatId, `✅ ${companyName} の調査レポートが完成しました：\n\n${report.slice(0, 4000)}`);
+        }
+      } else if (text.startsWith("/es")) {
+        const parts = text.replace("/es", "").trim().split(" ");
+        const companyName = parts[0];
+        const position = parts[1] ?? "総合職";
+        if (!companyName) {
+          await sendTelegramMessage(chatId, "企業名を入力してください。例: `/es トヨタ 営業職`", "Markdown");
+        } else {
+          await sendTelegramMessage(chatId, `📄 ${companyName} のESを作成しています...`);
+          const es = await runAgentES(userId, companyName, position, sessionId);
+          await sendTelegramMessage(chatId, `✅ ${companyName} のES案が完成しました：\n\n${es.slice(0, 4000)}`);
+        }
+      } else if (text.startsWith("/interview")) {
+        const companyName = text.replace("/interview", "").trim();
+        if (!companyName) {
+          await sendTelegramMessage(chatId, "企業名を入力してください。例: `/interview トヨタ`", "Markdown");
+        } else {
+          await updateAgentSession(userId, { interviewMode: true, currentAgent: "careerpassinterview" });
+          const question = await runAgentInterview(userId, companyName, "総合職");
+          await sendTelegramMessage(chatId, `🎤 ${companyName} の模擬面接を開始します。私は面接官です。失礼いたします。\n\n${question}`);
+        }
+      } else if (text === "/stop") {
+        await updateAgentSession(userId, { interviewMode: false, currentAgent: "careerpass" });
+        await sendTelegramMessage(chatId, "対話を終了し、メインメニューに戻ります。");
+      } else {
+        // Natural Language Processing via Orchestrator
+        const memories = await getAgentMemory(userId, "conversation");
+        const history = memories.slice(0, 5).reverse().map(m => {
+          const parts = m.content.split("\nAssistant: ");
+          return [
+            { role: "user", content: parts[0].replace("User: ", "") },
+            { role: "assistant", content: parts[1] ?? "" }
+          ];
+        }).flat();
+
+        if (session.interviewMode) {
+          // Continue interview
+          const question = await runAgentInterview(userId, "企業名不明", "総合職", history, text);
+          await sendTelegramMessage(chatId, question);
+        } else {
+          // Regular Chat
+          const { reply } = await handleAgentChat(userId, text, sessionId, history);
+          await sendTelegramMessage(chatId, reply);
+        }
+      }
     } else {
-      // Regular message — echo back a placeholder
+      // Not bound
       await sendTelegramMessage(
         chatId,
-        "メッセージを受信しました。現在、Telegram経由のAI対話機能は準備中です。\n\nウェブサイトのAIチャット機能をご利用ください。"
+        `就活パスへようこそ！\n\n就活パスのウェブサイトでアカウントを作成し、QRコードをスキャンして連携してください。\n\n${APP_DOMAIN}`
       );
     }
 

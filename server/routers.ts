@@ -22,6 +22,13 @@ import crypto from "crypto";
 import { reconCompany as runRecon, searchMemories } from "./recon";
 import { monitorGmailAndSync, sendTelegramMessage } from "./gmail";
 import {
+  handleAgentChat,
+  generateResume,
+  reconCompany as runAgentRecon,
+  generateES as runAgentES,
+  startInterview as runAgentInterview,
+} from "./agents";
+import {
   registerWithEmail,
   loginWithEmail,
   verifyEmail as verifyEmailToken,
@@ -419,98 +426,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const user = await getUserById(ctx.user.id);
-        const lang = user?.preferredLanguage ?? "ja";
-
-        // Build user profile context — injected into system prompt so Agent never re-asks known info
-        const educationMapJa: Record<string, string> = {
-          high_school: "高校卒", associate: "短大・専門卒", bachelor: "大学卒（学士）",
-          master: "大学院修士課程", doctor: "大学院博士課程", other: "その他",
-        };
-        const educationMapZh: Record<string, string> = {
-          high_school: "高中毕业", associate: "专科/短大", bachelor: "本科",
-          master: "硕士研究生", doctor: "博士研究生", other: "其他",
-        };
-        const birthYear = user?.birthDate ? parseInt(user.birthDate.split("-")[0]) : null;
-        const age = birthYear ? new Date().getFullYear() - birthYear : null;
-        const eduJa = user?.education ? (educationMapJa[user.education] ?? user.education) : "未記入";
-        const eduZh = user?.education ? (educationMapZh[user.education] ?? user.education) : "未填写";
-
-        const profileContextZh = `
-【用户已知信息 — 禁止重复询问以下任何内容】
-- 姓名: ${user?.name ?? "未填写"}
-- 年龄: ${age ? `${age}岁` : "未填写"}
-- 最终学历: ${eduZh}
-- 学校名称: ${user?.universityName ?? "未填写"}
-- 沟通语言偏好: 中文
-以上信息已从用户注册档案中获取，对话中无需再次询问这些基本信息。`;
-
-        const profileContextEn = `
-[User's Known Profile — DO NOT ask about any of the following]
-- Name: ${user?.name ?? "not provided"}
-- Age: ${age ? `${age} years old` : "not provided"}
-- Education: ${user?.education ? (user.education === "master" ? "Master's degree" : user.education === "bachelor" ? "Bachelor's degree" : user.education) : "not provided"}
-- University: ${user?.universityName ?? "not provided"}
-- Language preference: English
-This information is already known from the user's registration profile. Do NOT ask about these basic details during conversation.`;
-
-        const profileContextJa = `
-【ユーザーの既知情報 — 以下の情報は絶対に再度質問しないこと】
-- 氏名: ${user?.name ?? "未記入"}
-- 年齢: ${age ? `${age}歳` : "未記入"}
-- 最終学歴: ${eduJa}
-- 大学・学校名: ${user?.universityName ?? "未記入"}
-- 希望言語: 日本語
-これらの情報はユーザーの登録プロフィールから取得済みです。対話中にこれらの基本情報を再度尋ねてはいけません。`;
-
-        const systemPrompt =
-          lang === "zh"
-            ? `你是"就活パス"的专属AI求职顾问，专注于日本就职活动辅导。你的名字叫CareerPass。
-你的核心职责：
-1. 用STAR法则（Situation, Task, Action, Result）深挖用户的实习、打工、项目、研究经历
-2. 帮助用户准备日本企业的ES（Entry Sheet）和面试
-3. 监控求职进度并提供专业建议
-请用中文与用户交流。
-${profileContextZh}`
-            : lang === "en"
-            ? `You are CareerPass, a dedicated AI career advisor specializing in Japanese job hunting (就職活動).
-Your core responsibilities:
-1. Use the STAR method (Situation, Task, Action, Result) to deeply explore the user's internship, part-time, project, and research experiences
-2. Help users prepare ES (Entry Sheet) and interviews for Japanese companies
-3. Track job hunting progress and provide professional advice
-Please communicate in English.
-${profileContextEn}`
-            : `あなたは「就活パス」専属のAIキャリアアドバイザーです。日本の就職活動に特化したサポートを提供します。
-あなたの主な役割：
-1. STAR法（Situation, Task, Action, Result）を使って、ユーザーのインターン・アルバイト・プロジェクト・研究経験を深堀りする
-2. 日本企業のES（エントリーシート）と面接の準備をサポートする
-3. 就活の進捗を管理し、専門的なアドバイスを提供する
-日本語でユーザーとコミュニケーションしてください。
-${profileContextJa}`;
-
-        const messages = [
-          { role: "system" as const, content: systemPrompt },
-          ...(input.history ?? []).map((m) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
-          })),
-          { role: "user" as const, content: input.message },
-        ];
-
-        const response = await invokeLLM({ messages });
-        const rawReply = response.choices?.[0]?.message?.content;
-        const reply = typeof rawReply === "string" ? rawReply : "申し訳ありません、エラーが発生しました。";
-
-        // Save conversation to memory
-        await saveAgentMemory({
-          userId: ctx.user.id,
-          memoryType: "conversation",
-          title: `Conversation ${new Date().toISOString()}`,
-          content: `User: ${input.message}\nAssistant: ${reply}`,
-          metadata: { sessionId: input.sessionId ?? crypto.randomUUID() },
-        });
-
-        return { reply, sessionId: input.sessionId ?? crypto.randomUUID() };
+        return handleAgentChat(ctx.user.id, input.message, input.sessionId, input.history);
       }),
 
     generateResume: protectedProcedure
@@ -521,35 +437,8 @@ ${profileContextJa}`;
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const user = await getUserById(ctx.user.id);
-        const systemPrompt = `あなたはプロのキャリアアドバイザーです。ユーザーの経験を元に、日本の就活で使える構造化された履歴書（USER_${input.sessionId}.md形式）を作成してください。
-STAR法則に基づいて各経験を整理し、以下の形式で出力してください：
-# USER_${input.sessionId} - 個人履歴書
-## 基本情報
-## 学歴
-## 職務・インターン経験（STAR形式）
-## スキル・強み
-## 自己分析`;
-
-        const response = await invokeLLM({
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: input.experiences },
-          ],
-        });
-
-        const rawResume = response.choices?.[0]?.message?.content;
-        const resumeContent = typeof rawResume === "string" ? rawResume : "履歴書の生成に失敗しました。";
-
-        await saveAgentMemory({
-          userId: ctx.user.id,
-          memoryType: "resume",
-          title: `USER_${input.sessionId}.md`,
-          content: resumeContent,
-          metadata: { sessionId: input.sessionId },
-        });
-
-        return { resume: resumeContent, sessionId: input.sessionId };
+        const resume = await generateResume(ctx.user.id, input.experiences, input.sessionId);
+        return { resume, sessionId: input.sessionId };
       }),
 
     reconCompany: protectedProcedure
@@ -560,67 +449,10 @@ STAR法則に基づいて各経験を整理し、以下の形式で出力して�
         })
       )
       .mutation(async ({ ctx, input }) => {
-        // Stage 1-3: Firecrawl → Tavily → LLM-only fallback
-        const reconResult = await runRecon(input.companyName);
-
-        const strategyLabel: Record<string, string> = {
-          firecrawl: "Firecrawl深度スクレイピング",
-          tavily: "Tavily AI検索",
-          llm_only: "LLM内部知識のみ",
-        };
-
-        const systemPrompt = `あなたは日本の就活コンサルタントです。以下の情報源を分析し、就活生向けの《企業深度簡報》を作成してください。
-
-情報収集戦略: ${strategyLabel[reconResult.strategy]}
-
-${reconResult.rawText ? `収集した情報源:
-${reconResult.rawText.slice(0, 8000)}` : `情報源なし。内部知識のみで分析してください。`}
-
-レポート形式（${input.companyName}_Recon_Report.md）に必ず以下4セクションを含めてください：
-
-## 【基本情報と中期戦略】
-主要事業・技術スタック・市場地位・最近の戦略的重点
-
-## 【内部の実態・黒料】
-最近のニュースや経営計画から推測される課題（DX転換の遅れ、AI導入の困難、グローバル化の障壁、技術的負債など）
-
-## 【求める人間像（核心推論）】
-企業が渴求する人材特性と価値観
-
-## 【高価値逆質問設計】
-面接で使える効果的な逆質問3～5個`;
-
-        const response = await invokeLLM({
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: `${input.companyName}の《企業深度簡報》を作成してください。`,
-            },
-          ],
-        });
-
-        const rawReport = response.choices?.[0]?.message?.content;
-        const reportContent = typeof rawReport === "string" ? rawReport : "レポートの生成に失敗しました。";
-
-        await saveAgentMemory({
-          userId: ctx.user.id,
-          memoryType: "company_report",
-          title: `${input.companyName}_Recon_Report.md`,
-          content: reportContent,
-          metadata: {
-            companyName: input.companyName,
-            jobApplicationId: input.jobApplicationId,
-            reconStrategy: reconResult.strategy,
-            sourcesCount: reconResult.sources.length,
-          },
-        });
-
+        const report = await runAgentRecon(ctx.user.id, input.companyName, input.jobApplicationId);
         return {
-          report: reportContent,
+          report,
           companyName: input.companyName,
-          strategy: reconResult.strategy,
-          sourcesCount: reconResult.sources.length,
         };
       }),
 
@@ -633,62 +465,8 @@ ${reconResult.rawText.slice(0, 8000)}` : `情報源なし。内部知識のみ�
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const memories = await getAgentMemory(ctx.user.id);
-        const resume = memories.find((m) => m.memoryType === "resume");
-        const report = memories.find(
-          (m) => m.memoryType === "company_report" && m.title.includes(input.companyName)
-        );
-
-        const systemPrompt = `あなたはプロの就活アドバイザーです。以下の情報を元に、${input.companyName}の${input.position}ポジション向けの日本語ESを作成してください。
-
-ESには必ず以下の2つのセクションを含めてください：
-1. 志望動機 - 企業の実際の課題・痛点と自分の能力を結びつけ、なぜこの会社でなければならないかを説明
-2. 自己PR - STAR法則に基づいた具体的な経験と強みのアピール
-
-企業情報：
-${report?.content ?? "（企業情報なし）"}
-
-ユーザー履歴書：
-${resume?.content ?? "（履歴書なし）"}`;
-
-        const response = await invokeLLM({
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: `${input.companyName}の${input.position}向けのESを作成してください。`,
-            },
-          ],
-        });
-
-        const rawES = response.choices?.[0]?.message?.content;
-        let esContent = typeof rawES === "string" ? rawES : "";
-
-        // Validate ES contains both required sections; retry once if missing
-        const hasMotive = esContent.includes("志望動機");
-        const hasSelfPR = esContent.includes("自己PR");
-        if (!hasMotive || !hasSelfPR) {
-          const retryResponse = await invokeLLM({
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: `${input.companyName}の${input.position}向けのESを作成してください。必ず「志望動機」と「自己PR」の両セクションを含めてください。` },
-            ],
-          });
-          const retryRaw = retryResponse.choices?.[0]?.message?.content;
-          esContent = typeof retryRaw === "string" ? retryRaw : esContent;
-        }
-
-        if (!esContent) esContent = "ESの生成に失敗しました。";
-
-        await saveAgentMemory({
-          userId: ctx.user.id,
-          memoryType: "es_draft",
-          title: `${input.companyName}_${input.position}_ES.md`,
-          content: esContent,
-          metadata: { companyName: input.companyName, position: input.position, sessionId: input.sessionId },
-        });
-
-        return { es: esContent };
+        const es = await runAgentES(ctx.user.id, input.companyName, input.position, input.sessionId);
+        return { es };
       }),
 
     startInterview: protectedProcedure
@@ -703,64 +481,8 @@ ${resume?.content ?? "（履歴書なし）"}`;
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const memories = await getAgentMemory(ctx.user.id);
-        const report = memories.find(
-          (m) => m.memoryType === "company_report" && m.title.includes(input.companyName)
-        );
-        const esDraft = memories.find(
-          (m) => m.memoryType === "es_draft" && m.title.includes(input.companyName)
-        );
-
-        const systemPrompt = `あなたは${input.companyName}の採用面接官です。非常に厳格で、曖昧な回答を絶対に許さない、本物の日本企業の面接官として振る舞ってください。
-全て丁寧語・敬語を使用してください。
-【重要ルール】毎回必ず1つの質問のみを行い、ユーザーの回答を待ってから次の質問をしてください。複数の質問を一度にしてはいけません。
-候補者のESと企業情報を熟読し、ESの内容を深掘りする鋭い質問をしてください。
-
-企業情報：
-${report?.content ?? ""}
-
-候補者のES：
-${esDraft?.content ?? ""}`;
-
-        const isFirstMessage = !input.history || input.history.length === 0;
-
-        const messages = [
-          { role: "system" as const, content: systemPrompt },
-          ...(input.history ?? []).map((m) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
-          })),
-        ];
-
-        if (isFirstMessage) {
-          messages.push({
-            role: "user" as const,
-            content: "面接を開始してください。",
-          });
-        } else if (input.userAnswer) {
-          messages.push({ role: "user" as const, content: input.userAnswer });
-        }
-
-        const response = await invokeLLM({ messages });
-        const rawQuestion = response.choices?.[0]?.message?.content;
-        let question = typeof rawQuestion === "string" ? rawQuestion : "面接を開始できませんでした。";
-
-        // Enforce single-question rule: if multiple question marks detected, trim to first question
-        const questionMarks = (question.match(/[？?]/g) ?? []).length;
-        if (questionMarks > 1) {
-          // Split on Japanese/English question marks and keep only the first question sentence
-          const parts = question.split(/(?<=[？?])/);
-          // Find the first part that ends with a question mark
-          const firstQuestion = parts.find(p => /[？?]/.test(p));
-          if (firstQuestion) {
-            // Keep any preamble (non-question text) before the first question
-            const firstQIdx = question.indexOf(firstQuestion);
-            const preamble = firstQIdx > 0 ? question.slice(0, firstQIdx) : "";
-            question = (preamble + firstQuestion).trim();
-          }
-        }
-
-        return { question, isFirstMessage };
+        const question = await runAgentInterview(ctx.user.id, input.companyName, input.position, input.history, input.userAnswer);
+        return { question, isFirstMessage: !input.history || input.history.length === 0 };
       }),
 
     monitorEmails: protectedProcedure.mutation(async ({ ctx }) => {

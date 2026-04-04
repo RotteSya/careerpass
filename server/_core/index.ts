@@ -5,6 +5,7 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { telegramRouter } from "../telegram";
+import { registerTelegramWebhook } from "../telegram";
 import { appRouter } from "../routers";
 import { registerCalendarOAuthRoute } from "../calendarOAuth";
 import { createContext } from "./context";
@@ -41,6 +42,18 @@ async function startServer() {
   registerCalendarOAuthRoute(app);
   // Telegram Bot Webhook under /api/telegram
   app.use("/api/telegram", telegramRouter);
+
+  // Auto-register Telegram webhook on startup to avoid silent bot inactivity.
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (botToken) {
+    const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.com";
+    const webhookUrl =
+      process.env.TELEGRAM_WEBHOOK_URL ?? `${appDomain}/api/telegram/webhook`;
+    registerTelegramWebhook(webhookUrl).catch(err => {
+      console.error("[Telegram] Webhook auto-registration failed:", err);
+    });
+  }
+
   // tRPC API
   app.use(
     "/api/trpc",
