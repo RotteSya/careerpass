@@ -15,8 +15,7 @@ import { getOauthToken, getUserCalendarColorPrefs, saveAgentMemory, upsertOauthT
 import { invokeLLM } from "./_core/llm";
 import {
   reconCompany as runAgentRecon,
-  generateES as runAgentES,
-  startInterview as runAgentInterview,
+  startCompanyWorkflow,
 } from "./agents";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -488,23 +487,16 @@ async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<
   if (!companyName) return actions;
 
   try {
-    // 1) Always keep company intelligence fresh for actionable events.
-    if (["interview", "briefing", "test", "deadline", "offer", "rejection"].includes(event.eventType)) {
+    // Mail-driven workflow trigger:
+    // careerpassmail identifies target company -> handoff to careerpass -> auto run recon -> ES -> interview.
+    if (["interview", "briefing", "test", "deadline", "offer"].includes(event.eventType)) {
+      const sid = `mail-${Date.now()}`;
+      await startCompanyWorkflow(userId, companyName, "総合職", sid);
+      actions.push(`careerpass:workflow-started:${companyName}`);
+    } else if (event.eventType === "rejection") {
+      // Rejection mails still update company intelligence, but do not start interview workflow.
       await runAgentRecon(userId, companyName);
       actions.push(`recon:${companyName}`);
-    }
-
-    // 2) Interview-related mail should prepare interview mode immediately.
-    if (event.eventType === "interview" || event.eventType === "test") {
-      await runAgentInterview(userId, companyName, "総合職");
-      actions.push(`interview:${companyName}`);
-    }
-
-    // 3) Briefing/intern related mail can prebuild ES draft for faster turnaround.
-    if (event.eventType === "briefing") {
-      const sid = `gmail-${Date.now()}`;
-      await runAgentES(userId, companyName, "総合職", sid);
-      actions.push(`es:${companyName}`);
     }
   } catch (err) {
     console.error("[Gmail] Sub-agent orchestration failed:", err);

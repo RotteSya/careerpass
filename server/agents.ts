@@ -3,6 +3,7 @@ import {
   getUserById,
   getAgentMemory,
   saveAgentMemory,
+  updateAgentSession,
   updateJobApplicationStatus,
   createJobApplication,
   getJobApplications,
@@ -99,7 +100,54 @@ const AGENT_TOOLS: Tool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "startCompanyWorkflow",
+      description:
+        "Start end-to-end workflow: recon -> ES drafting -> interview kickoff for a target company",
+      parameters: {
+        type: "object",
+        properties: {
+          companyName: { type: "string", description: "Target company name" },
+          position: {
+            type: "string",
+            description: "Target position, default to 総合職 when omitted",
+          },
+        },
+        required: ["companyName"],
+      },
+    },
+  },
 ];
+
+export async function startCompanyWorkflow(
+  userId: number,
+  companyName: string,
+  position: string,
+  sessionId: string
+): Promise<{ report: string; es: string; firstQuestion: string }> {
+  await updateAgentSession(userId, {
+    currentAgent: "careerpassrecon",
+    sessionState: { workflow: { stage: "recon", companyName, position, sessionId } },
+  });
+  const report = await reconCompany(userId, companyName);
+
+  await updateAgentSession(userId, {
+    currentAgent: "careerpasses",
+    sessionState: { workflow: { stage: "es", companyName, position, sessionId } },
+  });
+  const es = await generateES(userId, companyName, position, sessionId);
+
+  await updateAgentSession(userId, {
+    currentAgent: "careerpassinterview",
+    interviewMode: true,
+    sessionState: { workflow: { stage: "interview", companyName, position, sessionId } },
+  });
+  const firstQuestion = await startInterview(userId, companyName, position, []);
+
+  return { report, es, firstQuestion };
+}
 
 function educationLabel(lang: "ja" | "zh" | "en", edu?: string | null): string {
   const mapJa: Record<string, string> = {
@@ -227,6 +275,7 @@ export async function handleAgentChat(userId: number, message: string, sessionId
 4. 当用户想要了解某家公司时，调用 runRecon 工具进行侦察。
 5. 不要重复询问用户语言偏好和/register里已有的基础信息（姓名、生日、学历、学校）。
 6. 当用户要求修改自动日程颜色时，调用 setCalendarColor（类别: 说明会/面试/締切）。
+7. 当用户明确给出目标企业并希望推进求职动作时，调用 startCompanyWorkflow 自动串联 recon -> ES -> interview。
 请用中文与用户交流。
 ${profileContextZh}`
       : lang === "en"
@@ -237,6 +286,7 @@ ${profileContextZh}`
 4. Research companies via runRecon tool when requested.
 5. Never re-ask language preference or basic profile fields already filled in /register.
 6. If user asks to change auto-calendar event colors, call setCalendarColor.
+7. If user gives a target company and wants to proceed, call startCompanyWorkflow for recon -> ES -> interview handoff.
 Please communicate in English.
 ${profileContextEn}`
       : `あなたは「就活パス」専属のAIキャリアアドバイザーです。
@@ -246,6 +296,7 @@ ${profileContextEn}`
 3. 企業について知りたいと言われたら、runReconツールで調査を行う。
 4. /registerで入力済みの言語設定・基本プロフィール（氏名、生年月日、学歴、学校名）を再質問しない。
 5. 自動作成カレンダー予定の色変更を依頼されたら、setCalendarColorを使う（説明会/面接/締切）。
+6. 目標企業が明示され、就活プロセス前進の意図がある場合は、startCompanyWorkflowで recon -> ES -> interview を自動連携する。
 日本語でユーザーとコミュニケーションしてください。
 ${profileContextJa}`;
 
@@ -288,6 +339,20 @@ ${profileContextJa}`;
         } else {
           await updateUserCalendarColorPrefs(userId, { [category]: colorId });
           results.push(`Updated ${category} calendar color to ${colorId}`);
+        }
+      } else if (toolCall.function.name === "startCompanyWorkflow") {
+        const companyName = String(args.companyName ?? "").trim();
+        const position = String(args.position ?? "総合職").trim() || "総合職";
+        if (!companyName) {
+          results.push("Missing companyName for startCompanyWorkflow");
+        } else {
+          const wf = await startCompanyWorkflow(userId, companyName, position, sid);
+          results.push(
+            `Workflow completed for ${companyName} (${position}).\n` +
+              `Report: ${wf.report.slice(0, 240)}...\n` +
+              `ES: ${wf.es.slice(0, 240)}...\n` +
+              `InterviewFirstQuestion: ${wf.firstQuestion.slice(0, 240)}...`
+          );
         }
       }
     }
