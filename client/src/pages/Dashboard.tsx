@@ -312,7 +312,7 @@ export default function Dashboard() {
                 <div className="flex-1 space-y-4">
                   <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-primary mb-1">
-                      就活パス専属顧問を追加する
+                      请扫码添加就活パス专属顾问
                     </p>
                     <p className="text-xs text-muted-foreground">
                       QRコードをスキャンするか、下のボタンをタップして
