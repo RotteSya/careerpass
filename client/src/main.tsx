@@ -9,7 +9,6 @@ import { getLoginUrl } from "./const";
 import "./index.css";
 
 const queryClient = new QueryClient();
-const AUTH_FLOW_PATHS = new Set(["/", "/login", "/signup", "/register", "/email-verified"]);
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
@@ -18,7 +17,6 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
 
   if (!isUnauthorized) return;
-  if (AUTH_FLOW_PATHS.has(window.location.pathname)) return;
 
   window.location.href = getLoginUrl();
 };

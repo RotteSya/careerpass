@@ -17,7 +17,6 @@ export default function EmailVerified() {
 
   const verifyEmail = trpc.auth.verifyEmail.useMutation({
     onSuccess: async (data) => {
-      utils.auth.me.setData(undefined, data.user);
       await utils.auth.me.invalidate();
       setStatus("success");
       setTimeout(() => {

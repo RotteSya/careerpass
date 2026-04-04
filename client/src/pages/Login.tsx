@@ -16,7 +16,6 @@ export default function Login() {
 
   const emailLogin = trpc.auth.emailLogin.useMutation({
     onSuccess: async (data) => {
-      utils.auth.me.setData(undefined, data.user);
       await utils.auth.me.invalidate();
       if (data.profileCompleted) {
         navigate("/dashboard");
