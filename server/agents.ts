@@ -55,11 +55,88 @@ const AGENT_TOOLS: Tool[] = [
   },
 ];
 
+function preferredLanguageLabel(lang?: string | null): string {
+  if (lang === "zh") return "中文";
+  if (lang === "en") return "English";
+  return "日本語";
+}
+
+function educationLabel(lang: "ja" | "zh" | "en", edu?: string | null): string {
+  const mapJa: Record<string, string> = {
+    high_school: "高校卒",
+    associate: "短大・専門卒",
+    bachelor: "大学卒（学士）",
+    master: "大学院修士課程",
+    doctor: "大学院博士課程",
+    other: "その他",
+  };
+  const mapZh: Record<string, string> = {
+    high_school: "高中毕业",
+    associate: "专科/短大",
+    bachelor: "本科",
+    master: "硕士研究生",
+    doctor: "博士研究生",
+    other: "其他",
+  };
+  const mapEn: Record<string, string> = {
+    high_school: "High School",
+    associate: "Associate",
+    bachelor: "Bachelor's",
+    master: "Master's",
+    doctor: "Doctorate",
+    other: "Other",
+  };
+  if (!edu) {
+    return lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入";
+  }
+  if (lang === "zh") return mapZh[edu] ?? edu;
+  if (lang === "en") return mapEn[edu] ?? edu;
+  return mapJa[edu] ?? edu;
+}
+
+function buildFixedOpening(user: Awaited<ReturnType<typeof getUserById>>) {
+  const lang = (user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
+  const name =
+    user?.name ??
+    (lang === "zh" ? "同学" : lang === "en" ? "there" : "ユーザーさん");
+  const education = educationLabel(lang, user?.education);
+  const university =
+    user?.universityName ??
+    (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
+  const birthDate =
+    user?.birthDate ??
+    (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
+  const preferredLang = preferredLanguageLabel(user?.preferredLanguage);
+
+  if (lang === "zh") {
+    return `你好，${name}。我是就活パス，已经为你准备好服务。\n\n我已自动导入你在 /register 填写的信息：\n- 姓名：${user?.name ?? "未填写"}\n- 出生日期：${birthDate}\n- 最终学历：${education}\n- 学校名称：${university}\n- 语言偏好：${preferredLang}\n\n接下来你想先做哪一项？\n1. 履历挖掘\n2. ES撰写\n3. 模拟面试`;
+  }
+
+  if (lang === "en") {
+    return `Hello ${name}, I am CareerPass and I'm ready to support you.\n\nI have imported your /register profile into this Telegram session:\n- Name: ${user?.name ?? "not provided"}\n- Birth date: ${birthDate}\n- Education: ${education}\n- University: ${university}\n- Language preference: ${preferredLang}\n\nWhich would you like to start with?\n1. Experience mining\n2. ES drafting\n3. Mock interview`;
+  }
+
+  return `こんにちは、${name}。就活パスです。サポートの準備ができています。\n\n/register で入力した情報をこのTelegram会話に自動反映しました：\n- 氏名：${user?.name ?? "未記入"}\n- 生年月日：${birthDate}\n- 最終学歴：${education}\n- 学校名：${university}\n- 言語設定：${preferredLang}\n\nまず何から始めますか？\n1. 履歴の深掘り\n2. ES作成\n3. 模擬面接`;
+}
+
 export async function handleAgentChat(userId: number, message: string, sessionId?: string, history: any[] = []) {
   const user = await getUserById(userId);
   const lang = user?.preferredLanguage ?? "ja";
 
   const sid = sessionId ?? crypto.randomUUID();
+
+  // Keep first-turn greeting deterministic across all accounts.
+  if (history.length === 0) {
+    const opening = buildFixedOpening(user);
+    await saveAgentMemory({
+      userId,
+      memoryType: "conversation",
+      title: `Chat ${new Date().toISOString()}`,
+      content: `User: ${message}\nAssistant: ${opening}`,
+      metadata: { sessionId: sid },
+    });
+    return { reply: opening, sessionId: sid };
+  }
 
   // ... (rest of profile context logic stays same)
   const educationMapJa: Record<string, string> = {
@@ -106,6 +183,7 @@ export async function handleAgentChat(userId: number, message: string, sessionId
 2. 引导用户导出 Gemini/ChatGPT 的历史对话。
 3. 当用户提到面试或投递进度时，调用 updateJobStatus 工具更新数据库。
 4. 当用户想要了解某家公司时，调用 runRecon 工具进行侦察。
+5. 不要重复询问用户语言偏好和/register里已有的基础信息（姓名、生日、学历、学校）。
 请用中文与用户交流。
 ${profileContextZh}`
       : lang === "en"
@@ -114,6 +192,7 @@ ${profileContextZh}`
 2. Guide users to export history.
 3. Update job status via updateJobStatus tool when progress is mentioned.
 4. Research companies via runRecon tool when requested.
+5. Never re-ask language preference or basic profile fields already filled in /register.
 Please communicate in English.
 ${profileContextEn}`
       : `あなたは「就活パス」専属のAIキャリアアドバイザーです。
@@ -121,6 +200,7 @@ ${profileContextEn}`
 1. STAR法を使って経験を深堀りする。
 2. 面接やエントリーの進捗が語られたら、updateJobStatusツールでデータベースを更新する。
 3. 企業について知りたいと言われたら、runReconツールで調査を行う。
+4. /registerで入力済みの言語設定・基本プロフィール（氏名、生年月日、学歴、学校名）を再質問しない。
 日本語でユーザーとコミュニケーションしてください。
 ${profileContextJa}`;
 
@@ -383,4 +463,3 @@ ${esDraft?.content ?? ""}`;
 
   return question;
 }
-

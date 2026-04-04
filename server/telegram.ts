@@ -97,6 +97,30 @@ function educationLabelEn(edu?: string | null): string {
   return edu ? (map[edu] ?? edu) : "Education not specified";
 }
 
+function languageLabel(lang?: string | null): string {
+  if (lang === "zh") return "中文";
+  if (lang === "en") return "English";
+  return "日本語";
+}
+
+function buildTelegramFixedOpening(user: User, sessionId: string): string {
+  const lang = (user.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
+  const birthDate =
+    user.birthDate ??
+    (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
+  const preferredLang = languageLabel(user.preferredLanguage);
+
+  if (lang === "zh") {
+    return `你好，${user.name ?? "同学"}。我是就活パス，已经为你准备好服务。\n\n我已自动导入你在 /register 填写的信息：\n- 档案ID：user_${sessionId}\n- 姓名：${user.name ?? "未填写"}\n- 出生日期：${birthDate}\n- 最终学历：${educationLabelZh(user.education)}\n- 学校名称：${user.universityName ?? "未填写"}\n- 语言偏好：${preferredLang}\n\n接下来你想先做哪一项？\n1. 履历挖掘\n2. ES撰写\n3. 模拟面试`;
+  }
+
+  if (lang === "en") {
+    return `Hello ${user.name ?? "there"}, this is CareerPass and I am ready to support you.\n\nI have imported your /register profile:\n- Profile ID: user_${sessionId}\n- Name: ${user.name ?? "not provided"}\n- Birth date: ${birthDate}\n- Education: ${educationLabelEn(user.education)}\n- University: ${user.universityName ?? "not provided"}\n- Language preference: ${preferredLang}\n\nWhat would you like to start with?\n1. Experience mining\n2. ES drafting\n3. Mock interview`;
+  }
+
+  return `こんにちは、${user.name ?? "ユーザーさん"}。就活パスです。サポート準備ができています。\n\n/register で入力した情報をこのTelegram会話に自動反映しました：\n- プロフィールID：user_${sessionId}\n- 氏名：${user.name ?? "未記入"}\n- 生年月日：${birthDate}\n- 最終学歴：${educationLabelJa(user.education)}\n- 学校名：${user.universityName ?? "未記入"}\n- 言語設定：${preferredLang}\n\nまず何から始めますか？\n1. 履歴の深掘り\n2. ES作成\n3. 模擬面接`;
+}
+
 // Send a message via Telegram Bot API
 export async function sendTelegramMessage(chatId: string | number, text: string, parseMode = "Markdown") {
   try {
@@ -206,14 +230,15 @@ telegramRouter.post("/webhook", async (req, res) => {
               console.log(`[Telegram] Auto-generated USER.md for user ${userId}`);
             }
 
-            const lang = user.preferredLanguage ?? "ja";
-            const greetings: Record<string, string> = {
-              ja: `こんにちは、${user.name ?? "ユーザー"}さん！🎉\n\n就活パスへようこそ！\n\n✅ あなたのプロフィール（${user.universityName ?? "大学"}・${educationLabelJa(user.education)}）は既に登録済みです。\n\n以下のメニューから始めましょう：\n\n📝 *経験を話す* — AIと対話して履歴書を充実させる\n🔍 *企業を調べる* — 企業の深層情報をリサーチ\n📄 *ES生成* — 志望動機・自己PRを自動生成\n🎤 *模擬面接* — 厳しい面接官AIと練習\n\n何から始めますか？`,
-              zh: `你好，${user.name ?? "用户"}！🎉\n\n欢迎来到就活パス！\n\n✅ 你的个人信息（${user.universityName ?? "大学"}・${educationLabelZh(user.education)}）已自动导入。\n\n请选择接下来要做的事：\n\n📝 *讲述经历* — 与AI对话，丰富你的简历\n🔍 *企业调查* — 深度研究目标企业\n📄 *生成ES* — 自动生成志望動機・自己PR\n🎤 *模拟面试* — 与严格的面试官AI练习\n\n从哪里开始？`,
-              en: `Hello, ${user.name ?? "User"}! 🎉\n\nWelcome to CareerPass!\n\n✅ Your profile (${user.universityName ?? "University"} · ${educationLabelEn(user.education)}) has been imported automatically.\n\nChoose what to do next:\n\n📝 *Share experiences* — Chat with AI to enrich your resume\n🔍 *Research companies* — Deep-dive into target companies\n📄 *Generate ES* — Auto-create 志望動機 & 自己PR\n🎤 *Mock interview* — Practice with a strict interviewer AI\n\nWhere would you like to start?`,
-            };
-
-            await sendTelegramMessage(chatId, greetings[lang] ?? greetings.ja);
+            const greeting = buildTelegramFixedOpening(user, sessionId);
+            await sendTelegramMessage(chatId, greeting);
+            await saveAgentMemory({
+              userId,
+              memoryType: "conversation",
+              title: `Chat ${new Date().toISOString()}`,
+              content: `User: /start user_${userId}\nAssistant: ${greeting}`,
+              metadata: { sessionId },
+            });
           } else {
             await sendTelegramMessage(
               chatId,
