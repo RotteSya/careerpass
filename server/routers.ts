@@ -170,7 +170,7 @@ export const appRouter = router({
           const cookieOptions = getSessionCookieOptions(ctx.req);
           const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name ?? "", expiresInMs: 7 * 24 * 60 * 60 * 1000 });
           ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
-          return { success: true, profileCompleted: user.profileCompleted };
+          return { success: true, profileCompleted: user.profileCompleted, user };
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : "UNKNOWN";
           if (msg === "EMAIL_NOT_VERIFIED") {
@@ -191,7 +191,7 @@ export const appRouter = router({
           const cookieOptions = getSessionCookieOptions(ctx.req);
           const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name ?? "", expiresInMs: 7 * 24 * 60 * 60 * 1000 });
           ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
-          return { success: true, profileCompleted: user.profileCompleted };
+          return { success: true, profileCompleted: user.profileCompleted, user };
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : "UNKNOWN";
           if (msg === "TOKEN_EXPIRED") throw new Error("リンクの有効期限が切れました。再送信してください。");

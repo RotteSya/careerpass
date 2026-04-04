@@ -49,6 +49,7 @@ export default function Register() {
     onSuccess: async () => {
       toast.success("登録が完了しました！ / 注册成功！");
       // Invalidate profile cache BEFORE navigating so Dashboard reads updated profileCompleted=true
+      await utils.auth.me.invalidate();
       await utils.user.getProfile.invalidate();
       navigate("/dashboard");
     },
@@ -60,6 +61,9 @@ export default function Register() {
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       navigate("/login");
+    }
+    if (!loading && isAuthenticated && user?.profileCompleted) {
+      navigate("/dashboard");
     }
     if (!loading && isAuthenticated && user) {
       // Pre-fill name from OAuth
