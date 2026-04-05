@@ -14,7 +14,7 @@ import {
   generateES as runAgentES,
   startInterview as runAgentInterview,
 } from "./agents";
-import { monitorGmailAndSync } from "./gmail";
+import { startMailMonitoringAndCheckmail } from "./mailMonitoring";
 import type { User } from "../drizzle/schema";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
@@ -133,6 +133,16 @@ function buildTelegramFixedOpening(user: User, sessionId: string): string {
   }
 
   return `こんにちは、${name}さん。私は就活パスです。社会に踏み出す大切な時期だと理解しています。ぜひ一緒に頑張りましょう。\n\nあなたのプロフィールIDは *${profileId}* です。*${birthDate}* 生まれの *${name}* さんで、*${education}*、*${university}* ご出身でお間違いないですか？\n\nあなたは新卒ですか？それとも就業経験がありますか？`;
+}
+
+function buildMailMonitoringKickoffText(lang: "ja" | "zh" | "en"): string {
+  if (lang === "zh") {
+    return "已开始监控你的邮箱，并马上自动检查一次。之后只要有新的求职相关邮件，会主动通知你。";
+  }
+  if (lang === "en") {
+    return "Mail monitoring is now enabled. I’ll run one check right away. After that, I’ll proactively notify you when job-related emails arrive.";
+  }
+  return "メール監視を開始しました。今すぐ1回チェックします。以後、就活関連メールが来たら自動で通知します。";
 }
 
 // Send a message via Telegram Bot API
@@ -276,24 +286,53 @@ telegramRouter.post("/webhook", async (req, res) => {
               metadata: { sessionId },
             });
 
-            // After Telegram bind/start, begin 5-day mailbox recognition in background.
-            // Do not proactively push result yet; wait until user's next message to nudge via careerpass.
+            await sendTelegramMessage(chatId, buildMailMonitoringKickoffText((user.preferredLanguage ?? "ja") as "ja" | "zh" | "en"));
+
             void (async () => {
               try {
-                const result = await monitorGmailAndSync(userId!);
+                const { needsOAuth, watchOk, result } = await startMailMonitoringAndCheckmail({
+                  userId: userId!,
+                  telegramChatId: String(chatId),
+                });
+
+                const sessionState = (session?.sessionState as Record<string, unknown> | null) ?? {};
                 await updateAgentSession(userId!, {
                   sessionState: {
-                    ...(session?.sessionState as Record<string, unknown> | null ?? {}),
-                    mailOnboarding: {
-                      pendingNudge: result.detected > 0,
-                      scanned: result.scanned,
-                      detected: result.detected,
-                      updatedAt: new Date().toISOString(),
+                    ...sessionState,
+                    mailMonitoring: {
+                      enabled: true,
+                      watchOk,
+                      lastCheckAt: new Date().toISOString(),
+                      scanned: result?.scanned ?? 0,
+                      detected: result?.detected ?? 0,
+                      calendarEvents: result?.calendarEvents ?? 0,
                     },
                   },
                 });
+
+                if (needsOAuth) {
+                  await sendTelegramMessage(
+                    chatId,
+                    `⚠️ 还没连接 Google 邮箱/日历。\n请先在网页 Dashboard 完成 Google 授权后，我才能自动监控新邮件。\n\n${APP_DOMAIN}`
+                  );
+                  return;
+                }
+
+                if (result) {
+                  if (result.detected > 0) {
+                    await sendTelegramMessage(
+                      chatId,
+                      `✅ 邮箱检查完成：扫描 ${result.scanned} 封，识别 ${result.detected} 个事件，写入日历 ${result.calendarEvents} 个。`
+                    );
+                  } else {
+                    await sendTelegramMessage(
+                      chatId,
+                      `ℹ️ 邮箱检查完成：扫描 ${result.scanned} 封，但未识别到“说明会/面试/结果通知”等有效事件。`
+                    );
+                  }
+                }
               } catch (err) {
-                console.error("[Telegram] /start background mail recognition failed:", err);
+                console.error("[Telegram] /start background mail monitoring failed:", err);
               }
             })();
           } else {
@@ -358,7 +397,21 @@ telegramRouter.post("/webhook", async (req, res) => {
         // Run asynchronously and return webhook response quickly.
         void (async () => {
           try {
-            const result = await monitorGmailAndSync(userId!, String(chatId));
+            const { needsOAuth, result } = await startMailMonitoringAndCheckmail({
+              userId: userId!,
+              telegramChatId: String(chatId),
+            });
+            if (needsOAuth) {
+              await sendTelegramMessage(
+                chatId,
+                `⚠️ 还没连接 Google 邮箱/日历。\n请先在网页 Dashboard 完成 Google 授权后再试。\n\n${APP_DOMAIN}`
+              );
+              return;
+            }
+            if (!result) {
+              await sendTelegramMessage(chatId, "⚠️ 邮箱检查失败，请稍后重试。");
+              return;
+            }
             if (result.detected > 0) {
               await sendTelegramMessage(
                 chatId,
@@ -391,26 +444,8 @@ telegramRouter.post("/webhook", async (req, res) => {
           const question = await runAgentInterview(userId, "企業名不明", "総合職", history, text);
           await sendTelegramMessage(chatId, question);
         } else {
-          const sessionState = (session.sessionState as Record<string, any> | null) ?? {};
-          const mailOnboarding = (sessionState.mailOnboarding as Record<string, any> | undefined) ?? undefined;
-          let extraSystemInstruction: string | undefined;
-          if (mailOnboarding?.pendingNudge) {
-            extraSystemInstruction =
-              `你最近已经处理了该用户过去5天内的邮件，识别到${mailOnboarding.detected ?? "若干"}条求职相关事件。` +
-              `请在本次回复中先自然提及你已根据邮件更新了“求职进度看板”并询问用户是否查看，` +
-              `不要使用固定句式或照抄模板；然后再继续回答用户当前这条消息。`;
-            await updateAgentSession(userId, {
-              sessionState: {
-                ...sessionState,
-                mailOnboarding: {
-                  ...mailOnboarding,
-                  pendingNudge: false,
-                },
-              },
-            });
-          }
           // Regular Chat
-          const { reply } = await handleAgentChat(userId, text, sessionId, history, extraSystemInstruction);
+          const { reply } = await handleAgentChat(userId, text, sessionId, history);
           await sendTelegramMessage(chatId, reply);
         }
       }
