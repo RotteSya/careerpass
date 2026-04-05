@@ -116,7 +116,25 @@ const AGENT_TOOLS: Tool[] = [
     function: {
       name: "startCompanyWorkflow",
       description:
-        "Start end-to-end workflow: recon -> ES drafting -> interview kickoff for a target company",
+        "Start workflow: recon -> ES drafting for a target company (does not start mock interview without user consent)",
+      parameters: {
+        type: "object",
+        properties: {
+          companyName: { type: "string", description: "Target company name" },
+          position: {
+            type: "string",
+            description: "Target position, default to 総合職 when omitted",
+          },
+        },
+        required: ["companyName"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "startMockInterview",
+      description: "Enter mock interview mode and generate the first interview question (requires explicit user consent)",
       parameters: {
         type: "object",
         properties: {
@@ -137,7 +155,7 @@ export async function startCompanyWorkflow(
   companyName: string,
   position: string,
   sessionId: string
-): Promise<{ report: string; es: string; firstQuestion: string }> {
+): Promise<{ report: string; es: string }> {
   await updateAgentSession(userId, {
     currentAgent: "careerpassrecon",
     sessionState: { workflow: { stage: "recon", companyName, position, sessionId } },
@@ -151,13 +169,27 @@ export async function startCompanyWorkflow(
   const es = await generateES(userId, companyName, position, sessionId);
 
   await updateAgentSession(userId, {
+    currentAgent: "careerpass",
+    interviewMode: false,
+    sessionState: { workflow: { stage: "interview_ready", companyName, position, sessionId } },
+  });
+
+  return { report, es };
+}
+
+async function startMockInterview(
+  userId: number,
+  companyName: string,
+  position: string,
+  sessionId: string
+): Promise<{ firstQuestion: string }> {
+  await updateAgentSession(userId, {
     currentAgent: "careerpassinterview",
     interviewMode: true,
     sessionState: { workflow: { stage: "interview", companyName, position, sessionId } },
   });
   const firstQuestion = await startInterview(userId, companyName, position, []);
-
-  return { report, es, firstQuestion };
+  return { firstQuestion };
 }
 
 function educationLabel(lang: "ja" | "zh" | "en", edu?: string | null): string {
@@ -374,8 +406,17 @@ ${profileContextJa}`;
             `Workflow completed for ${companyName} (${position}).\n` +
               `Report: ${wf.report.slice(0, 240)}...\n` +
               `ES: ${wf.es.slice(0, 240)}...\n` +
-              `InterviewFirstQuestion: ${wf.firstQuestion.slice(0, 240)}...`
+              `Next: Ask user for consent before starting mock interview.`
           );
+        }
+      } else if (toolCall.function.name === "startMockInterview") {
+        const companyName = String(args.companyName ?? "").trim();
+        const position = String(args.position ?? "総合職").trim() || "総合職";
+        if (!companyName) {
+          results.push("Missing companyName for startMockInterview");
+        } else {
+          const interview = await startMockInterview(userId, companyName, position, sid);
+          results.push(`Mock interview started for ${companyName} (${position}).\nFirstQuestion: ${interview.firstQuestion}`);
         }
       }
     }
