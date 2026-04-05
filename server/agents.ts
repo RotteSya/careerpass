@@ -11,6 +11,7 @@ import {
 } from "./db";
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
+import { loadCareerpassSoul } from "./_core/soul";
 
 function normalizeCalendarColor(input: string): string | null {
   const v = input.trim().toLowerCase();
@@ -275,7 +276,7 @@ export async function handleAgentChat(
   const systemPrompt =
     lang === "zh"
       ? `你是"就活パス"的专属AI求职顾问。你的核心职责：
-1. 用STAR法则深挖用户的经历。
+1. 在需要时使用STAR法则将经历整理为可用于简历/ES/面试的材料；避免无休止深挖，并始终提供换话题出口。
 2. 引导用户导出 Gemini/ChatGPT 的历史对话。
 3. 当用户提到面试或投递进度时，调用 updateJobStatus 工具更新数据库。
 4. 当用户想要了解某家公司时，调用 runRecon 工具进行侦察。
@@ -286,7 +287,7 @@ export async function handleAgentChat(
 ${profileContextZh}`
       : lang === "en"
       ? `You are CareerPass, an AI career advisor. Your core responsibilities:
-1. Use STAR method to explore user experiences.
+1. Use STAR when it helps produce usable artifacts (resume/ES/interview). Avoid endless probing and always offer an easy topic switch.
 2. Guide users to export history.
 3. Update job status via updateJobStatus tool when progress is mentioned.
 4. Research companies via runRecon tool when requested.
@@ -297,7 +298,7 @@ Please communicate in English.
 ${profileContextEn}`
       : `あなたは「就活パス」専属のAIキャリアアドバイザーです。
 主な役割：
-1. STAR法を使って経験を深堀りする。
+1. 必要なときだけSTAR法で経験を整理し、履歴書/ES/面接回答として使える形にする。深堀りのしすぎは避け、話題を変える出口を常に用意する。
 2. 面接やエントリーの進捗が語られたら、updateJobStatusツールでデータベースを更新する。
 3. 企業について知りたいと言われたら、runReconツールで調査を行う。
 4. /registerで入力済みの言語設定・基本プロフィール（氏名、生年月日、学歴、学校名）を再質問しない。
@@ -306,9 +307,11 @@ ${profileContextEn}`
 日本語でユーザーとコミュニケーションしてください。
 ${profileContextJa}`;
 
+  const soul = await loadCareerpassSoul();
+  const systemWithSoul = soul.content ? `${systemPrompt}\n\n[SOUL]\n${soul.content}` : systemPrompt;
   const effectiveSystemPrompt = extraSystemInstruction
-    ? `${systemPrompt}\n\n[运行时附加指令]\n${extraSystemInstruction}`
-    : systemPrompt;
+    ? `${systemWithSoul}\n\n[运行时附加指令]\n${extraSystemInstruction}`
+    : systemWithSoul;
 
   const messages = [
     { role: "system" as const, content: effectiveSystemPrompt },
