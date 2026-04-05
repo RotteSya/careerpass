@@ -344,27 +344,12 @@ function jobStatusRank(status: JobStatus): number {
 }
 
 function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobStatus | null {
+  if (eventType === "offer") return "offer";
+  if (eventType === "rejection") return "rejected";
   if (eventType === "interview") return "interview_1";
   if (eventType === "test") return "interview_1";
   if (eventType === "deadline") return "es_preparing";
   if (eventType === "briefing") return "researching";
-  return null;
-}
-
-function inferHardOutcomeStatusFromText(text: string): JobStatus | null {
-  const t = text.toLowerCase();
-  if (
-    /(不採用|見送り|お見送り|選考結果.*残念|残念ながら|ご縁がなく|ご期待に添え|不合格|不通過)/.test(t) ||
-    /(rejected|unfortunately|we regret|not selected)/.test(t)
-  ) {
-    return "rejected";
-  }
-  if (
-    /(内定通知|内定のご連絡|内定のお知らせ|内定.*決定|採用内定|合格通知|合格のお知らせ|採用決定)/.test(t) ||
-    /(offer\s*letter|job\s*offer|we are pleased to offer)/.test(t)
-  ) {
-    return "offer";
-  }
   return null;
 }
 
@@ -388,29 +373,6 @@ function nextStepsZh(status: JobStatus): string[] {
   if (status === "rejected") return ["复盘 1 个关键失分点并改写答案", "把经验迁移到下一家公司投递"];
   if (status === "withdrawn") return ["记录撤回原因与学到的筛选标准", "更新投递优先级列表"];
   return [];
-}
-
-function jobStatusLabelZh(status: JobStatus): string {
-  if (status === "researching") return "调研/准备";
-  if (status === "es_preparing") return "ES 准备";
-  if (status === "es_submitted") return "已提交 ES";
-  if (status === "interview_1") return "一面";
-  if (status === "interview_2") return "二面";
-  if (status === "interview_final") return "终面";
-  if (status === "offer") return "已拿到 offer";
-  if (status === "rejected") return "未通过";
-  if (status === "withdrawn") return "已撤回";
-  return status;
-}
-
-function normalizeCompanyName(name: string | null | undefined): string | null {
-  const raw = (name ?? "").trim();
-  if (!raw) return null;
-  const lower = raw.toLowerCase();
-  const blocked = new Set(["info", "noreply", "no-reply", "support", "recruit", "saiyo", "hr", "jobs"]);
-  if (blocked.has(lower)) return null;
-  if (raw.length < 2) return null;
-  return raw;
 }
 
 async function upsertJobProgressFromMail(params: {
@@ -696,13 +658,7 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
     });
-    if (res.ok) return true;
-    const fallbackRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text }),
-    });
-    return fallbackRes.ok;
+    return res.ok;
   } catch {
     return false;
   }
@@ -763,25 +719,10 @@ async function processGmailMessageIds(params: {
     });
     if (!decision.isJobRelated) continue;
 
-    const mailText = `${detail.subject}\n${detail.body}`;
-    const hardOutcome = inferHardOutcomeStatusFromText(mailText);
-    const rawEventType = decision.eventType ?? "other";
-    const eventType =
-      rawEventType === "offer"
-        ? hardOutcome === "offer"
-          ? "offer"
-          : "other"
-        : rawEventType === "rejection"
-        ? hardOutcome === "rejected"
-          ? "rejection"
-          : "other"
-        : rawEventType;
+    const eventType = decision.eventType ?? "other";
     const date = decision.eventDate ?? null;
     const time = decision.eventTime ?? null;
-    const companyName =
-      normalizeCompanyName(decision.companyName) ??
-      normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
-      null;
+    const companyName = decision.companyName ?? extractCompanyName(detail.from, detail.subject);
 
     const emailEvent: EmailEvent = {
       subject: detail.subject,
@@ -800,11 +741,10 @@ async function processGmailMessageIds(params: {
     await reportToCareerpassAgent(userId, emailEvent, decision.reason);
 
     const stageStatus =
-      rawEventType === "interview" || rawEventType === "test" || /面接|interview/.test(mailText.toLowerCase())
-        ? inferInterviewStatusFromText(mailText)
+      eventType === "interview" || eventType === "test"
+        ? inferInterviewStatusFromText(`${detail.subject}\n${detail.body}`)
         : null;
-    const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(rawEventType);
-    const inferredStatus = companyName ? desiredStatus : null;
+    const inferredStatus = companyName ? (stageStatus ?? jobStatusFromEmailEventType(eventType)) : null;
     const progressUpdate =
       inferredStatus && companyName
         ? await upsertJobProgressFromMail({
@@ -830,20 +770,14 @@ async function processGmailMessageIds(params: {
           : "";
       const progressText =
         progressUpdate && progressUpdate.jobId
-          ? `\n📌 进度看板${progressUpdate.changed ? "已更新" : "未变更"}\n- 公司: ${companyName ?? "企业"}\n- 状态: ${jobStatusLabelZh(progressUpdate.nextStatus)}`
-          : desiredStatus && !companyName
-          ? `\n📌 进度看板未更新（原因：无法识别公司名；识别到的阶段: ${jobStatusLabelZh(desiredStatus)})`
+          ? `\n📌 *进度看板已更新*\n- 公司: ${companyName ?? "企业"}\n- 状态: ${progressUpdate.nextStatus}`
           : "";
       const nextStepsText =
         progressUpdate && progressUpdate.jobId
-          ? `\n✅ 接下来建议\n${nextStepsZh(progressUpdate.nextStatus).map(s => `- ${s}`).join("\n")}`
-          : "";
-      const outcomeWarningText =
-        (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome
-          ? `\n⚠️ 检测到可能是“结果/内定”相关邮件，但不够确定，我没有自动标记为 offer/未通过。请你在 Dashboard 手动确认。`
+          ? `\n✅ *接下来建议*\n${nextStepsZh(progressUpdate.nextStatus).map(s => `- ${s}`).join("\n")}`
           : "";
       const notifText =
-        `📨 就活相关邮件检测\n\n` +
+        `📨 *就活関連メール検出*\n\n` +
         `${typeLabels[eventType]} ${companyName ?? "企業"}\n` +
         `${scheduleText}\n` +
         `📍 場所/リンク: ${emailEvent.location ?? "未記入"}\n` +
@@ -851,7 +785,6 @@ async function processGmailMessageIds(params: {
         todoText +
         progressText +
         nextStepsText +
-        outcomeWarningText +
         actionsText;
       await sendTelegramMessage(telegramChatId, notifText);
     }
