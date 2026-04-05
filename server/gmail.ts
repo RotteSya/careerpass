@@ -353,6 +353,15 @@ function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobSta
   return null;
 }
 
+function inferInterviewStatusFromText(text: string): JobStatus | null {
+  const t = text.toLowerCase();
+  if (/最終|最終面接|final\s*interview|final\b|last\s*interview/.test(t)) return "interview_final";
+  if (/二次|2次|２次|second\s*interview|2nd\s*interview|second\b|2nd\b/.test(t)) return "interview_2";
+  if (/三次|3次|３次|third\s*interview|3rd\s*interview|third\b|3rd\b/.test(t)) return "interview_final";
+  if (/一次|1次|１次|first\s*interview|1st\s*interview|first\b|1st\b/.test(t)) return "interview_1";
+  return null;
+}
+
 function nextStepsZh(status: JobStatus): string[] {
   if (status === "researching") return ["确认投递岗位与截止时间", "准备 ES 的两段核心素材（志望动机/自己PR）"];
   if (status === "es_preparing") return ["把志望动机写成 5 句（公司痛点→你的能力→为什么现在）", "整理 1 个可量化 STAR 案例用于自己PR"];
@@ -731,7 +740,11 @@ async function processGmailMessageIds(params: {
     detectedEvents.push(emailEvent);
     await reportToCareerpassAgent(userId, emailEvent, decision.reason);
 
-    const inferredStatus = companyName ? jobStatusFromEmailEventType(eventType) : null;
+    const stageStatus =
+      eventType === "interview" || eventType === "test"
+        ? inferInterviewStatusFromText(`${detail.subject}\n${detail.body}`)
+        : null;
+    const inferredStatus = companyName ? (stageStatus ?? jobStatusFromEmailEventType(eventType)) : null;
     const progressUpdate =
       inferredStatus && companyName
         ? await upsertJobProgressFromMail({
