@@ -81,6 +81,8 @@ export const oauthProviderAccounts = mysqlTable("oauth_provider_accounts", {
   userId: int("userId").notNull(),
   provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
   accountEmail: varchar("accountEmail", { length: 320 }).notNull(),
+  lastHistoryId: varchar("lastHistoryId", { length: 64 }),
+  watchExpiration: timestamp("watchExpiration"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

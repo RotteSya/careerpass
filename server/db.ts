@@ -185,6 +185,15 @@ export async function upsertOauthProviderAccount(params: {
   if (!db) throw new Error("Database not available");
   const normalizedEmail = params.accountEmail.trim().toLowerCase();
 
+  const existing = await db
+    .select({
+      lastHistoryId: oauthProviderAccounts.lastHistoryId,
+      watchExpiration: oauthProviderAccounts.watchExpiration,
+    })
+    .from(oauthProviderAccounts)
+    .where(and(eq(oauthProviderAccounts.provider, params.provider), eq(oauthProviderAccounts.userId, params.userId)))
+    .limit(1);
+
   await db
     .delete(oauthProviderAccounts)
     .where(and(eq(oauthProviderAccounts.provider, params.provider), eq(oauthProviderAccounts.userId, params.userId)));
@@ -193,6 +202,8 @@ export async function upsertOauthProviderAccount(params: {
     userId: params.userId,
     provider: params.provider,
     accountEmail: normalizedEmail,
+    lastHistoryId: existing[0]?.lastHistoryId ?? null,
+    watchExpiration: existing[0]?.watchExpiration ?? null,
   });
 }
 
@@ -209,6 +220,69 @@ export async function getUserIdByOauthProviderAccount(
     .where(and(eq(oauthProviderAccounts.provider, provider), eq(oauthProviderAccounts.accountEmail, normalizedEmail)))
     .limit(1);
   return result[0]?.userId ?? null;
+}
+
+export interface GoogleAccountSyncState {
+  accountEmail: string;
+  lastHistoryId: string | null;
+  watchExpiration: Date | null;
+}
+
+export async function getGoogleAccountSyncState(userId: number): Promise<GoogleAccountSyncState | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db
+    .select({
+      accountEmail: oauthProviderAccounts.accountEmail,
+      lastHistoryId: oauthProviderAccounts.lastHistoryId,
+      watchExpiration: oauthProviderAccounts.watchExpiration,
+    })
+    .from(oauthProviderAccounts)
+    .where(and(eq(oauthProviderAccounts.provider, "google"), eq(oauthProviderAccounts.userId, userId)))
+    .limit(1);
+  if (!result[0]) return null;
+  return {
+    accountEmail: result[0].accountEmail,
+    lastHistoryId: result[0].lastHistoryId ?? null,
+    watchExpiration: result[0].watchExpiration ?? null,
+  };
+}
+
+export async function updateGoogleAccountSyncState(
+  userId: number,
+  updates: Partial<Pick<GoogleAccountSyncState, "lastHistoryId" | "watchExpiration">>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const set: { lastHistoryId?: string | null; watchExpiration?: Date | null } = {};
+  if (updates.lastHistoryId !== undefined) set.lastHistoryId = updates.lastHistoryId;
+  if (updates.watchExpiration !== undefined) set.watchExpiration = updates.watchExpiration;
+  if (Object.keys(set).length === 0) return;
+  await db
+    .update(oauthProviderAccounts)
+    .set(set)
+    .where(and(eq(oauthProviderAccounts.provider, "google"), eq(oauthProviderAccounts.userId, userId)));
+}
+
+export async function updateGoogleLastHistoryIdIfNewer(userId: number, newHistoryId: string): Promise<void> {
+  const state = await getGoogleAccountSyncState(userId);
+  if (!state) return;
+  const current = state.lastHistoryId;
+  if (!current) {
+    await updateGoogleAccountSyncState(userId, { lastHistoryId: newHistoryId });
+    return;
+  }
+  try {
+    const next = BigInt(newHistoryId);
+    const prev = BigInt(current);
+    if (next > prev) {
+      await updateGoogleAccountSyncState(userId, { lastHistoryId: newHistoryId });
+    }
+  } catch {
+    if (newHistoryId !== current) {
+      await updateGoogleAccountSyncState(userId, { lastHistoryId: newHistoryId });
+    }
+  }
 }
 
 // ─── Telegram Bindings ─────────────────────────────────────────────────────

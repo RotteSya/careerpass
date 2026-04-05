@@ -1,6 +1,6 @@
 import express from "express";
 import { getTelegramBinding, getUserByEmail, getUserIdByOauthProviderAccount } from "./db";
-import { monitorGmailAndSync } from "./gmail";
+import { monitorGmailAndSync, syncGmailIncremental } from "./gmail";
 
 export const gmailPushRouter = express.Router();
 
@@ -28,6 +28,20 @@ function decodePubSubPayload(data?: string): GmailPushPayload | null {
   }
 }
 
+const perUserQueue = new Map<number, Promise<void>>();
+
+function enqueuePerUser(userId: number, fn: () => Promise<void>): Promise<void> {
+  const prev = perUserQueue.get(userId) ?? Promise.resolve();
+  const next = prev
+    .catch(() => undefined)
+    .then(fn)
+    .finally(() => {
+      if (perUserQueue.get(userId) === next) perUserQueue.delete(userId);
+    });
+  perUserQueue.set(userId, next);
+  return next;
+}
+
 gmailPushRouter.post("/push", (req, res) => {
   // Acknowledge first; process asynchronously to avoid Pub/Sub retries caused by long processing.
   res.status(204).end();
@@ -51,13 +65,21 @@ gmailPushRouter.post("/push", (req, res) => {
 
       const binding = await getTelegramBinding(user.id);
       const chatId = binding?.telegramId ?? undefined;
-      const result = await monitorGmailAndSync(user.id, chatId);
-      console.log("[GmailPush] Processed:", {
-        userId: user.id,
-        emailAddress,
-        scanned: result.scanned,
-        detected: result.detected,
-        calendarEvents: result.calendarEvents,
+      const endHistoryId = payload?.historyId;
+
+      await enqueuePerUser(user.id, async () => {
+        const result = endHistoryId
+          ? await syncGmailIncremental(user.id, chatId, endHistoryId)
+          : await monitorGmailAndSync(user.id, chatId);
+        console.log("[GmailPush] Processed:", {
+          userId: user.id,
+          emailAddress,
+          historyId: endHistoryId ?? null,
+          mode: endHistoryId ? "incremental" : "fallback-scan",
+          scanned: result.scanned,
+          detected: result.detected,
+          calendarEvents: result.calendarEvents,
+        });
       });
     } catch (err) {
       console.error("[GmailPush] Processing failed:", err);

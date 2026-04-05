@@ -11,7 +11,15 @@
  *       access_token の有効期限切れ時は refresh_token で自動更新。
  */
 
-import { getOauthToken, getUserCalendarColorPrefs, saveAgentMemory, upsertOauthToken } from "./db";
+import {
+  getGoogleAccountSyncState,
+  getOauthToken,
+  getUserCalendarColorPrefs,
+  saveAgentMemory,
+  updateGoogleAccountSyncState,
+  updateGoogleLastHistoryIdIfNewer,
+  upsertOauthToken,
+} from "./db";
 import { invokeLLM } from "./_core/llm";
 import {
   reconCompany as runAgentRecon,
@@ -122,7 +130,15 @@ export async function registerGmailPushWatch(userId: number): Promise<boolean> {
       return false;
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as { expiration?: string | number; historyId?: string };
+    const historyId = typeof data.historyId === "string" ? data.historyId : null;
+    const expirationMs = typeof data.expiration === "string" || typeof data.expiration === "number" ? Number(data.expiration) : NaN;
+    const expirationDate = Number.isFinite(expirationMs) ? new Date(expirationMs) : null;
+
+    await updateGoogleAccountSyncState(userId, { watchExpiration: expirationDate });
+    if (historyId) {
+      await updateGoogleLastHistoryIdIfNewer(userId, historyId);
+    }
     console.log("[Gmail] Push watch registered:", {
       userId,
       expiration: data?.expiration,
@@ -193,6 +209,85 @@ async function fetchEmailDetail(
   } catch {
     return null;
   }
+}
+
+async function fetchGmailProfileHistoryId(accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { historyId?: string };
+    return data.historyId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+type GmailHistoryResponse = {
+  history?: Array<{
+    messages?: Array<{ id: string; threadId?: string }>;
+    messagesAdded?: Array<{ message?: { id: string; threadId?: string } }>;
+    labelsAdded?: Array<{ message?: { id: string; threadId?: string } }>;
+    labelsRemoved?: Array<{ message?: { id: string; threadId?: string } }>;
+  }>;
+  nextPageToken?: string;
+  historyId?: string;
+};
+
+async function listGmailHistoryChanges(params: {
+  accessToken: string;
+  startHistoryId: string;
+}): Promise<{ messageIds: string[]; latestHistoryId: string | null } | null> {
+  const { accessToken, startHistoryId } = params;
+  const messageIds: string[] = [];
+  let pageToken: string | undefined;
+  let latestHistoryId: string | null = null;
+
+  while (true) {
+    const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/history");
+    url.searchParams.set("startHistoryId", startHistoryId);
+    url.searchParams.set("labelId", "INBOX");
+    url.searchParams.append("historyTypes", "messageAdded");
+    url.searchParams.append("historyTypes", "labelAdded");
+    url.searchParams.append("historyTypes", "labelRemoved");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as GmailHistoryResponse;
+    latestHistoryId = data.historyId ?? latestHistoryId;
+    for (const h of data.history ?? []) {
+      for (const m of h.messages ?? []) {
+        if (m.id) messageIds.push(m.id);
+      }
+      for (const a of h.messagesAdded ?? []) {
+        const id = a.message?.id;
+        if (id) messageIds.push(id);
+      }
+      for (const a of h.labelsAdded ?? []) {
+        const id = a.message?.id;
+        if (id) messageIds.push(id);
+      }
+      for (const a of h.labelsRemoved ?? []) {
+        const id = a.message?.id;
+        if (id) messageIds.push(id);
+      }
+    }
+
+    if (!data.nextPageToken) break;
+    pageToken = data.nextPageToken;
+  }
+
+  const seen = new Set<string>();
+  const deduped = messageIds.filter((id) => {
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+
+  return { messageIds: deduped, latestHistoryId };
 }
 
 // ─── Mail Monitor Agent ────────────────────────────────────────────────────────
@@ -505,25 +600,21 @@ async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<
   return actions;
 }
 
-export async function monitorGmailAndSync(
-  userId: number,
-  telegramChatId?: string
-): Promise<MonitorResult> {
-  const accessToken = await getValidAccessToken(userId);
-  if (!accessToken) {
-    return { scanned: 0, detected: 0, calendarEvents: 0, events: [] };
-  }
-
+async function processGmailMessageIds(params: {
+  userId: number;
+  telegramChatId?: string;
+  accessToken: string;
+  messageIds: string[];
+}): Promise<MonitorResult> {
+  const { userId, telegramChatId, accessToken, messageIds } = params;
   const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
-  const messages = await fetchRecentEmails(accessToken, 20);
   const detectedEvents: EmailEvent[] = [];
   let calendarCount = 0;
 
-  for (const msg of messages.slice(0, 10)) {
-    const detail = await fetchEmailDetail(accessToken, msg.id);
+  for (const messageId of messageIds) {
+    const detail = await fetchEmailDetail(accessToken, messageId);
     if (!detail) continue;
 
-    // Dedicated careerpassmail agent: semantic decision + localized time parsing + domain signal.
     const decision = await runCareerpassmailAgent({
       subject: detail.subject,
       body: detail.body,
@@ -552,7 +643,6 @@ export async function monitorGmailAndSync(
     detectedEvents.push(emailEvent);
     await reportToCareerpassAgent(userId, emailEvent, decision.reason);
 
-    // Notify Telegram as soon as a valid event is detected (no longer blocked by calendar write success).
     let orchestrationActions: string[] = [];
     if (telegramChatId) {
       orchestrationActions = await orchestrateSubAgents(userId, emailEvent);
@@ -578,7 +668,6 @@ export async function monitorGmailAndSync(
       await sendTelegramMessage(telegramChatId, notifText);
     }
 
-    // Write to Google Calendar only for schedulable event types.
     if (date && CALENDAR_WRITABLE_TYPES.includes(eventType)) {
       const startDateTime = time ? `${date}T${time}:00` : `${date}T09:00:00`;
       const endDateTime = time
@@ -607,9 +696,80 @@ export async function monitorGmailAndSync(
   }
 
   return {
-    scanned: messages.length,
+    scanned: messageIds.length,
     detected: detectedEvents.length,
     calendarEvents: calendarCount,
     events: detectedEvents,
   };
+}
+
+export async function monitorGmailAndSync(
+  userId: number,
+  telegramChatId?: string
+): Promise<MonitorResult> {
+  const accessToken = await getValidAccessToken(userId);
+  if (!accessToken) {
+    return { scanned: 0, detected: 0, calendarEvents: 0, events: [] };
+  }
+
+  const messages = await fetchRecentEmails(accessToken, 20);
+  const ids = messages.slice(0, 10).map((m) => m.id);
+  return processGmailMessageIds({
+    userId,
+    telegramChatId,
+    accessToken,
+    messageIds: ids,
+  });
+}
+
+export async function syncGmailIncremental(
+  userId: number,
+  telegramChatId: string | undefined,
+  endHistoryId: string
+): Promise<MonitorResult> {
+  const accessToken = await getValidAccessToken(userId);
+  if (!accessToken) {
+    return { scanned: 0, detected: 0, calendarEvents: 0, events: [] };
+  }
+
+  const state = await getGoogleAccountSyncState(userId);
+  const startHistoryId = state?.lastHistoryId ?? null;
+
+  if (!startHistoryId) {
+    const fallback = await monitorGmailAndSync(userId, telegramChatId);
+    const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
+    if (profileHistoryId) {
+      await updateGoogleLastHistoryIdIfNewer(userId, profileHistoryId);
+    } else {
+      await updateGoogleLastHistoryIdIfNewer(userId, endHistoryId);
+    }
+    return fallback;
+  }
+
+  const changes = await listGmailHistoryChanges({ accessToken, startHistoryId });
+  if (!changes) {
+    const fallback = await monitorGmailAndSync(userId, telegramChatId);
+    const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
+    if (profileHistoryId) {
+      await updateGoogleLastHistoryIdIfNewer(userId, profileHistoryId);
+    } else {
+      await updateGoogleLastHistoryIdIfNewer(userId, endHistoryId);
+    }
+    return fallback;
+  }
+
+  const result = await processGmailMessageIds({
+    userId,
+    telegramChatId,
+    accessToken,
+    messageIds: changes.messageIds,
+  });
+
+  if (changes.latestHistoryId) {
+    await updateGoogleLastHistoryIdIfNewer(userId, changes.latestHistoryId);
+  } else {
+    await updateGoogleLastHistoryIdIfNewer(userId, endHistoryId);
+  }
+
+  return result;
 }
