@@ -271,6 +271,42 @@ function formatDateYmd(date: Date | string | null | undefined): string {
   return d.toISOString().slice(0, 10);
 }
 
+function truncateForBoard(input: string, maxLen: number): string {
+  const s = input.replace(/[\r\n]+/g, " ").trim();
+  const chars = Array.from(s);
+  if (chars.length <= maxLen) return s;
+  return `${chars.slice(0, Math.max(0, maxLen - 1)).join("")}…`;
+}
+
+function padForBoard(input: string, width: number): string {
+  const s = truncateForBoard(input, width);
+  return s.length >= width ? s : s.padEnd(width, " ");
+}
+
+function computePriorityLabel(params: {
+  lang: "ja" | "zh" | "en";
+  status: string;
+  nextActionAt?: Date | null;
+}): string {
+  const now = Date.now();
+  const nextAt = params.nextActionAt ? new Date(params.nextActionAt).getTime() : null;
+  const daysToNext = nextAt ? Math.floor((nextAt - now) / (24 * 3600 * 1000)) : null;
+
+  const terminal = ["offer", "rejected", "withdrawn"].includes(params.status);
+  if (terminal) return params.lang === "en" ? "-" : "—";
+
+  const high =
+    ["interview_1", "interview_2", "interview_final"].includes(params.status) ||
+    (daysToNext !== null && daysToNext <= 3);
+  const mid =
+    ["es_preparing", "es_submitted"].includes(params.status) ||
+    (daysToNext !== null && daysToNext <= 7);
+
+  if (params.lang === "en") return high ? "High" : mid ? "Med" : "Low";
+  if (params.lang === "ja") return high ? "高" : mid ? "中" : "低";
+  return high ? "高" : mid ? "中" : "低";
+}
+
 function buildBoardText(params: {
   lang: "ja" | "zh" | "en";
   apps: Array<{ id: number; companyNameJa: string; companyNameEn: string | null; status: string; updatedAt: Date; nextActionAt?: Date | null }>;
@@ -283,30 +319,60 @@ function buildBoardText(params: {
       ? "📌 Job Board (most recently updated first)"
       : "📌 就活ボード（更新順）";
 
-  const lines = params.apps.map((a, idx) => {
+  const dashboardUrl = `${APP_DOMAIN.replace(/\/+$/, "")}/dashboard`;
+  const dashboardLink =
+    params.lang === "zh"
+      ? `🔗 [打开网页看板](${dashboardUrl})`
+      : params.lang === "en"
+      ? `🔗 [Open Web Board](${dashboardUrl})`
+      : `🔗 [Webボードを開く](${dashboardUrl})`;
+
+  const colCompany = params.lang === "en" ? "Company" : params.lang === "ja" ? "会社名" : "公司名";
+  const colStatus = params.lang === "en" ? "Status" : params.lang === "ja" ? "状態" : "状态";
+  const colType = params.lang === "en" ? "Type" : params.lang === "ja" ? "種類" : "类型";
+  const colPri = params.lang === "en" ? "Pri" : params.lang === "ja" ? "優先" : "优先";
+  const colUpdated = params.lang === "en" ? "Updated" : params.lang === "ja" ? "更新" : "更新";
+
+  const typeLabel = params.lang === "en" ? "Job" : params.lang === "ja" ? "就活" : "求职";
+
+  const wCompany = 18;
+  const wStatus = 10;
+  const wType = 6;
+  const wPri = 4;
+  const wUpdated = 10;
+
+  const tableHeader =
+    `${padForBoard(colCompany, wCompany)}  ` +
+    `${padForBoard(colStatus, wStatus)}  ` +
+    `${padForBoard(colType, wType)}  ` +
+    `${padForBoard(colPri, wPri)}  ` +
+    `${padForBoard(colUpdated, wUpdated)}`;
+  const tableSep =
+    `${"-".repeat(wCompany)}  ${"-".repeat(wStatus)}  ${"-".repeat(wType)}  ${"-".repeat(wPri)}  ${"-".repeat(wUpdated)}`;
+
+  const rows = params.apps.map((a) => {
     const company = a.companyNameJa || a.companyNameEn || "—";
     const status = formatJobStatusLabel(params.lang, a.status);
+    const pri = computePriorityLabel({ lang: params.lang, status: a.status, nextActionAt: a.nextActionAt ?? null });
     const updated = formatDateYmd(a.updatedAt);
-    const nextAction = a.nextActionAt ? formatDateYmd(a.nextActionAt) : "";
-    const last = params.lastEvents[idx];
-    const hint = last?.reason ? String(last.reason).replace(/\s+/g, " ").slice(0, 60) : "";
-    const tail =
-      params.lang === "zh"
-        ? `${updated ? ` | 更新:${updated}` : ""}${nextAction ? ` | 下一步:${nextAction}` : ""}${hint ? ` | 线索:${hint}` : ""}`
-        : params.lang === "en"
-        ? `${updated ? ` | Updated:${updated}` : ""}${nextAction ? ` | Next:${nextAction}` : ""}${hint ? ` | Note:${hint}` : ""}`
-        : `${updated ? ` | 更新:${updated}` : ""}${nextAction ? ` | 次:${nextAction}` : ""}${hint ? ` | 根拠:${hint}` : ""}`;
-    return `- ${company} | ${status}${tail}`;
+    return (
+      `${padForBoard(company, wCompany)}  ` +
+      `${padForBoard(status, wStatus)}  ` +
+      `${padForBoard(typeLabel, wType)}  ` +
+      `${padForBoard(pri, wPri)}  ` +
+      `${padForBoard(updated, wUpdated)}`
+    );
   });
 
   const footer =
     params.lang === "zh"
-      ? "\n查看单家公司：用 /recon 公司名 或 /es 公司名\n开始面试：用 /interview 公司名（需要你主动）"
+      ? "\n查看单家公司：/recon 公司名 或 /es 公司名\n开始面试：/interview 公司名（需要你主动）"
       : params.lang === "en"
       ? "\nCompany detail: /recon <company> or /es <company>\nStart interview: /interview <company> (explicit opt-in)"
       : "\n企業別：/recon 企業名 または /es 企業名\n面接開始：/interview 企業名（明示同意）";
 
-  return `${header}\n${lines.join("\n")}${footer}`;
+  const table = `\`\`\`\n${tableHeader}\n${tableSep}\n${rows.join("\n")}\n\`\`\``;
+  return `${header}\n${dashboardLink}\n${table}${footer}`;
 }
 
 function normalizeCompanyKey(name: string): string {
