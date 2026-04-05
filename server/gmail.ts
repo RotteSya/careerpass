@@ -14,6 +14,9 @@
 import {
   getGoogleAccountSyncState,
   getOauthToken,
+  getJobApplications,
+  createJobApplication,
+  updateJobApplicationStatus,
   getUserCalendarColorPrefs,
   saveAgentMemory,
   updateGoogleAccountSyncState,
@@ -313,6 +316,83 @@ const typeLabels: Record<EmailEvent["eventType"], string> = {
   rejection: "【結果通知】",
   other: "【就活】",
 };
+
+type JobStatus =
+  | "researching"
+  | "es_preparing"
+  | "es_submitted"
+  | "interview_1"
+  | "interview_2"
+  | "interview_final"
+  | "offer"
+  | "rejected"
+  | "withdrawn";
+
+function jobStatusRank(status: JobStatus): number {
+  const ranks: Record<JobStatus, number> = {
+    researching: 10,
+    es_preparing: 20,
+    es_submitted: 30,
+    interview_1: 40,
+    interview_2: 50,
+    interview_final: 60,
+    offer: 70,
+    rejected: 70,
+    withdrawn: 70,
+  };
+  return ranks[status] ?? 0;
+}
+
+function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobStatus | null {
+  if (eventType === "offer") return "offer";
+  if (eventType === "rejection") return "rejected";
+  if (eventType === "interview") return "interview_1";
+  if (eventType === "test") return "interview_1";
+  if (eventType === "deadline") return "es_preparing";
+  if (eventType === "briefing") return "researching";
+  return null;
+}
+
+function nextStepsZh(status: JobStatus): string[] {
+  if (status === "researching") return ["确认投递岗位与截止时间", "准备 ES 的两段核心素材（志望动机/自己PR）"];
+  if (status === "es_preparing") return ["把志望动机写成 5 句（公司痛点→你的能力→为什么现在）", "整理 1 个可量化 STAR 案例用于自己PR"];
+  if (status === "es_submitted") return ["准备面试用的 30 秒自我介绍", "准备 3 个高价值逆質問"];
+  if (status === "interview_1") return ["整理面试题库：动机/强项/失败经历", "把 ES 的每一句都准备可追问的证据"];
+  if (status === "interview_2") return ["补齐职业规划与岗位匹配的逻辑链", "准备 1 个“你如何推进项目”的深挖案例"];
+  if (status === "interview_final") return ["准备入社动机与价值观对齐", "准备薪资/条件/入社时间的确认问题"];
+  if (status === "offer") return ["确认条件（入社时间/勤務地/待遇）", "准备对比与决策标准"];
+  if (status === "rejected") return ["复盘 1 个关键失分点并改写答案", "把经验迁移到下一家公司投递"];
+  if (status === "withdrawn") return ["记录撤回原因与学到的筛选标准", "更新投递优先级列表"];
+  return [];
+}
+
+async function upsertJobProgressFromMail(params: {
+  userId: number;
+  companyName: string;
+  nextStatus: JobStatus;
+}): Promise<{ changed: boolean; jobId: number | null; prevStatus: JobStatus | null; nextStatus: JobStatus }> {
+  const { userId, companyName, nextStatus } = params;
+  const jobs = await getJobApplications(userId);
+  const existing = jobs.find((j) => j.companyNameJa === companyName || j.companyNameEn === companyName);
+  if (!existing) {
+    await createJobApplication({ userId, companyNameJa: companyName });
+    const fresh = await getJobApplications(userId);
+    const created = fresh.find((j) => j.companyNameJa === companyName) ?? null;
+    if (created) {
+      await updateJobApplicationStatus(created.id, userId, nextStatus);
+      return { changed: true, jobId: created.id, prevStatus: null, nextStatus };
+    }
+    return { changed: false, jobId: null, prevStatus: null, nextStatus };
+  }
+
+  const prevStatus = existing.status as JobStatus;
+  const shouldAdvance = jobStatusRank(nextStatus) > jobStatusRank(prevStatus);
+  if (shouldAdvance) {
+    await updateJobApplicationStatus(existing.id, userId, nextStatus);
+    return { changed: true, jobId: existing.id, prevStatus, nextStatus };
+  }
+  return { changed: false, jobId: existing.id, prevStatus, nextStatus: prevStatus };
+}
 
 // Only events that represent a real appointment should be written to calendar.
 const CALENDAR_WRITABLE_TYPES: EmailEvent["eventType"][] = ["interview", "briefing", "test", "deadline"];
@@ -651,6 +731,16 @@ async function processGmailMessageIds(params: {
     detectedEvents.push(emailEvent);
     await reportToCareerpassAgent(userId, emailEvent, decision.reason);
 
+    const inferredStatus = companyName ? jobStatusFromEmailEventType(eventType) : null;
+    const progressUpdate =
+      inferredStatus && companyName
+        ? await upsertJobProgressFromMail({
+            userId,
+            companyName,
+            nextStatus: inferredStatus,
+          })
+        : null;
+
     let orchestrationActions: string[] = [];
     if (telegramChatId) {
       orchestrationActions = await orchestrateSubAgents(userId, emailEvent);
@@ -665,6 +755,14 @@ async function processGmailMessageIds(params: {
         orchestrationActions.length > 0
           ? `\n🤖 Agent調度: ${orchestrationActions.join(", ")}`
           : "";
+      const progressText =
+        progressUpdate && progressUpdate.jobId
+          ? `\n📌 *进度看板已更新*\n- 公司: ${companyName ?? "企业"}\n- 状态: ${progressUpdate.nextStatus}`
+          : "";
+      const nextStepsText =
+        progressUpdate && progressUpdate.jobId
+          ? `\n✅ *接下来建议*\n${nextStepsZh(progressUpdate.nextStatus).map(s => `- ${s}`).join("\n")}`
+          : "";
       const notifText =
         `📨 *就活関連メール検出*\n\n` +
         `${typeLabels[eventType]} ${companyName ?? "企業"}\n` +
@@ -672,6 +770,8 @@ async function processGmailMessageIds(params: {
         `📍 場所/リンク: ${emailEvent.location ?? "未記入"}\n` +
         `📧 件名: ${detail.subject.slice(0, 80)}` +
         todoText +
+        progressText +
+        nextStepsText +
         actionsText;
       await sendTelegramMessage(telegramChatId, notifText);
     }
