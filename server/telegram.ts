@@ -7,6 +7,8 @@ import {
   getAgentMemory,
   updateAgentSession,
   getTelegramBindingByTelegramId,
+  getJobApplications,
+  listJobStatusEvents,
 } from "./db";
 import {
   handleAgentChat,
@@ -222,6 +224,89 @@ function buildDeepDiveOfferText(lang: "ja" | "zh" | "en"): string {
 function isDeepDiveOptIn(text: string): boolean {
   const t = text.trim();
   return /^(开始|開始|好|可以|行|要|来|やる|お願いします|はい|ok|okay|yes|yep|sure)\b/i.test(t);
+}
+
+function formatJobStatusLabel(lang: "ja" | "zh" | "en", status: string): string {
+  const zh: Record<string, string> = {
+    researching: "调研中",
+    es_preparing: "ES准备中",
+    es_submitted: "ES已投递",
+    interview_1: "一面",
+    interview_2: "二面",
+    interview_final: "终面",
+    offer: "Offer",
+    rejected: "拒信",
+    withdrawn: "已撤回",
+  };
+  const ja: Record<string, string> = {
+    researching: "調査中",
+    es_preparing: "ES作成中",
+    es_submitted: "ES提出済み",
+    interview_1: "一次面接",
+    interview_2: "二次面接",
+    interview_final: "最終面接",
+    offer: "内定",
+    rejected: "不合格",
+    withdrawn: "辞退",
+  };
+  const en: Record<string, string> = {
+    researching: "Researching",
+    es_preparing: "ES Preparing",
+    es_submitted: "ES Submitted",
+    interview_1: "Interview 1",
+    interview_2: "Interview 2",
+    interview_final: "Final Interview",
+    offer: "Offer",
+    rejected: "Rejected",
+    withdrawn: "Withdrawn",
+  };
+  const map = lang === "zh" ? zh : lang === "en" ? en : ja;
+  return map[status] ?? status;
+}
+
+function formatDateYmd(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+function buildBoardText(params: {
+  lang: "ja" | "zh" | "en";
+  apps: Array<{ id: number; companyNameJa: string; companyNameEn: string | null; status: string; updatedAt: Date; nextActionAt?: Date | null }>;
+  lastEvents: Array<{ reason?: string | null; createdAt: Date } | null>;
+}): string {
+  const header =
+    params.lang === "zh"
+      ? "📌 求职动态看板（最近更新在前）"
+      : params.lang === "en"
+      ? "📌 Job Board (most recently updated first)"
+      : "📌 就活ボード（更新順）";
+
+  const lines = params.apps.map((a, idx) => {
+    const company = a.companyNameJa || a.companyNameEn || "—";
+    const status = formatJobStatusLabel(params.lang, a.status);
+    const updated = formatDateYmd(a.updatedAt);
+    const nextAction = a.nextActionAt ? formatDateYmd(a.nextActionAt) : "";
+    const last = params.lastEvents[idx];
+    const hint = last?.reason ? String(last.reason).replace(/\s+/g, " ").slice(0, 60) : "";
+    const tail =
+      params.lang === "zh"
+        ? `${updated ? ` | 更新:${updated}` : ""}${nextAction ? ` | 下一步:${nextAction}` : ""}${hint ? ` | 线索:${hint}` : ""}`
+        : params.lang === "en"
+        ? `${updated ? ` | Updated:${updated}` : ""}${nextAction ? ` | Next:${nextAction}` : ""}${hint ? ` | Note:${hint}` : ""}`
+        : `${updated ? ` | 更新:${updated}` : ""}${nextAction ? ` | 次:${nextAction}` : ""}${hint ? ` | 根拠:${hint}` : ""}`;
+    return `- ${company} | ${status}${tail}`;
+  });
+
+  const footer =
+    params.lang === "zh"
+      ? "\n查看单家公司：用 /recon 公司名 或 /es 公司名\n开始面试：用 /interview 公司名（需要你主动）"
+      : params.lang === "en"
+      ? "\nCompany detail: /recon <company> or /es <company>\nStart interview: /interview <company> (explicit opt-in)"
+      : "\n企業別：/recon 企業名 または /es 企業名\n面接開始：/interview 企業名（明示同意）";
+
+  return `${header}\n${lines.join("\n")}${footer}`;
 }
 
 function normalizeCompanyKey(name: string): string {
@@ -545,15 +630,40 @@ telegramRouter.post("/webhook", async (req, res) => {
       // Agent Session Handling
       const session = await getOrCreateAgentSession(userId, String(chatId));
       const sessionId = String(session.id);
+      const uid = userId;
 
       // Simple routing based on session state or commands
-      if (text.startsWith("/recon")) {
+      if (text.startsWith("/board") || text.startsWith("/kanban") || /看板|进度|求职.*板|board|kanban/i.test(text)) {
+        const user = await getUserById(uid);
+        const lang = ((user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en");
+        const apps = await getJobApplications(uid);
+        if (apps.length === 0) {
+          await sendTelegramMessage(
+            chatId,
+            lang === "zh"
+              ? "📌 你的看板还是空的。等我从邮件里识别到公司事件后，会自动帮你建卡并更新状态。"
+              : lang === "en"
+              ? "📌 Your board is empty. Once I detect company-related events from email, I’ll auto-create and update entries."
+              : "📌 まだボードが空です。メールから企業イベントを検知すると自動で作成・更新します。"
+          );
+          return res.json({ ok: true });
+        }
+
+        const topApps = apps.slice(0, 12);
+        const lastEvents = await Promise.all(
+          topApps.map(async (a) => {
+            const rows = await listJobStatusEvents(uid, a.id, 1);
+            return rows[0] ?? null;
+          })
+        );
+        await sendTelegramMessage(chatId, buildBoardText({ lang, apps: topApps as any, lastEvents: lastEvents as any }));
+      } else if (text.startsWith("/recon")) {
         const companyName = text.replace("/recon", "").trim();
         if (!companyName) {
           await sendTelegramMessage(chatId, "企業名を入力してください。例: `/recon トヨタ`", "Markdown");
         } else {
           await sendTelegramMessage(chatId, `🔍 ${companyName} の情報を調査しています... しばらくお待ちください。`);
-          const report = await runAgentRecon(userId, companyName);
+          const report = await runAgentRecon(uid, companyName);
           await sendTelegramMessage(chatId, `✅ ${companyName} の調査レポートが完成しました：\n\n${report.slice(0, 4000)}`);
         }
       } else if (text.startsWith("/es")) {
@@ -564,7 +674,7 @@ telegramRouter.post("/webhook", async (req, res) => {
           await sendTelegramMessage(chatId, "企業名を入力してください。例: `/es トヨタ 営業職`", "Markdown");
         } else {
           await sendTelegramMessage(chatId, `📄 ${companyName} のESを作成しています...`);
-          const es = await runAgentES(userId, companyName, position, sessionId);
+          const es = await runAgentES(uid, companyName, position, sessionId);
           await sendTelegramMessage(chatId, `✅ ${companyName} のES案が完成しました：\n\n${es.slice(0, 4000)}`);
         }
       } else if (text.startsWith("/interview")) {
@@ -572,12 +682,12 @@ telegramRouter.post("/webhook", async (req, res) => {
         if (!companyName) {
           await sendTelegramMessage(chatId, "企業名を入力してください。例: `/interview トヨタ`", "Markdown");
         } else {
-          await updateAgentSession(userId, { interviewMode: true, currentAgent: "careerpassinterview" });
-          const question = await runAgentInterview(userId, companyName, "総合職");
+          await updateAgentSession(uid, { interviewMode: true, currentAgent: "careerpassinterview" });
+          const question = await runAgentInterview(uid, companyName, "総合職");
           await sendTelegramMessage(chatId, `🎤 ${companyName} の模擬面接を開始します。私は面接官です。失礼いたします。\n\n${question}`);
         }
       } else if (text === "/stop") {
-        await updateAgentSession(userId, { interviewMode: false, currentAgent: "careerpass" });
+        await updateAgentSession(uid, { interviewMode: false, currentAgent: "careerpass" });
         await sendTelegramMessage(chatId, "対話を終了し、メインメニューに戻ります。");
       } else if (
         text.startsWith("/checkmail") ||
