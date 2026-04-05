@@ -31,6 +31,8 @@ import {
   startCompanyWorkflow,
 } from "./agents";
 
+const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface EmailEvent {
@@ -761,6 +763,13 @@ export interface MonitorResult {
   events: EmailEvent[];
 }
 
+function buildDashboardUrl(params?: { companyName?: string | null }): string {
+  const base = `${APP_DOMAIN.replace(/\/+$/, "")}/dashboard`;
+  const company = params?.companyName?.trim();
+  if (!company) return base;
+  return `${base}?company=${encodeURIComponent(company)}`;
+}
+
 async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<string[]> {
   const actions: string[] = [];
   const companyName = event.companyName?.trim();
@@ -885,6 +894,10 @@ async function processGmailMessageIds(params: {
           : desiredStatus && !companyName
           ? `\n📌 进度看板未更新（原因：无法识别公司名；识别到的阶段: ${jobStatusLabelZh(desiredStatus)})`
           : "";
+      const boardLinkText =
+        progressUpdate && progressUpdate.jobId && progressUpdate.changed
+          ? `\n🔗 [打开求职看板](${buildDashboardUrl({ companyName })})`
+          : "";
       const nextStepsText =
         progressUpdate && progressUpdate.jobId
           ? `\n✅ 接下来建议\n${nextStepsZh(progressUpdate.nextStatus).map(s => `- ${s}`).join("\n")}`
@@ -901,6 +914,7 @@ async function processGmailMessageIds(params: {
         `📧 件名: ${detail.subject.slice(0, 80)}` +
         todoText +
         progressText +
+        boardLinkText +
         nextStepsText +
         outcomeWarningText +
         actionsText;
