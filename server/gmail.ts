@@ -21,6 +21,7 @@ import {
   upsertOauthToken,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
+import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import {
   reconCompany as runAgentRecon,
   startCompanyWorkflow,
@@ -450,11 +451,18 @@ async function runCareerpassmailAgent(input: {
   "location": string | null,
   "todoItems": string[]
 }`;
+  const soul = await loadAgentSoul("careerpassmail");
+  const agents = await loadAgentAgents("careerpassmail");
+  const systemWithSoul = soul.content ? `${systemPrompt}\n\n[SOUL]\n${soul.content}` : systemPrompt;
+  const systemWithSoulAndAgents = agents.content ? `${systemWithSoul}\n\n[AGENTS]\n${agents.content}` : systemWithSoul;
+  const effectiveSystemPrompt =
+    `${systemWithSoulAndAgents}\n\n` +
+    `【输出格式强约束】你必须严格输出一个 JSON object，且不得输出任何多余文本。若[SOUL]/[AGENTS]与输出格式冲突，以输出格式为准。`;
 
   try {
     const response = await invokeLLM({
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: effectiveSystemPrompt },
         {
           role: "user",
           content:
