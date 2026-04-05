@@ -13,8 +13,9 @@ import {
   getTelegramBinding,
   getJobApplications,
   createJobApplication,
+  createJobStatusEvent,
   updateJobApplicationStatus,
-  saveAgentMemory,
+  listJobStatusEvents,
   getAgentMemory,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
@@ -393,8 +394,22 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
+        const prev = (await getJobApplications(ctx.user.id)).find(j => j.id === input.id)?.status ?? null;
         await updateJobApplicationStatus(input.id, ctx.user.id, input.status);
+        await createJobStatusEvent({
+          userId: ctx.user.id,
+          jobApplicationId: input.id,
+          source: "manual",
+          prevStatus: prev,
+          nextStatus: input.status,
+        });
         return { success: true };
+      }),
+
+    listStatusEvents: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return listJobStatusEvents(ctx.user.id, input.id, 20);
       }),
   }),
 

@@ -5,11 +5,13 @@ import {
   InsertOauthToken,
   InsertTelegramBinding,
   InsertJobApplication,
+  InsertJobStatusEvent,
   InsertAgentMemory,
   InsertAgentSession,
   agentMemory,
   agentSessions,
   jobApplications,
+  jobStatusEvents,
   oauthTokens,
   oauthProviderAccounts,
   telegramBindings,
@@ -353,6 +355,23 @@ export async function updateJobApplicationStatus(
     .update(jobApplications)
     .set({ status, updatedAt: new Date() })
     .where(and(eq(jobApplications.id, id), eq(jobApplications.userId, userId)));
+}
+
+export async function createJobStatusEvent(event: InsertJobStatusEvent) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(jobStatusEvents).values(event);
+}
+
+export async function listJobStatusEvents(userId: number, jobApplicationId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(jobStatusEvents)
+    .where(and(eq(jobStatusEvents.userId, userId), eq(jobStatusEvents.jobApplicationId, jobApplicationId)))
+    .orderBy(desc(jobStatusEvents.createdAt))
+    .limit(limit);
 }
 
 // ─── Agent Memory ──────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import {
   getOauthToken,
   getJobApplications,
   createJobApplication,
+  createJobStatusEvent,
   updateJobApplicationStatus,
   getUserCalendarColorPrefs,
   saveAgentMemory,
@@ -344,12 +345,27 @@ function jobStatusRank(status: JobStatus): number {
 }
 
 function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobStatus | null {
-  if (eventType === "offer") return "offer";
-  if (eventType === "rejection") return "rejected";
   if (eventType === "interview") return "interview_1";
   if (eventType === "test") return "interview_1";
   if (eventType === "deadline") return "es_preparing";
   if (eventType === "briefing") return "researching";
+  return null;
+}
+
+function inferHardOutcomeStatusFromText(text: string): JobStatus | null {
+  const t = text.toLowerCase();
+  if (
+    /(不採用|見送り|お見送り|選考結果.*残念|残念ながら|ご縁がなく|ご期待に添え|不合格|不通過)/.test(t) ||
+    /(rejected|unfortunately|we regret|not selected)/.test(t)
+  ) {
+    return "rejected";
+  }
+  if (
+    /(内定通知|内定のご連絡|内定のお知らせ|内定.*決定|採用内定|合格通知|合格のお知らせ|採用決定)/.test(t) ||
+    /(offer\s*letter|job\s*offer|we are pleased to offer)/.test(t)
+  ) {
+    return "offer";
+  }
   return null;
 }
 
@@ -360,6 +376,29 @@ function inferInterviewStatusFromText(text: string): JobStatus | null {
   if (/三次|3次|３次|third\s*interview|3rd\s*interview|third\b|3rd\b/.test(t)) return "interview_final";
   if (/一次|1次|１次|first\s*interview|1st\s*interview|first\b|1st\b/.test(t)) return "interview_1";
   return null;
+}
+
+function jobStatusLabelZh(status: JobStatus): string {
+  if (status === "researching") return "调研/准备";
+  if (status === "es_preparing") return "ES 准备";
+  if (status === "es_submitted") return "已提交 ES";
+  if (status === "interview_1") return "一面";
+  if (status === "interview_2") return "二面";
+  if (status === "interview_final") return "终面";
+  if (status === "offer") return "已拿到 offer";
+  if (status === "rejected") return "未通过";
+  if (status === "withdrawn") return "已撤回";
+  return status;
+}
+
+function normalizeCompanyName(name: string | null | undefined): string | null {
+  const raw = (name ?? "").trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  const blocked = new Set(["info", "noreply", "no-reply", "support", "recruit", "saiyo", "hr", "jobs"]);
+  if (blocked.has(lower)) return null;
+  if (raw.length < 2) return null;
+  return raw;
 }
 
 function nextStepsZh(status: JobStatus): string[] {
@@ -379,6 +418,13 @@ async function upsertJobProgressFromMail(params: {
   userId: number;
   companyName: string;
   nextStatus: JobStatus;
+  mail?: {
+    messageId: string;
+    from: string;
+    subject: string;
+    snippet?: string;
+    reason?: string;
+  };
 }): Promise<{ changed: boolean; jobId: number | null; prevStatus: JobStatus | null; nextStatus: JobStatus }> {
   const { userId, companyName, nextStatus } = params;
   const jobs = await getJobApplications(userId);
@@ -389,6 +435,18 @@ async function upsertJobProgressFromMail(params: {
     const created = fresh.find((j) => j.companyNameJa === companyName) ?? null;
     if (created) {
       await updateJobApplicationStatus(created.id, userId, nextStatus);
+      await createJobStatusEvent({
+        userId,
+        jobApplicationId: created.id,
+        source: "gmail",
+        prevStatus: null,
+        nextStatus,
+        mailMessageId: params.mail?.messageId ?? null,
+        mailFrom: params.mail?.from ?? null,
+        mailSubject: params.mail?.subject ?? null,
+        mailSnippet: params.mail?.snippet ?? null,
+        reason: params.mail?.reason ?? null,
+      });
       return { changed: true, jobId: created.id, prevStatus: null, nextStatus };
     }
     return { changed: false, jobId: null, prevStatus: null, nextStatus };
@@ -398,8 +456,32 @@ async function upsertJobProgressFromMail(params: {
   const shouldAdvance = jobStatusRank(nextStatus) > jobStatusRank(prevStatus);
   if (shouldAdvance) {
     await updateJobApplicationStatus(existing.id, userId, nextStatus);
+    await createJobStatusEvent({
+      userId,
+      jobApplicationId: existing.id,
+      source: "gmail",
+      prevStatus,
+      nextStatus,
+      mailMessageId: params.mail?.messageId ?? null,
+      mailFrom: params.mail?.from ?? null,
+      mailSubject: params.mail?.subject ?? null,
+      mailSnippet: params.mail?.snippet ?? null,
+      reason: params.mail?.reason ?? null,
+    });
     return { changed: true, jobId: existing.id, prevStatus, nextStatus };
   }
+  await createJobStatusEvent({
+    userId,
+    jobApplicationId: existing.id,
+    source: "gmail",
+    prevStatus,
+    nextStatus: prevStatus,
+    mailMessageId: params.mail?.messageId ?? null,
+    mailFrom: params.mail?.from ?? null,
+    mailSubject: params.mail?.subject ?? null,
+    mailSnippet: params.mail?.snippet ?? null,
+    reason: params.mail?.reason ?? null,
+  });
   return { changed: false, jobId: existing.id, prevStatus, nextStatus: prevStatus };
 }
 
@@ -658,7 +740,13 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
     });
-    return res.ok;
+    if (res.ok) return true;
+    const fallbackRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    });
+    return fallbackRes.ok;
   } catch {
     return false;
   }
@@ -719,10 +807,25 @@ async function processGmailMessageIds(params: {
     });
     if (!decision.isJobRelated) continue;
 
-    const eventType = decision.eventType ?? "other";
+    const mailText = `${detail.subject}\n${detail.body}`;
+    const hardOutcome = inferHardOutcomeStatusFromText(mailText);
+    const rawEventType = decision.eventType ?? "other";
+    const eventType =
+      rawEventType === "offer"
+        ? hardOutcome === "offer"
+          ? "offer"
+          : "other"
+        : rawEventType === "rejection"
+        ? hardOutcome === "rejected"
+          ? "rejection"
+          : "other"
+        : rawEventType;
     const date = decision.eventDate ?? null;
     const time = decision.eventTime ?? null;
-    const companyName = decision.companyName ?? extractCompanyName(detail.from, detail.subject);
+    const companyName =
+      normalizeCompanyName(decision.companyName) ??
+      normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
+      null;
 
     const emailEvent: EmailEvent = {
       subject: detail.subject,
@@ -741,16 +844,24 @@ async function processGmailMessageIds(params: {
     await reportToCareerpassAgent(userId, emailEvent, decision.reason);
 
     const stageStatus =
-      eventType === "interview" || eventType === "test"
-        ? inferInterviewStatusFromText(`${detail.subject}\n${detail.body}`)
+      rawEventType === "interview" || rawEventType === "test" || /面接|interview/.test(mailText.toLowerCase())
+        ? inferInterviewStatusFromText(mailText)
         : null;
-    const inferredStatus = companyName ? (stageStatus ?? jobStatusFromEmailEventType(eventType)) : null;
+    const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(rawEventType);
+    const inferredStatus = companyName ? desiredStatus : null;
     const progressUpdate =
       inferredStatus && companyName
         ? await upsertJobProgressFromMail({
             userId,
             companyName,
             nextStatus: inferredStatus,
+            mail: {
+              messageId,
+              from: detail.from,
+              subject: detail.subject,
+              snippet: detail.body.slice(0, 120),
+              reason: `${decision.reason ?? ""} (eventType=${rawEventType}, hardOutcome=${hardOutcome ?? "none"})`,
+            },
           })
         : null;
 
@@ -770,14 +881,20 @@ async function processGmailMessageIds(params: {
           : "";
       const progressText =
         progressUpdate && progressUpdate.jobId
-          ? `\n📌 *进度看板已更新*\n- 公司: ${companyName ?? "企业"}\n- 状态: ${progressUpdate.nextStatus}`
+          ? `\n📌 进度看板${progressUpdate.changed ? "已更新" : "未变更"}\n- 公司: ${companyName ?? "企业"}\n- 状态: ${jobStatusLabelZh(progressUpdate.nextStatus)}`
+          : desiredStatus && !companyName
+          ? `\n📌 进度看板未更新（原因：无法识别公司名；识别到的阶段: ${jobStatusLabelZh(desiredStatus)})`
           : "";
       const nextStepsText =
         progressUpdate && progressUpdate.jobId
-          ? `\n✅ *接下来建议*\n${nextStepsZh(progressUpdate.nextStatus).map(s => `- ${s}`).join("\n")}`
+          ? `\n✅ 接下来建议\n${nextStepsZh(progressUpdate.nextStatus).map(s => `- ${s}`).join("\n")}`
+          : "";
+      const outcomeWarningText =
+        (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome
+          ? `\n⚠️ 检测到可能是“结果/内定”相关邮件，但不够确定，我没有自动标记为 offer/未通过。请你在 Dashboard 手动确认。`
           : "";
       const notifText =
-        `📨 *就活関連メール検出*\n\n` +
+        `📨 就活相关邮件检测\n\n` +
         `${typeLabels[eventType]} ${companyName ?? "企業"}\n` +
         `${scheduleText}\n` +
         `📍 場所/リンク: ${emailEvent.location ?? "未記入"}\n` +
@@ -785,6 +902,7 @@ async function processGmailMessageIds(params: {
         todoText +
         progressText +
         nextStepsText +
+        outcomeWarningText +
         actionsText;
       await sendTelegramMessage(telegramChatId, notifText);
     }

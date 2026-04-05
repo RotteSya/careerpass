@@ -69,6 +69,7 @@ export default function Dashboard() {
     onSuccess: () => {
       toast.success("进度已更新");
       refetchJobs();
+      refetchStatusEvents();
     },
     onError: (err) => {
       toast.error(`更新失败: ${err.message}`);
@@ -78,6 +79,13 @@ export default function Dashboard() {
   const { data: jobs = [], isLoading: jobsLoading, refetch: refetchJobs } = trpc.jobs.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+  const {
+    data: statusEvents = [],
+    refetch: refetchStatusEvents,
+  } = trpc.jobs.listStatusEvents.useQuery(
+    { id: selectedJobId ?? 0 },
+    { enabled: isAuthenticated && !!selectedJobId }
+  );
   const { data: reconMemories = [] } = trpc.memory.list.useQuery(
     { type: "company_report" },
     { enabled: isAuthenticated }
@@ -550,6 +558,38 @@ export default function Dashboard() {
                     </p>
                     <p className="line-clamp-3">{selectedCard.interview?.content?.slice(0, 120) ?? "未生成"}</p>
                   </div>
+                </div>
+                <div className="mt-3 p-3 rounded-lg border border-border bg-card">
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> 更新记录
+                  </p>
+                  {statusEvents.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">暂无</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {statusEvents.slice(0, 5).map((e: any) => (
+                        <div key={e.id} className="text-xs">
+                          <div className="flex flex-wrap gap-x-2 gap-y-1 text-muted-foreground">
+                            <span>{e.createdAt ? new Date(e.createdAt).toLocaleString() : ""}</span>
+                            <span>{e.source ?? ""}</span>
+                            <span>
+                              {(e.prevStatus ?? "-") + " → " + (e.nextStatus ?? "-")}
+                            </span>
+                          </div>
+                          {e.mailSubject ? (
+                            <div className="mt-0.5 text-foreground">
+                              {String(e.mailSubject).slice(0, 120)}
+                            </div>
+                          ) : null}
+                          {e.mailFrom ? (
+                            <div className="text-muted-foreground">
+                              {String(e.mailFrom).slice(0, 120)}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

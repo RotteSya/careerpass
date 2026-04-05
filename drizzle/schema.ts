@@ -159,6 +159,24 @@ export const jobApplications = mysqlTable("job_applications", {
 export type JobApplication = typeof jobApplications.$inferSelect;
 export type InsertJobApplication = typeof jobApplications.$inferInsert;
 
+export const jobStatusEvents = mysqlTable("job_status_events", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  jobApplicationId: int("jobApplicationId"),
+  source: mysqlEnum("source", ["gmail", "manual", "agent"]).notNull(),
+  prevStatus: varchar("prevStatus", { length: 32 }),
+  nextStatus: varchar("nextStatus", { length: 32 }),
+  mailMessageId: varchar("mailMessageId", { length: 128 }),
+  mailFrom: text("mailFrom"),
+  mailSubject: text("mailSubject"),
+  mailSnippet: text("mailSnippet"),
+  reason: text("reason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type JobStatusEvent = typeof jobStatusEvents.$inferSelect;
+export type InsertJobStatusEvent = typeof jobStatusEvents.$inferInsert;
+
 // ─── Agent Memory (記憶庫) ────────────────────────────────────────────────────
 export const agentMemory = mysqlTable("agent_memory", {
   id: int("id").autoincrement().primaryKey(),
