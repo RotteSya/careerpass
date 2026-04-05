@@ -13,6 +13,7 @@ import {
   reconCompany as runAgentRecon,
   generateES as runAgentES,
   startInterview as runAgentInterview,
+  startCompanyWorkflow,
 } from "./agents";
 import { startMailMonitoringAndCheckmail } from "./mailMonitoring";
 import type { User } from "../drizzle/schema";
@@ -223,6 +224,88 @@ function isDeepDiveOptIn(text: string): boolean {
   return /^(开始|開始|好|可以|行|要|来|やる|お願いします|はい|ok|okay|yes|yep|sure)\b/i.test(t);
 }
 
+function normalizeCompanyKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+function uniqueCompanyNamesFromEvents(events: Array<{ companyName: string | null }>): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const e of events) {
+    const raw = e.companyName?.trim();
+    if (!raw) continue;
+    const key = normalizeCompanyKey(raw);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(raw);
+  }
+  return names;
+}
+
+function buildAutoWorkflowKickoffText(lang: "ja" | "zh" | "en", companies: string[]): string {
+  const list = companies.slice(0, 6).join(lang === "zh" ? "、" : ", ");
+  if (lang === "zh") {
+    return `我已经识别到你正在推进这些公司：${list}。\n\n我现在先自动帮你跑「企业调研 + ES 初稿」。模拟面试不会自动开始，需要你确认后才进入。`;
+  }
+  if (lang === "en") {
+    return `I found you’re active with: ${list}.\n\nI’ll automatically run company recon + an ES draft next. Mock interview will NOT start automatically; it will require your consent.`;
+  }
+  return `進行中の企業：${list}\n\nこれから自動で「企業調査 + ES初稿」を作成します。模擬面接は自動開始しません（同意が必要です）。`;
+}
+
+async function autoStartWorkflowsIfNeeded(params: {
+  userId: number;
+  sessionId: string;
+  chatId: string | number;
+  lang: "ja" | "zh" | "en";
+  events: Array<{ companyName: string | null }>;
+}) {
+  const companyNames = uniqueCompanyNamesFromEvents(params.events).slice(0, 3);
+  if (companyNames.length === 0) return;
+
+  const memories = await getAgentMemory(params.userId);
+  const hasReport = (company: string) =>
+    memories.some((m) => m.memoryType === "company_report" && m.title.includes(company));
+  const hasEs = (company: string) =>
+    memories.some((m) => m.memoryType === "es_draft" && m.title.includes(company));
+
+  const toRun = companyNames.filter((c) => !(hasReport(c) && hasEs(c)));
+  if (toRun.length === 0) return;
+
+  await sendTelegramMessage(params.chatId, buildAutoWorkflowKickoffText(params.lang, toRun));
+  for (const company of toRun) {
+    await sendTelegramMessage(
+      params.chatId,
+      params.lang === "zh"
+        ? `🔍 正在生成 ${company} 的调研与 ES 初稿...`
+        : params.lang === "en"
+        ? `🔍 Generating recon + ES draft for ${company}...`
+        : `🔍 ${company} の調査とES初稿を作成中です...`
+    );
+    try {
+      await startCompanyWorkflow(params.userId, company, "総合職", params.sessionId);
+      await sendTelegramMessage(
+        params.chatId,
+        params.lang === "zh"
+          ? `✅ ${company}：调研与 ES 初稿已生成。`
+          : params.lang === "en"
+          ? `✅ ${company}: recon + ES draft generated.`
+          : `✅ ${company}：調査とES初稿が完成しました。`
+      );
+    } catch (err) {
+      console.error("[Telegram] autoStartWorkflows failed:", err);
+      await sendTelegramMessage(
+        params.chatId,
+        params.lang === "zh"
+          ? `⚠️ ${company}：自动生成调研/ES 失败了，你可以稍后用 /recon 或 /es 手动触发。`
+          : params.lang === "en"
+          ? `⚠️ ${company}: auto recon/ES failed. You can trigger it later via /recon or /es.`
+          : `⚠️ ${company}：自動生成に失敗しました。後で /recon または /es で手動実行できます。`
+      );
+    }
+  }
+}
+
 // Send a message via Telegram Bot API
 export async function sendTelegramMessage(chatId: string | number, text: string, parseMode = "Markdown") {
   if (!TELEGRAM_API) {
@@ -429,6 +512,14 @@ telegramRouter.post("/webhook", async (req, res) => {
                   if (digest) await sendTelegramMessage(chatId, digest);
 
                   await sendTelegramMessage(chatId, buildDeepDiveOfferText(lang));
+
+                  await autoStartWorkflowsIfNeeded({
+                    userId: userId!,
+                    sessionId,
+                    chatId,
+                    lang,
+                    events: result.events,
+                  });
                 }
               } catch (err) {
                 console.error("[Telegram] /start background mail monitoring failed:", err);
@@ -540,6 +631,14 @@ telegramRouter.post("/webhook", async (req, res) => {
             const digest = buildScheduleDigestText(lang, result.events);
             if (digest) await sendTelegramMessage(chatId, digest);
             await sendTelegramMessage(chatId, buildDeepDiveOfferText(lang));
+
+            await autoStartWorkflowsIfNeeded({
+              userId: userId!,
+              sessionId,
+              chatId,
+              lang,
+              events: result.events,
+            });
           } catch (err) {
             console.error("[Telegram] /checkmail async monitor failed:", err);
             await sendTelegramMessage(chatId, "⚠️ 邮箱检查失败，请稍后重试。");
