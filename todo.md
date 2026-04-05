@@ -129,3 +129,8 @@
 - [x] 撰写服务条款（Terms of Service）页面内容
 - [x] 创建 /privacy 和 /terms 前端页面并注册路由
 - [x] 在首页页脚添加隐私政策和服务条款链接
+
+## v2.9 SEO 修复（首页 /）
+- [x] 修复标题：扩充至 27 字符（就活パス CareerPass｜AI就活エージェント・ES・面接対策）
+- [x] 新增 meta description：79 字符，含 ES/面接/AI就活/Gmail監視/カレンダー連携等关键词
+- [x] 新增 meta keywords 标签，包含就活/ES/面接/AI/内定等 11 个关键词
