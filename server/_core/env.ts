@@ -7,4 +7,9 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  openclawChatEnabled: (process.env.OPENCLAW_CHAT_ENABLED ?? "false").toLowerCase() === "true",
+  openclawChatRequired: (process.env.OPENCLAW_CHAT_REQUIRED ?? "false").toLowerCase() === "true",
+  openclawChatEndpoint: process.env.OPENCLAW_CHAT_ENDPOINT ?? "",
+  openclawChatToken: process.env.OPENCLAW_CHAT_TOKEN ?? "",
+  openclawChatTimeoutMs: Number(process.env.OPENCLAW_CHAT_TIMEOUT_MS ?? "25000"),
 };
