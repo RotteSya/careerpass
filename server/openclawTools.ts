@@ -1,0 +1,164 @@
+import express from "express";
+import { z } from "zod";
+import {
+  generateES,
+  reconCompany,
+  startCompanyWorkflow,
+  startInterview,
+} from "./agents";
+import { getOrCreateAgentSession } from "./db";
+
+export const openclawToolsRouter = express.Router();
+
+function isEnabledFlag(value: string | undefined): boolean {
+  return /^(1|true|yes|on)$/i.test((value ?? "").trim());
+}
+
+function resolveSessionId(sessionId: string | undefined, fallbackId: number): string {
+  return sessionId?.trim() || String(fallbackId);
+}
+
+function ensureEnabledAndAuthorized(req: express.Request, res: express.Response): boolean {
+  if (!isEnabledFlag(process.env.OPENCLAW_TOOLS_ENABLED)) {
+    res.status(404).json({ ok: false, error: "OpenClaw tools API is disabled" });
+    return false;
+  }
+
+  const expected = process.env.OPENCLAW_TOOL_SECRET ?? "";
+  if (!expected) {
+    res.status(503).json({ ok: false, error: "OPENCLAW_TOOL_SECRET is not configured" });
+    return false;
+  }
+
+  const provided = req.header("x-openclaw-secret") ?? "";
+  if (!provided || provided !== expected) {
+    res.status(401).json({ ok: false, error: "Unauthorized" });
+    return false;
+  }
+
+  return true;
+}
+
+openclawToolsRouter.get("/health", (req, res) => {
+  if (!ensureEnabledAndAuthorized(req, res)) return;
+  res.json({ ok: true });
+});
+
+openclawToolsRouter.post("/recon", async (req, res) => {
+  if (!ensureEnabledAndAuthorized(req, res)) return;
+
+  const schema = z.object({
+    userId: z.number().int().positive(),
+    companyName: z.string().min(1),
+    jobApplicationId: z.number().int().positive().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, error: "Invalid payload", details: parsed.error.flatten() });
+    return;
+  }
+
+  try {
+    const report = await reconCompany(
+      parsed.data.userId,
+      parsed.data.companyName,
+      parsed.data.jobApplicationId
+    );
+    res.json({ ok: true, report });
+  } catch (error) {
+    console.error("[OpenClawTools] /recon failed:", error);
+    res.status(500).json({ ok: false, error: "Failed to run recon" });
+  }
+});
+
+openclawToolsRouter.post("/es", async (req, res) => {
+  if (!ensureEnabledAndAuthorized(req, res)) return;
+
+  const schema = z.object({
+    userId: z.number().int().positive(),
+    companyName: z.string().min(1),
+    position: z.string().min(1).optional(),
+    sessionId: z.string().min(1).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, error: "Invalid payload", details: parsed.error.flatten() });
+    return;
+  }
+
+  try {
+    const session = await getOrCreateAgentSession(parsed.data.userId);
+    const sid = resolveSessionId(parsed.data.sessionId, session.id);
+    const position = parsed.data.position ?? "総合職";
+    const es = await generateES(parsed.data.userId, parsed.data.companyName, position, sid);
+    res.json({ ok: true, es, sessionId: sid });
+  } catch (error) {
+    console.error("[OpenClawTools] /es failed:", error);
+    res.status(500).json({ ok: false, error: "Failed to generate ES" });
+  }
+});
+
+openclawToolsRouter.post("/workflow/start", async (req, res) => {
+  if (!ensureEnabledAndAuthorized(req, res)) return;
+
+  const schema = z.object({
+    userId: z.number().int().positive(),
+    companyName: z.string().min(1),
+    position: z.string().min(1).optional(),
+    sessionId: z.string().min(1).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, error: "Invalid payload", details: parsed.error.flatten() });
+    return;
+  }
+
+  try {
+    const session = await getOrCreateAgentSession(parsed.data.userId);
+    const sid = resolveSessionId(parsed.data.sessionId, session.id);
+    const position = parsed.data.position ?? "総合職";
+    const workflow = await startCompanyWorkflow(
+      parsed.data.userId,
+      parsed.data.companyName,
+      position,
+      sid
+    );
+    res.json({ ok: true, sessionId: sid, ...workflow });
+  } catch (error) {
+    console.error("[OpenClawTools] /workflow/start failed:", error);
+    res.status(500).json({ ok: false, error: "Failed to run workflow" });
+  }
+});
+
+openclawToolsRouter.post("/interview/start", async (req, res) => {
+  if (!ensureEnabledAndAuthorized(req, res)) return;
+
+  const schema = z.object({
+    userId: z.number().int().positive(),
+    companyName: z.string().min(1),
+    position: z.string().min(1).optional(),
+    history: z
+      .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
+      .optional(),
+    userAnswer: z.string().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, error: "Invalid payload", details: parsed.error.flatten() });
+    return;
+  }
+
+  try {
+    const question = await startInterview(
+      parsed.data.userId,
+      parsed.data.companyName,
+      parsed.data.position ?? "総合職",
+      parsed.data.history ?? [],
+      parsed.data.userAnswer
+    );
+    res.json({ ok: true, question });
+  } catch (error) {
+    console.error("[OpenClawTools] /interview/start failed:", error);
+    res.status(500).json({ ok: false, error: "Failed to start interview" });
+  }
+});
