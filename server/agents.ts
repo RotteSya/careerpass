@@ -12,11 +12,6 @@ import {
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
 import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
-import {
-  isOpenClawChatEnabled,
-  isOpenClawChatRequired,
-  openClawChat,
-} from "./_core/openclawChat";
 
 async function buildSystemPrompt(params: { agentId: string; base: string; extraSystemInstruction?: string }) {
   const soul = await loadAgentSoul(params.agentId);
@@ -368,37 +363,6 @@ ${profileContextJa}`;
     })),
     { role: "user" as const, content: message },
   ];
-
-  if (isOpenClawChatEnabled()) {
-    try {
-      const reply = await openClawChat({
-        agentId: "careerpass",
-        userId,
-        sessionId: sid,
-        message,
-        history: history.map((m) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        })),
-        systemPrompt: effectiveSystemPrompt,
-      });
-
-      await saveAgentMemory({
-        userId,
-        memoryType: "conversation",
-        title: `Chat ${new Date().toISOString()}`,
-        content: `User: ${message}\nAssistant: ${reply}`,
-        metadata: { sessionId: sid, via: "openclaw" },
-      });
-
-      return { reply, sessionId: sid };
-    } catch (err) {
-      console.error("[OpenClaw] chat failed:", err);
-      if (isOpenClawChatRequired()) {
-        throw new Error("OpenClaw chat is required but unavailable");
-      }
-    }
-  }
 
   const response = await invokeLLM({ messages, tools: AGENT_TOOLS, tool_choice: "auto" });
   const choice = response.choices?.[0]?.message;
