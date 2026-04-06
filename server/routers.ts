@@ -23,12 +23,12 @@ import crypto from "crypto";
 import { reconCompany as runRecon, searchMemories } from "./recon";
 import { monitorGmailAndSync, sendTelegramMessage } from "./gmail";
 import {
+  handleAgentChat,
   generateResume,
   reconCompany as runAgentRecon,
   generateES as runAgentES,
   startInterview as runAgentInterview,
 } from "./agents";
-import { handleHybridAgentChat } from "./openclawBridge";
 import {
   registerWithEmail,
   loginWithEmail,
@@ -441,12 +441,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        return handleHybridAgentChat({
-          userId: ctx.user.id,
-          message: input.message,
-          sessionId: input.sessionId,
-          history: input.history,
-        });
+        return handleAgentChat(ctx.user.id, input.message, input.sessionId, input.history);
       }),
 
     generateResume: protectedProcedure

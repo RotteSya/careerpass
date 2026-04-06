@@ -7,7 +7,6 @@ import { registerOAuthRoutes } from "./oauth";
 import { telegramRouter } from "../telegram";
 import { registerTelegramWebhook } from "../telegram";
 import { gmailPushRouter } from "../gmailPush";
-import { openclawToolsRouter } from "../openclawTools";
 import { registerGmailPushWatch } from "../gmail";
 import { listUserIdsByOauthProvider } from "../db";
 import { appRouter } from "../routers";
@@ -48,8 +47,6 @@ async function startServer() {
   app.use("/api/telegram", telegramRouter);
   // Gmail push notifications (Google Pub/Sub push endpoint)
   app.use("/api/gmail", gmailPushRouter);
-  // OpenClaw tool endpoints (disabled by default, protected by shared secret)
-  app.use("/api/openclaw-tools", openclawToolsRouter);
 
   // Auto-register Telegram webhook on startup to avoid silent bot inactivity.
   const botToken = process.env.TELEGRAM_BOT_TOKEN;

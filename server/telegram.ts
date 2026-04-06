@@ -11,12 +11,12 @@ import {
   listJobStatusEvents,
 } from "./db";
 import {
+  handleAgentChat,
   reconCompany as runAgentRecon,
   generateES as runAgentES,
   startInterview as runAgentInterview,
   startCompanyWorkflow,
 } from "./agents";
-import { handleHybridAgentChat } from "./openclawBridge";
 import { startMailMonitoringAndCheckmail } from "./mailMonitoring";
 import type { User } from "../drizzle/schema";
 
@@ -861,13 +861,7 @@ telegramRouter.post("/webhook", async (req, res) => {
             }
           }
 
-          const { reply } = await handleHybridAgentChat({
-            userId,
-            message: text,
-            sessionId,
-            history,
-            extraSystemInstruction,
-          });
+          const { reply } = await handleAgentChat(userId, text, sessionId, history, extraSystemInstruction);
           await sendTelegramMessage(chatId, reply);
         }
       }
