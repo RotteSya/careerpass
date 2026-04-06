@@ -194,17 +194,17 @@ function buildScheduleDigestText(
 
   const header =
     lang === "zh"
-      ? "你近期的关键日程（JST）："
+      ? "我帮你把近期关键安排整理好了（JST）："
       : lang === "en"
-      ? "Your upcoming key items (JST):"
-      : "直近の重要予定（JST）：";
+      ? "Here are your upcoming key items (JST):"
+      : "直近の重要予定を整理しました（JST）：";
 
   const lines = schedulable.map((e) => {
     const dt = `${e.eventDate}${e.eventTime ? ` ${e.eventTime}` : ""} JST`;
     const company = e.companyName ?? (lang === "zh" ? "公司未知" : lang === "en" ? "Unknown company" : "企業不明");
     const type = formatEventTypeLabel(lang, e.eventType);
     const loc = e.location ? ` @ ${e.location}` : "";
-    const todo = e.todoItems?.length ? ` | TODO: ${e.todoItems.slice(0, 2).join(" / ")}` : "";
+    const todo = e.todoItems?.length ? `；你先做：${e.todoItems.slice(0, 2).join(" / ")}` : "";
     return `- ${dt} | ${company} | ${type}${loc}${todo}`;
   });
 
@@ -649,12 +649,12 @@ telegramRouter.post("/webhook", async (req, res) => {
                   if (result.detected > 0) {
                     await sendTelegramMessage(
                       chatId,
-                      `✅ 邮箱检查完成：扫描 ${result.scanned} 封，识别 ${result.detected} 个事件，写入日历 ${result.calendarEvents} 个。`
+                      `我把邮箱过了一遍：看了 ${result.scanned} 封邮件，抓到 ${result.detected} 条求职相关信息，已写入 ${result.calendarEvents} 条日历。`
                     );
                   } else {
                     await sendTelegramMessage(
                       chatId,
-                      `ℹ️ 邮箱检查完成：扫描 ${result.scanned} 封，但未识别到“说明会/面试/结果通知”等有效事件。`
+                      `我看了 ${result.scanned} 封邮件，这一轮没有发现需要你马上处理的求职事件。`
                     );
                   }
 
@@ -793,12 +793,12 @@ telegramRouter.post("/webhook", async (req, res) => {
             if (result.detected > 0) {
               await sendTelegramMessage(
                 chatId,
-                `✅ 检查完成：扫描 ${result.scanned} 封，识别 ${result.detected} 个有效事件，写入日历 ${result.calendarEvents} 个。`
+                `我刚帮你查完邮箱：看了 ${result.scanned} 封，识别到 ${result.detected} 条有效事件，已同步 ${result.calendarEvents} 条到日历。`
               );
             } else {
               await sendTelegramMessage(
                 chatId,
-                `ℹ️ 检查完成：扫描 ${result.scanned} 封，但未识别到“说明会/面试/结果通知”等有效事件。`
+                `这次我查了 ${result.scanned} 封邮件，暂时没有发现需要你立即处理的求职事件。`
               );
             }
 

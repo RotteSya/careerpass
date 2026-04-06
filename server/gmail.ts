@@ -877,47 +877,48 @@ async function processGmailMessageIds(params: {
     let orchestrationActions: string[] = [];
     if (telegramChatId) {
       orchestrationActions = await orchestrateSubAgents(userId, emailEvent);
+      const workflowTriggered = orchestrationActions.length > 0;
       const todoText =
         emailEvent.todoItems.length > 0
-          ? `\n📝 *やるべきこと:*\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}`
+          ? `\n我建议你先做这几件事：\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}`
           : "";
       const scheduleText = date
-        ? `📆 ${date}${time ? ` ${time}` : ""}`
-        : "📆 日時抽出: 失敗（メール本文に日時が明示されていない可能性があります）";
-      const actionsText =
-        orchestrationActions.length > 0
-          ? `\n🤖 Agent調度: ${orchestrationActions.join(", ")}`
-          : "";
+        ? `时间大概是 ${date}${time ? ` ${time}` : ""} JST`
+        : "这封邮件里没有明确时间，我先不强行写死日程。";
       const progressText =
         progressUpdate && progressUpdate.jobId
-          ? `\n📌 进度看板${progressUpdate.changed ? "已更新" : "未变更"}\n- 公司: ${companyName ?? "企业"}\n- 状态: ${jobStatusLabelZh(progressUpdate.nextStatus)}`
+          ? `\n我已帮你把进度看板${progressUpdate.changed ? "更新" : "核对"}到「${jobStatusLabelZh(progressUpdate.nextStatus)}」。`
           : desiredStatus && !companyName
-          ? `\n📌 进度看板未更新（原因：无法识别公司名；识别到的阶段: ${jobStatusLabelZh(desiredStatus)})`
+          ? `\n这封邮件像是「${jobStatusLabelZh(desiredStatus)}」阶段，但我没识别出公司名，所以还没自动改看板。`
           : "";
       const boardLinkText =
         progressUpdate && progressUpdate.jobId && progressUpdate.changed
-          ? `\n🔗 [打开求职看板](${buildDashboardUrl({ companyName })})`
+          ? `\n你可以在这里看详情：[打开求职看板](${buildDashboardUrl({ companyName })})`
           : "";
       const nextStepsText =
         progressUpdate && progressUpdate.jobId
-          ? `\n✅ 接下来建议\n${nextStepsZh(progressUpdate.nextStatus).map(s => `- ${s}`).join("\n")}`
+          ? `\n接下来建议：\n${nextStepsZh(progressUpdate.nextStatus).map(s => `- ${s}`).join("\n")}`
           : "";
       const outcomeWarningText =
         (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome
-          ? `\n⚠️ 检测到可能是“结果/内定”相关邮件，但不够确定，我没有自动标记为 offer/未通过。请你在 Dashboard 手动确认。`
+          ? `\n这封邮件可能和结果有关，但语义不够确定，我先没有自动标记为 offer/未通过。你方便时在 Dashboard 看一眼确认就行。`
+          : "";
+      const workflowText =
+        workflowTriggered
+          ? `\n另外我已经把这家公司的后续流程往前推进了。`
           : "";
       const notifText =
-        `📨 就活相关邮件检测\n\n` +
-        `${typeLabels[eventType]} ${companyName ?? "企業"}\n` +
+        `我刚看完一封和求职相关的邮件：\n\n` +
+        `${companyName ?? "这家公司"}（${typeLabels[eventType]}）\n` +
         `${scheduleText}\n` +
-        `📍 場所/リンク: ${emailEvent.location ?? "未記入"}\n` +
-        `📧 件名: ${detail.subject.slice(0, 80)}` +
+        `地点/链接：${emailEvent.location ?? "邮件里没写"}\n` +
+        `邮件主题：${detail.subject.slice(0, 80)}` +
         todoText +
         progressText +
         boardLinkText +
         nextStepsText +
         outcomeWarningText +
-        actionsText;
+        workflowText;
       await sendTelegramMessage(telegramChatId, notifText);
     }
 
