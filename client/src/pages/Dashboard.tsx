@@ -350,23 +350,105 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Module 2: Telegram Binding */}
+          {/* Module 2: Chat Platform Binding */}
           <div className="rounded-2xl border border-border bg-card p-6">
             <div className="mb-5">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-primary" />
-                Telegram 専属顧問との連携
+                聊天机器人绑定
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                就活パス専属顧問と接続して、AI就活サポートを開始しましょう
+                当前支持 Telegram。后续将陆续支持 LINE / WhatsApp / WeChat 等主流社交平台。
               </p>
+            </div>
+
+            <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-4 rounded-xl border border-border bg-secondary/20">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">Telegram</p>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#2AABEE]/15 text-[#2AABEE] border border-[#2AABEE]/30">
+                    可用
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground min-h-[32px]">
+                  当前主通道，支持扫码绑定和消息通知。
+                </p>
+                {telegramStatus?.bound ? (
+                  <Button size="sm" className="w-full mt-3" variant="outline" disabled>
+                    已绑定
+                  </Button>
+                ) : telegramDeepLink?.deepLink ? (
+                  <a
+                    href={telegramDeepLink.deepLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 w-full mt-3 h-8 rounded-md bg-[#2AABEE] hover:bg-[#229ED9] text-white text-xs font-medium transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    去绑定
+                  </a>
+                ) : (
+                  <Button size="sm" className="w-full mt-3" disabled>
+                    加载中...
+                  </Button>
+                )}
+              </div>
+
+              <div className="p-4 rounded-xl border border-border bg-secondary/20 opacity-80">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">LINE</p>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                    准备中
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground min-h-[32px]">
+                  即将支持通过 LINE 接收提醒与对话。
+                </p>
+                <Button size="sm" className="w-full mt-3" disabled>
+                  即将开放
+                </Button>
+              </div>
+
+              <div className="p-4 rounded-xl border border-border bg-secondary/20 opacity-80">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">WhatsApp</p>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                    准备中
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground min-h-[32px]">
+                  即将支持通过 WhatsApp 接收提醒与对话。
+                </p>
+                <Button size="sm" className="w-full mt-3" disabled>
+                  即将开放
+                </Button>
+              </div>
+
+              <div className="p-4 rounded-xl border border-border bg-secondary/20 opacity-80">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">WeChat</p>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                    准备中
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground min-h-[32px]">
+                  即将支持通过 WeChat 接收提醒与对话。
+                </p>
+                <Button size="sm" className="w-full mt-3" disabled>
+                  即将开放
+                </Button>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-xs text-muted-foreground">Telegram 绑定详情</p>
             </div>
 
             {telegramStatus?.bound ? (
               <div className="flex items-center gap-4 p-4 rounded-xl border border-green-500/30 bg-green-500/10">
                 <CheckCircle2 className="w-8 h-8 text-green-400 shrink-0" />
                 <div>
-                  <p className="font-medium text-green-300">Telegram 連携済み</p>
+                  <p className="font-medium text-green-300">Telegram 已绑定</p>
                   <p className="text-sm text-muted-foreground">
                     @{telegramStatus.telegramUsername ?? telegramStatus.telegramId} と接続中
                   </p>
@@ -401,11 +483,10 @@ export default function Dashboard() {
                 <div className="flex-1 space-y-4">
                   <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-primary mb-1">
-                      请扫码添加就活パス专属顾问
+                      请先通过 Telegram 绑定就活パス专属顾问
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      QRコードをスキャンするか、下のボタンをタップして
-                      CareerpassBot を追加してください
+                      先完成 Telegram 接入，后续平台（LINE / WhatsApp / WeChat）上线后会在这里开放绑定入口。
                     </p>
                   </div>
 
