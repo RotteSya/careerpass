@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { handleAgentChat } from "./agents";
 import { saveAgentMemory } from "./db";
+import { recordHybridRoute } from "./openclawObservability";
 
 type ChatHistoryItem = { role: string; content: string };
 
@@ -98,6 +99,7 @@ async function invokeOpenClawChat(params: {
 }
 
 export async function handleHybridAgentChat(params: HybridChatParams): Promise<HybridChatResult> {
+  const startedAt = Date.now();
   const sid = params.sessionId ?? crypto.randomUUID();
   const history = params.history ?? [];
   const hybridEnabled = isTruthy(process.env.OPENCLAW_HYBRID_ENABLED);
@@ -110,6 +112,10 @@ export async function handleHybridAgentChat(params: HybridChatParams): Promise<H
       history,
       params.extraSystemInstruction
     );
+    recordHybridRoute({
+      route: "legacy_direct",
+      latencyMs: Date.now() - startedAt,
+    });
     return { ...legacy, mode: "legacy" };
   }
 
@@ -130,6 +136,10 @@ export async function handleHybridAgentChat(params: HybridChatParams): Promise<H
       metadata: { sessionId: sid, provider: "openclaw" },
     });
 
+    recordHybridRoute({
+      route: "openclaw",
+      latencyMs: Date.now() - startedAt,
+    });
     return { reply, sessionId: sid, mode: "openclaw" };
   } catch (error) {
     console.error("[OpenClawBridge] Fallback to legacy agent due to error:", error);
@@ -140,6 +150,11 @@ export async function handleHybridAgentChat(params: HybridChatParams): Promise<H
       history,
       params.extraSystemInstruction
     );
+    recordHybridRoute({
+      route: "legacy_fallback",
+      latencyMs: Date.now() - startedAt,
+      error,
+    });
     return { ...legacy, mode: "legacy" };
   }
 }

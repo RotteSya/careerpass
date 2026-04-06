@@ -7,6 +7,7 @@ import {
   startInterview,
 } from "./agents";
 import { getOrCreateAgentSession } from "./db";
+import { getOpenClawObservabilitySnapshot, recordToolCall } from "./openclawObservability";
 
 export const openclawToolsRouter = express.Router();
 
@@ -40,12 +41,31 @@ function ensureEnabledAndAuthorized(req: express.Request, res: express.Response)
 }
 
 openclawToolsRouter.get("/health", (req, res) => {
-  if (!ensureEnabledAndAuthorized(req, res)) return;
+  const startedAt = Date.now();
+  if (!ensureEnabledAndAuthorized(req, res)) {
+    recordToolCall({ endpoint: "health", ok: false, latencyMs: Date.now() - startedAt, error: "unauthorized_or_disabled" });
+    return;
+  }
+  recordToolCall({ endpoint: "health", ok: true, latencyMs: Date.now() - startedAt });
   res.json({ ok: true });
 });
 
+openclawToolsRouter.get("/metrics", (req, res) => {
+  const startedAt = Date.now();
+  if (!ensureEnabledAndAuthorized(req, res)) {
+    recordToolCall({ endpoint: "metrics", ok: false, latencyMs: Date.now() - startedAt, error: "unauthorized_or_disabled" });
+    return;
+  }
+  recordToolCall({ endpoint: "metrics", ok: true, latencyMs: Date.now() - startedAt });
+  res.json({ ok: true, metrics: getOpenClawObservabilitySnapshot() });
+});
+
 openclawToolsRouter.post("/recon", async (req, res) => {
-  if (!ensureEnabledAndAuthorized(req, res)) return;
+  const startedAt = Date.now();
+  if (!ensureEnabledAndAuthorized(req, res)) {
+    recordToolCall({ endpoint: "recon", ok: false, latencyMs: Date.now() - startedAt, error: "unauthorized_or_disabled" });
+    return;
+  }
 
   const schema = z.object({
     userId: z.number().int().positive(),
@@ -54,6 +74,7 @@ openclawToolsRouter.post("/recon", async (req, res) => {
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
+    recordToolCall({ endpoint: "recon", ok: false, latencyMs: Date.now() - startedAt, error: "invalid_payload" });
     res.status(400).json({ ok: false, error: "Invalid payload", details: parsed.error.flatten() });
     return;
   }
@@ -64,15 +85,21 @@ openclawToolsRouter.post("/recon", async (req, res) => {
       parsed.data.companyName,
       parsed.data.jobApplicationId
     );
+    recordToolCall({ endpoint: "recon", ok: true, latencyMs: Date.now() - startedAt });
     res.json({ ok: true, report });
   } catch (error) {
+    recordToolCall({ endpoint: "recon", ok: false, latencyMs: Date.now() - startedAt, error });
     console.error("[OpenClawTools] /recon failed:", error);
     res.status(500).json({ ok: false, error: "Failed to run recon" });
   }
 });
 
 openclawToolsRouter.post("/es", async (req, res) => {
-  if (!ensureEnabledAndAuthorized(req, res)) return;
+  const startedAt = Date.now();
+  if (!ensureEnabledAndAuthorized(req, res)) {
+    recordToolCall({ endpoint: "es", ok: false, latencyMs: Date.now() - startedAt, error: "unauthorized_or_disabled" });
+    return;
+  }
 
   const schema = z.object({
     userId: z.number().int().positive(),
@@ -82,6 +109,7 @@ openclawToolsRouter.post("/es", async (req, res) => {
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
+    recordToolCall({ endpoint: "es", ok: false, latencyMs: Date.now() - startedAt, error: "invalid_payload" });
     res.status(400).json({ ok: false, error: "Invalid payload", details: parsed.error.flatten() });
     return;
   }
@@ -91,15 +119,21 @@ openclawToolsRouter.post("/es", async (req, res) => {
     const sid = resolveSessionId(parsed.data.sessionId, session.id);
     const position = parsed.data.position ?? "総合職";
     const es = await generateES(parsed.data.userId, parsed.data.companyName, position, sid);
+    recordToolCall({ endpoint: "es", ok: true, latencyMs: Date.now() - startedAt });
     res.json({ ok: true, es, sessionId: sid });
   } catch (error) {
+    recordToolCall({ endpoint: "es", ok: false, latencyMs: Date.now() - startedAt, error });
     console.error("[OpenClawTools] /es failed:", error);
     res.status(500).json({ ok: false, error: "Failed to generate ES" });
   }
 });
 
 openclawToolsRouter.post("/workflow/start", async (req, res) => {
-  if (!ensureEnabledAndAuthorized(req, res)) return;
+  const startedAt = Date.now();
+  if (!ensureEnabledAndAuthorized(req, res)) {
+    recordToolCall({ endpoint: "workflow_start", ok: false, latencyMs: Date.now() - startedAt, error: "unauthorized_or_disabled" });
+    return;
+  }
 
   const schema = z.object({
     userId: z.number().int().positive(),
@@ -109,6 +143,7 @@ openclawToolsRouter.post("/workflow/start", async (req, res) => {
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
+    recordToolCall({ endpoint: "workflow_start", ok: false, latencyMs: Date.now() - startedAt, error: "invalid_payload" });
     res.status(400).json({ ok: false, error: "Invalid payload", details: parsed.error.flatten() });
     return;
   }
@@ -123,15 +158,21 @@ openclawToolsRouter.post("/workflow/start", async (req, res) => {
       position,
       sid
     );
+    recordToolCall({ endpoint: "workflow_start", ok: true, latencyMs: Date.now() - startedAt });
     res.json({ ok: true, sessionId: sid, ...workflow });
   } catch (error) {
+    recordToolCall({ endpoint: "workflow_start", ok: false, latencyMs: Date.now() - startedAt, error });
     console.error("[OpenClawTools] /workflow/start failed:", error);
     res.status(500).json({ ok: false, error: "Failed to run workflow" });
   }
 });
 
 openclawToolsRouter.post("/interview/start", async (req, res) => {
-  if (!ensureEnabledAndAuthorized(req, res)) return;
+  const startedAt = Date.now();
+  if (!ensureEnabledAndAuthorized(req, res)) {
+    recordToolCall({ endpoint: "interview_start", ok: false, latencyMs: Date.now() - startedAt, error: "unauthorized_or_disabled" });
+    return;
+  }
 
   const schema = z.object({
     userId: z.number().int().positive(),
@@ -144,6 +185,7 @@ openclawToolsRouter.post("/interview/start", async (req, res) => {
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
+    recordToolCall({ endpoint: "interview_start", ok: false, latencyMs: Date.now() - startedAt, error: "invalid_payload" });
     res.status(400).json({ ok: false, error: "Invalid payload", details: parsed.error.flatten() });
     return;
   }
@@ -156,8 +198,10 @@ openclawToolsRouter.post("/interview/start", async (req, res) => {
       parsed.data.history ?? [],
       parsed.data.userAnswer
     );
+    recordToolCall({ endpoint: "interview_start", ok: true, latencyMs: Date.now() - startedAt });
     res.json({ ok: true, question });
   } catch (error) {
+    recordToolCall({ endpoint: "interview_start", ok: false, latencyMs: Date.now() - startedAt, error });
     console.error("[OpenClawTools] /interview/start failed:", error);
     res.status(500).json({ ok: false, error: "Failed to start interview" });
   }

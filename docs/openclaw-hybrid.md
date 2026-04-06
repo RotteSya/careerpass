@@ -39,6 +39,8 @@ All `/api/openclaw-tools/*` endpoints require:
 Base URL: `https://<your-domain>/api/openclaw-tools`
 
 - `GET /health`
+- `GET /metrics`
+  - Returns in-memory observability snapshot (hybrid route hit ratio, fallback/error count, per-tool success/failure and average latency).
 - `POST /recon`
   - Body: `{ "userId": number, "companyName": string, "jobApplicationId"?: number }`
 - `POST /es`
