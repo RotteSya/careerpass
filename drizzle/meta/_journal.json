@@ -43,6 +43,13 @@
       "when": 1775302800000,
       "tag": "0005_calendar_color_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1775440091868,
+      "tag": "0006_careless_the_phantom",
+      "breakpoints": true
     }
   ]
 }
