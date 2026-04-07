@@ -149,7 +149,7 @@ export async function upsertOauthToken(token: InsertOauthToken) {
   await db.insert(oauthTokens).values(token);
 }
 
-export async function getOauthToken(userId: number, provider: "google" | "outlook") {
+export async function getOauthToken(userId: number, provider: "google" | "outlook" | "notion") {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db
@@ -160,7 +160,7 @@ export async function getOauthToken(userId: number, provider: "google" | "outloo
   return result[0] ?? undefined;
 }
 
-export async function deleteOauthToken(userId: number, provider: "google" | "outlook") {
+export async function deleteOauthToken(userId: number, provider: "google" | "outlook" | "notion") {
   const db = await getDb();
   if (!db) return;
   await db
@@ -168,7 +168,7 @@ export async function deleteOauthToken(userId: number, provider: "google" | "out
     .where(and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, provider)));
 }
 
-export async function listUserIdsByOauthProvider(provider: "google" | "outlook"): Promise<number[]> {
+export async function listUserIdsByOauthProvider(provider: "google" | "outlook" | "notion"): Promise<number[]> {
   const db = await getDb();
   if (!db) return [];
   const rows = await db
@@ -180,7 +180,7 @@ export async function listUserIdsByOauthProvider(provider: "google" | "outlook")
 
 export async function upsertOauthProviderAccount(params: {
   userId: number;
-  provider: "google" | "outlook";
+  provider: "google" | "outlook" | "notion";
   accountEmail: string;
 }) {
   const db = await getDb();
@@ -210,7 +210,7 @@ export async function upsertOauthProviderAccount(params: {
 }
 
 export async function getUserIdByOauthProviderAccount(
-  provider: "google" | "outlook",
+  provider: "google" | "outlook" | "notion",
   accountEmail: string
 ): Promise<number | null> {
   const db = await getDb();

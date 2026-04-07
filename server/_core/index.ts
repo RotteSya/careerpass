@@ -11,6 +11,7 @@ import { registerGmailPushWatch } from "../gmail";
 import { listUserIdsByOauthProvider } from "../db";
 import { appRouter } from "../routers";
 import { registerCalendarOAuthRoute } from "../calendarOAuth";
+import { registerNotionOAuthRoute } from "../notionOAuth";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -43,6 +44,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Google Calendar OAuth callback — server-side Express route to avoid SPA routing issues
   registerCalendarOAuthRoute(app);
+  // Notion OAuth callback
+  registerNotionOAuthRoute(app);
   // Telegram Bot Webhook under /api/telegram
   app.use("/api/telegram", telegramRouter);
   // Gmail push notifications (Google Pub/Sub push endpoint)

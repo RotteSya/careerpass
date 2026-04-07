@@ -12,6 +12,7 @@ import {
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
 import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
+import { syncJobToNotionBoard } from "./notion";
 
 async function buildSystemPrompt(params: { agentId: string; base: string; extraSystemInstruction?: string }) {
   const soul = await loadAgentSoul(params.agentId);
@@ -381,6 +382,16 @@ ${profileContextJa}`;
         }
         if (app) {
           await updateJobApplicationStatus(app.id, userId, args.status as any);
+          try {
+            await syncJobToNotionBoard({
+              userId,
+              companyName: args.companyName,
+              status: args.status,
+              source: "agent",
+            });
+          } catch (e) {
+            console.warn("[Notion] Agent status sync failed:", (e as Error).message);
+          }
           results.push(`Updated ${args.companyName} status to ${args.status}`);
         }
       } else if (toolCall.function.name === "runRecon") {

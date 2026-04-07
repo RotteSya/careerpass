@@ -58,6 +58,18 @@ export default function Dashboard() {
     { provider: "outlook", origin: typeof window !== "undefined" ? window.location.origin : "" },
     { enabled: isAuthenticated }
   );
+  const { data: notionStatus, refetch: refetchNotionStatus } = trpc.notion.getStatus.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const { data: notionAuthUrl } = trpc.notion.getAuthUrl.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const disconnectNotion = trpc.notion.disconnect.useMutation({
+    onSuccess: () => {
+      toast.success("Notion 連携を解除しました");
+      refetchNotionStatus();
+    },
+  });
 
   const disconnectCalendar = trpc.calendar.disconnect.useMutation({
     onSuccess: () => {
@@ -110,13 +122,25 @@ export default function Dashboard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const calendarResult = params.get("calendar");
-    if (!calendarResult) return;
-    if (calendarResult === "success") {
-      toast.success("カレンダー連携が完了しました！");
-      refetchCalendar();
-    } else if (calendarResult === "error") {
-      const reason = params.get("reason") ?? "unknown";
-      toast.error(`カレンダー連携に失敗しました: ${reason}`);
+    const notionResult = params.get("notion");
+    if (!calendarResult && !notionResult) return;
+    if (calendarResult) {
+      if (calendarResult === "success") {
+        toast.success("カレンダー連携が完了しました！");
+        refetchCalendar();
+      } else if (calendarResult === "error") {
+        const reason = params.get("reason") ?? "unknown";
+        toast.error(`カレンダー連携に失敗しました: ${reason}`);
+      }
+    }
+    if (notionResult) {
+      if (notionResult === "success") {
+        toast.success("Notion 連携が完了しました！");
+        refetchNotionStatus();
+      } else if (notionResult === "error") {
+        const reason = params.get("reason") ?? "unknown";
+        toast.error(`Notion 連携に失敗しました: ${reason}`);
+      }
     }
     // Remove query params from URL without triggering navigation
     window.history.replaceState({}, "", window.location.pathname);
@@ -537,6 +561,50 @@ export default function Dashboard() {
               </div>
               <div className="text-xs text-muted-foreground">
                 企業数: {jobs.length} / 進行中: {columns.inResearch.length + columns.inES.length + columns.inInterview.length}
+              </div>
+            </div>
+
+            <div className="mb-4 p-4 rounded-xl border border-border bg-secondary/20">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Notion 动态看板同步</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    将邮件识别和状态更新自动同步到 Notion Database
+                    {notionStatus?.workspaceName ? `（${notionStatus.workspaceName}）` : ""}
+                  </p>
+                  {!notionStatus?.databaseConfigured && (
+                    <p className="text-xs text-amber-400 mt-1">
+                      未配置 `NOTION_JOB_BOARD_DATABASE_ID`，当前仅保存连接，不会实际写入看板。
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {notionStatus?.connected ? (
+                    <>
+                      <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/30">
+                        已连接
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-transparent text-destructive border-destructive/30 hover:bg-destructive/10"
+                        onClick={() => disconnectNotion.mutate()}
+                        disabled={disconnectNotion.isPending}
+                      >
+                        断开
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => notionAuthUrl?.url && (window.location.href = notionAuthUrl.url)}
+                      disabled={!notionAuthUrl}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                      连接 Notion
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="mb-4">

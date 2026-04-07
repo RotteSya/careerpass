@@ -59,11 +59,11 @@ export const emailAuth = mysqlTable("email_auth", {
 export type EmailAuth = typeof emailAuth.$inferSelect;
 export type InsertEmailAuth = typeof emailAuth.$inferInsert;
 
-// ─── OAuth Tokens (Google / Outlook Calendar) ──────────────────────────────
+// ─── OAuth Tokens (Google / Outlook / Notion) ──────────────────────────────
 export const oauthTokens = mysqlTable("oauth_tokens", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
+  provider: mysqlEnum("provider", ["google", "outlook", "notion"]).notNull(),
   accessToken: text("accessToken").notNull(),
   refreshToken: text("refreshToken"),
   expiresAt: timestamp("expiresAt"),
@@ -79,7 +79,7 @@ export type InsertOauthToken = typeof oauthTokens.$inferInsert;
 export const oauthProviderAccounts = mysqlTable("oauth_provider_accounts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
+  provider: mysqlEnum("provider", ["google", "outlook", "notion"]).notNull(),
   accountEmail: varchar("accountEmail", { length: 320 }).notNull(),
   lastHistoryId: varchar("lastHistoryId", { length: 64 }),
   watchExpiration: timestamp("watchExpiration"),

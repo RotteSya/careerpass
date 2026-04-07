@@ -30,6 +30,7 @@ import {
   reconCompany as runAgentRecon,
   startCompanyWorkflow,
 } from "./agents";
+import { syncJobToNotionBoard } from "./notion";
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
@@ -873,6 +874,24 @@ async function processGmailMessageIds(params: {
             },
           })
         : null;
+
+    if (companyName) {
+      try {
+        await syncJobToNotionBoard({
+          userId,
+          companyName,
+          status: inferredStatus ?? null,
+          eventType,
+          eventDate: date,
+          eventTime: time,
+          location: decision.location ?? null,
+          mailSubject: detail.subject,
+          source: "gmail",
+        });
+      } catch (e) {
+        console.warn("[Notion] Gmail sync failed:", (e as Error).message);
+      }
+    }
 
     let orchestrationActions: string[] = [];
     if (telegramChatId) {

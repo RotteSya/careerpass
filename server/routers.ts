@@ -22,6 +22,7 @@ import { invokeLLM } from "./_core/llm";
 import crypto from "crypto";
 import { reconCompany as runRecon, searchMemories } from "./recon";
 import { monitorGmailAndSync, sendTelegramMessage } from "./gmail";
+import { syncJobToNotionBoard } from "./notion";
 import {
   handleAgentChat,
   generateResume,
@@ -84,6 +85,14 @@ function buildOutlookOAuthUrl(userId: number, origin: string): string {
   );
   const state = buildSignedState({ userId, provider: "outlook", exp: Date.now() + 10 * 60 * 1000 });
   return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
+}
+
+function buildNotionOAuthUrl(userId: number): string {
+  const clientId = process.env.NOTION_CLIENT_ID ?? "";
+  const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.com";
+  const redirectUri = `${appDomain}/api/notion/callback`;
+  const state = buildSignedState({ userId, provider: "notion", exp: Date.now() + 10 * 60 * 1000 });
+  return `https://api.notion.com/v1/oauth/authorize?owner=user&client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${encodeURIComponent(state)}`;
 }
 
 async function exchangeGoogleCode(code: string, redirectUri: string) {
@@ -220,6 +229,34 @@ export const appRouter = router({
           throw new Error("再送信に失敗しました。もう一度お試しください。");
         }
       }),
+  }),
+
+  notion: router({
+    getAuthUrl: protectedProcedure.query(({ ctx }) => {
+      return { url: buildNotionOAuthUrl(ctx.user.id) };
+    }),
+    getStatus: protectedProcedure.query(async ({ ctx }) => {
+      const notion = await getOauthToken(ctx.user.id, "notion");
+      const dbId = (process.env.NOTION_JOB_BOARD_DATABASE_ID ?? "").trim();
+      let workspaceName: string | null = null;
+      if (notion?.scope) {
+        try {
+          const meta = JSON.parse(notion.scope) as { workspaceName?: string };
+          workspaceName = meta.workspaceName ?? null;
+        } catch {
+          workspaceName = null;
+        }
+      }
+      return {
+        connected: !!notion,
+        workspaceName,
+        databaseConfigured: !!dbId,
+      };
+    }),
+    disconnect: protectedProcedure.mutation(async ({ ctx }) => {
+      await deleteOauthToken(ctx.user.id, "notion");
+      return { success: true };
+    }),
   }),
 
   // ── User Profile ─────────────────────────────────────────────────────────────
@@ -395,6 +432,7 @@ export const appRouter = router({
       )
       .mutation(async ({ ctx, input }) => {
         const prev = (await getJobApplications(ctx.user.id)).find(j => j.id === input.id)?.status ?? null;
+        const target = (await getJobApplications(ctx.user.id)).find(j => j.id === input.id);
         await updateJobApplicationStatus(input.id, ctx.user.id, input.status);
         await createJobStatusEvent({
           userId: ctx.user.id,
@@ -403,6 +441,18 @@ export const appRouter = router({
           prevStatus: prev,
           nextStatus: input.status,
         });
+        if (target?.companyNameJa) {
+          try {
+            await syncJobToNotionBoard({
+              userId: ctx.user.id,
+              companyName: target.companyNameJa,
+              status: input.status,
+              source: "manual",
+            });
+          } catch (e) {
+            console.warn("[Notion] Manual status sync failed:", (e as Error).message);
+          }
+        }
         return { success: true };
       }),
 
