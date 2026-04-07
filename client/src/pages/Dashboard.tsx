@@ -63,6 +63,7 @@ export default function Dashboard() {
   });
   const { data: notionAuthUrl } = trpc.notion.getAuthUrl.useQuery(undefined, {
     enabled: isAuthenticated,
+    retry: false,
   });
   const disconnectNotion = trpc.notion.disconnect.useMutation({
     onSuccess: () => {
@@ -145,6 +146,12 @@ export default function Dashboard() {
     // Remove query params from URL without triggering navigation
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    // When Notion OAuth URL fetch fails, show a direct configuration hint.
+    if (notionAuthUrl === undefined) return;
+  }, [isAuthenticated, notionAuthUrl]);
 
   // Poll Telegram binding status every 5s after page load
   useEffect(() => {
@@ -597,8 +604,13 @@ export default function Dashboard() {
                   ) : (
                     <Button
                       size="sm"
-                      onClick={() => notionAuthUrl?.url && (window.location.href = notionAuthUrl.url)}
-                      disabled={!notionAuthUrl}
+                      onClick={() => {
+                        if (notionAuthUrl?.url) {
+                          window.location.href = notionAuthUrl.url;
+                          return;
+                        }
+                        toast.error("Notion OAuth 未正确配置，请检查 NOTION_CLIENT_ID");
+                      }}
                     >
                       <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
                       连接 Notion

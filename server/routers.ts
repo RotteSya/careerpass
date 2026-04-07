@@ -88,7 +88,10 @@ function buildOutlookOAuthUrl(userId: number, origin: string): string {
 }
 
 function buildNotionOAuthUrl(userId: number): string {
-  const clientId = process.env.NOTION_CLIENT_ID ?? "";
+  const clientId = (process.env.NOTION_CLIENT_ID ?? "").trim();
+  if (!clientId || clientId === "0") {
+    throw new Error("NOTION_CLIENT_ID is not configured correctly");
+  }
   const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.com";
   const redirectUri = `${appDomain}/api/notion/callback`;
   const state = buildSignedState({ userId, provider: "notion", exp: Date.now() + 10 * 60 * 1000 });
@@ -233,7 +236,11 @@ export const appRouter = router({
 
   notion: router({
     getAuthUrl: protectedProcedure.query(({ ctx }) => {
-      return { url: buildNotionOAuthUrl(ctx.user.id) };
+      try {
+        return { url: buildNotionOAuthUrl(ctx.user.id) };
+      } catch (e) {
+        throw new Error(`Notion OAuth misconfigured: ${(e as Error).message}`);
+      }
     }),
     getStatus: protectedProcedure.query(async ({ ctx }) => {
       const notion = await getOauthToken(ctx.user.id, "notion");
