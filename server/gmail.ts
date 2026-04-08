@@ -23,6 +23,7 @@ import {
   updateGoogleAccountSyncState,
   updateGoogleLastHistoryIdIfNewer,
   upsertOauthToken,
+  upsertOauthProviderAccount,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
@@ -119,6 +120,12 @@ export async function registerGmailPushWatch(userId: number): Promise<boolean> {
   }
 
   try {
+    const mapped = await ensureGoogleProviderAccountMapping(userId, accessToken);
+    if (!mapped) {
+      console.warn("[Gmail] Cannot register watch because provider-account mapping is missing.", { userId });
+      return false;
+    }
+
     const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/watch", {
       method: "POST",
       headers: {
@@ -157,6 +164,36 @@ export async function registerGmailPushWatch(userId: number): Promise<boolean> {
     console.error("[Gmail] Failed to register watch:", err);
     return false;
   }
+}
+
+async function fetchGoogleAccountEmailFromGmailProfile(accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { emailAddress?: string };
+    const email = data.emailAddress?.trim().toLowerCase();
+    return email || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function ensureGoogleProviderAccountMapping(
+  userId: number,
+  accessToken?: string
+): Promise<boolean> {
+  const token = accessToken ?? (await getValidAccessToken(userId));
+  if (!token) return false;
+  const accountEmail = await fetchGoogleAccountEmailFromGmailProfile(token);
+  if (!accountEmail) return false;
+  await upsertOauthProviderAccount({
+    userId,
+    provider: "google",
+    accountEmail,
+  });
+  return true;
 }
 
 async function fetchRecentEmails(

@@ -67,8 +67,14 @@ async function startServer() {
   if (gmailTopic) {
     listUserIdsByOauthProvider("google")
       .then(async userIds => {
-        await Promise.allSettled(userIds.map(userId => registerGmailPushWatch(userId)));
-        console.log(`[Gmail] Push watch renewal attempted for ${userIds.length} user(s).`);
+        const results = await Promise.allSettled(userIds.map(userId => registerGmailPushWatch(userId)));
+        const okCount = results.filter(
+          (r): r is PromiseFulfilledResult<boolean> => r.status === "fulfilled" && r.value === true
+        ).length;
+        const failCount = userIds.length - okCount;
+        console.log(
+          `[Gmail] Push watch renewal finished: total=${userIds.length}, success=${okCount}, failed=${failCount}.`
+        );
       })
       .catch(err => {
         console.error("[Gmail] Failed to renew push watches on startup:", err);
