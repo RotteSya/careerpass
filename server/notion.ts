@@ -68,18 +68,38 @@ async function notionFetchJson<T>(
   accessToken: string,
   init?: RequestInit
 ): Promise<T> {
-  const res = await fetch(`${NOTION_API_BASE}${path}`, {
-    ...init,
-    headers: {
-      ...notionHeaders(accessToken),
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Notion API error ${res.status}: ${err}`);
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(`${NOTION_API_BASE}${path}`, {
+      ...init,
+      headers: {
+        ...notionHeaders(accessToken),
+        ...(init?.headers ?? {}),
+      },
+    });
+    const rawText = await res.text();
+
+    // Notion may respond with 429 and plain text body: "Rate exceeded."
+    if (res.status === 429 && attempt < maxAttempts) {
+      const retryAfterSec = Number(res.headers.get("retry-after") ?? "0");
+      const waitMs = Number.isFinite(retryAfterSec) && retryAfterSec > 0
+        ? retryAfterSec * 1000
+        : attempt * 800;
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+      continue;
+    }
+
+    if (!res.ok) {
+      throw new Error(`Notion API error ${res.status}: ${rawText.slice(0, 300)}`);
+    }
+
+    try {
+      return JSON.parse(rawText) as T;
+    } catch {
+      throw new Error(`Notion API returned non-JSON payload: ${rawText.slice(0, 300)}`);
+    }
   }
-  return (await res.json()) as T;
+  throw new Error("Notion API failed after retries");
 }
 
 export async function syncJobToNotionBoard(input: SyncNotionJobInput): Promise<void> {
