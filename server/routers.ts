@@ -17,6 +17,7 @@ import {
   updateJobApplicationStatus,
   listJobStatusEvents,
   getAgentMemory,
+  deleteUserAccountData,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import crypto from "crypto";
@@ -35,6 +36,7 @@ import {
   loginWithEmail,
   verifyEmail as verifyEmailToken,
   resendVerificationEmail,
+  changePassword,
 } from "./emailAuth";
 import { sdk } from "./_core/sdk";
 
@@ -230,6 +232,54 @@ export const appRouter = router({
           const msg = err instanceof Error ? err.message : "UNKNOWN";
           if (msg === "ALREADY_VERIFIED") throw new Error("既に確認済みです。ログインしてください。");
           throw new Error("再送信に失敗しました。もう一度お試しください。");
+        }
+      }),
+    changePassword: protectedProcedure
+      .input(
+        z.object({
+          currentPassword: z.string().min(1),
+          newPassword: z.string().min(8).max(128),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (input.currentPassword === input.newPassword) {
+          throw new Error("新しいパスワードは現在のパスワードと異なる必要があります。");
+        }
+        try {
+          await changePassword(ctx.user.id, input.currentPassword, input.newPassword);
+          return { success: true } as const;
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "UNKNOWN";
+          if (msg === "EMAIL_AUTH_NOT_FOUND") {
+            throw new Error("このアカウントはパスワード変更に対応していません。");
+          }
+          if (msg === "INVALID_CURRENT_PASSWORD") {
+            throw new Error("現在のパスワードが正しくありません。");
+          }
+          throw new Error("パスワードの変更に失敗しました。");
+        }
+      }),
+    deleteAccount: protectedProcedure
+      .input(z.object({ password: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const current = await getUserById(ctx.user.id);
+          const email = current?.email;
+          if (!email) throw new Error("EMAIL_AUTH_NOT_FOUND");
+          await loginWithEmail(email, input.password);
+          await deleteUserAccountData(ctx.user.id);
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+          return { success: true } as const;
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "UNKNOWN";
+          if (msg === "INVALID_CREDENTIALS") {
+            throw new Error("密码错误，无法删除账号。");
+          }
+          if (msg === "EMAIL_AUTH_NOT_FOUND") {
+            throw new Error("该账号暂不支持网页端删除，请联系管理员。");
+          }
+          throw new Error("删除账号失败，请稍后重试。");
         }
       }),
   }),

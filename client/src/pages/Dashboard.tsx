@@ -1,5 +1,23 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import {
   BrainCircuit,
@@ -13,6 +31,8 @@ import {
   MessageSquare,
   Mic,
   ShieldCheck,
+  KeyRound,
+  Trash2,
   User,
   XCircle,
 } from "lucide-react";
@@ -30,6 +50,13 @@ export default function Dashboard() {
   const [currentPath, navigate] = useLocation();
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [companyQuery, setCompanyQuery] = useState("");
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const utils = trpc.useUtils();
 
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = trpc.user.getProfile.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -86,6 +113,28 @@ export default function Dashboard() {
     },
     onError: (err) => {
       toast.error(`更新失败: ${err.message}`);
+    },
+  });
+  const changePasswordMutation = trpc.auth.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success("密码已修改");
+      setPasswordDialogOpen(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+  const deleteAccountMutation = trpc.auth.deleteAccount.useMutation({
+    onSuccess: async () => {
+      toast.success("账号已删除");
+      await utils.auth.me.invalidate();
+      navigate("/login");
+    },
+    onError: (err) => {
+      toast.error(err.message);
     },
   });
 
@@ -252,24 +301,43 @@ export default function Dashboard() {
           ))}
         </nav>
         <div className="p-3 border-t border-border">
-          <div className="flex items-center gap-2 px-3 py-2 mb-2">
-            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
-              <User className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name ?? "ユーザー"}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-muted-foreground hover:text-foreground"
-            onClick={logout}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            ログアウト
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-secondary transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <Avatar className="w-8 h-8 border border-border">
+                  <AvatarFallback className="text-xs font-medium bg-primary/15 text-primary">
+                    {(user?.name?.trim()?.[0] ?? "U").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{user?.name ?? "ユーザー"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="top" className="w-72">
+              <DropdownMenuLabel className="pb-1">账号信息</DropdownMenuLabel>
+              <div className="px-2 pb-2 space-y-1 text-xs text-muted-foreground">
+                <p className="truncate">姓名：{profile?.name ?? user?.name ?? "-"}</p>
+                <p className="truncate">邮箱：{profile?.email ?? user?.email ?? "-"}</p>
+                <p className="truncate">学历：{educationLabel(profile?.education)}</p>
+                <p className="truncate">语言：{langLabel(profile?.preferredLanguage)}</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setPasswordDialogOpen(true)} className="cursor-pointer">
+                <KeyRound className="w-4 h-4" />
+                修改密码
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDeleteDialogOpen(true)} variant="destructive" className="cursor-pointer">
+                <Trash2 className="w-4 h-4" />
+                删除账号
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                <LogOut className="w-4 h-4" />
+                ログアウト
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
 
@@ -281,9 +349,39 @@ export default function Dashboard() {
             <BrainCircuit className="w-6 h-6 text-primary" />
             <span className="font-bold">就活パス</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={logout}>
-            <LogOut className="w-4 h-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <Avatar className="w-8 h-8 border border-border">
+                  <AvatarFallback className="text-xs font-medium bg-primary/15 text-primary">
+                    {(user?.name?.trim()?.[0] ?? "U").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={8} className="w-72">
+              <DropdownMenuLabel className="pb-1">账号信息</DropdownMenuLabel>
+              <div className="px-2 pb-2 space-y-1 text-xs text-muted-foreground">
+                <p className="truncate">姓名：{profile?.name ?? user?.name ?? "-"}</p>
+                <p className="truncate">邮箱：{profile?.email ?? user?.email ?? "-"}</p>
+                <p className="truncate">学历：{educationLabel(profile?.education)}</p>
+                <p className="truncate">语言：{langLabel(profile?.preferredLanguage)}</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setPasswordDialogOpen(true)} className="cursor-pointer">
+                <KeyRound className="w-4 h-4" />
+                修改密码
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDeleteDialogOpen(true)} variant="destructive" className="cursor-pointer">
+                <Trash2 className="w-4 h-4" />
+                删除账号
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                <LogOut className="w-4 h-4" />
+                ログアウト
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -756,30 +854,100 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Profile Summary */}
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              プロフィール
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-              {[
-                { label: "氏名", value: profile?.name ?? "-" },
-                { label: "生年月日", value: profile?.birthDate ?? "-" },
-                { label: "最終学歴", value: educationLabel(profile?.education) },
-                { label: "大学名", value: profile?.universityName ?? "-" },
-                { label: "メールアドレス", value: profile?.email ?? user?.email ?? "-" },
-                { label: "言語設定", value: langLabel(profile?.preferredLanguage) },
-              ].map((item, i) => (
-                <div key={i} className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{item.label}</p>
-                  <p className="font-medium truncate">{item.value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </main>
+
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>修改密码</DialogTitle>
+            <DialogDescription>请输入当前密码和新密码（至少8位）。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              type="password"
+              placeholder="当前密码"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="新密码"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="确认新密码"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                  toast.error("请填写完整");
+                  return;
+                }
+                if (newPassword.length < 8) {
+                  toast.error("新密码至少8位");
+                  return;
+                }
+                if (newPassword !== confirmPassword) {
+                  toast.error("两次输入的新密码不一致");
+                  return;
+                }
+                changePasswordMutation.mutate({
+                  currentPassword,
+                  newPassword,
+                });
+              }}
+              disabled={changePasswordMutation.isPending}
+            >
+              {changePasswordMutation.isPending ? "提交中..." : "确认修改"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>删除账号</DialogTitle>
+            <DialogDescription>
+              此操作不可恢复，将删除你的账号及相关数据。请输入密码确认。
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            type="password"
+            placeholder="请输入当前密码"
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!deletePassword) {
+                  toast.error("请输入密码");
+                  return;
+                }
+                deleteAccountMutation.mutate({ password: deletePassword });
+              }}
+              disabled={deleteAccountMutation.isPending}
+            >
+              {deleteAccountMutation.isPending ? "删除中..." : "确认删除账号"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

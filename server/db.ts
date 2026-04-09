@@ -16,6 +16,8 @@ import {
   oauthProviderAccounts,
   telegramBindings,
   users,
+  emailAuth,
+  messagingBindings,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -136,6 +138,22 @@ export async function updateUserCalendarColorPrefs(
       updatedAt: new Date(),
     })
     .where(eq(users.id, userId));
+}
+
+export async function deleteUserAccountData(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(jobStatusEvents).where(eq(jobStatusEvents.userId, userId));
+  await db.delete(jobApplications).where(eq(jobApplications.userId, userId));
+  await db.delete(agentMemory).where(eq(agentMemory.userId, userId));
+  await db.delete(agentSessions).where(eq(agentSessions.userId, userId));
+  await db.delete(telegramBindings).where(eq(telegramBindings.userId, userId));
+  await db.delete(messagingBindings).where(eq(messagingBindings.userId, userId));
+  await db.delete(oauthProviderAccounts).where(eq(oauthProviderAccounts.userId, userId));
+  await db.delete(oauthTokens).where(eq(oauthTokens.userId, userId));
+  await db.delete(emailAuth).where(eq(emailAuth.userId, userId));
+  await db.delete(users).where(eq(users.id, userId));
 }
 
 // ─── OAuth Tokens ──────────────────────────────────────────────────────────

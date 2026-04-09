@@ -198,3 +198,26 @@ async function sendVerificationEmail(email: string, token: string) {
 </html>`,
   });
 }
+
+// ── Password Management ───────────────────────────────────────────────────────
+export async function changePassword(
+  userId: number,
+  currentPassword: string,
+  newPassword: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("DB_UNAVAILABLE");
+
+  const rows = await db.select().from(emailAuth).where(eq(emailAuth.userId, userId));
+  const record = rows[0];
+  if (!record) throw new Error("EMAIL_AUTH_NOT_FOUND");
+
+  const ok = await bcrypt.compare(currentPassword, record.passwordHash);
+  if (!ok) throw new Error("INVALID_CURRENT_PASSWORD");
+
+  const newHash = await bcrypt.hash(newPassword, 12);
+  await db
+    .update(emailAuth)
+    .set({ passwordHash: newHash, updatedAt: new Date() })
+    .where(eq(emailAuth.id, record.id));
+}
