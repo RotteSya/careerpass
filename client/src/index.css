@@ -6,9 +6,9 @@
 
 @theme inline {
   --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -42,91 +42,90 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* ClickHouse-inspired brand tokens (DESIGN.md) */
-  --color-neon: #faff69;
-  --color-neon-soft: #f4f692;
-  --color-forest: #166534;
-  --color-forest-deep: #0f4f28;
-  --color-charcoal: #414141;
-  --color-near-black: #141414;
-  --color-silver: #a0a0a0;
-  --color-olive-border: #4f5100;
+  --color-notion-blue: #0075de;
+  --color-notion-blue-active: #005bab;
+  --color-focus-blue: #097fe8;
+  --color-warm-white: #f6f5f4;
+  --color-warm-dark: #31302e;
+  --color-warm-gray-500: #615d59;
+  --color-warm-gray-300: #a39e98;
+  --color-text-primary: rgba(0, 0, 0, 0.95);
+  --shadow-card: rgba(0,0,0,0.04) 0px 4px 18px, rgba(0,0,0,0.027) 0px 2.025px 7.84688px, rgba(0,0,0,0.02) 0px 0.8px 2.925px, rgba(0,0,0,0.01) 0px 0.175px 1.04062px;
+  --shadow-deep: rgba(0,0,0,0.01) 0px 1px 3px, rgba(0,0,0,0.02) 0px 3px 7px, rgba(0,0,0,0.02) 0px 7px 15px, rgba(0,0,0,0.04) 0px 14px 28px, rgba(0,0,0,0.05) 0px 23px 52px;
 }
 
 :root {
-  --radius: 0.25rem;
+  --radius: 0.75rem;
   --font-sans: "Inter", "Noto Sans JP", system-ui, sans-serif;
   --font-mono: "Inconsolata", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
-  /* Light fallback (rarely used — app defaults to dark) */
   --background: #ffffff;
-  --foreground: #0a0a0a;
+  --foreground: rgba(0, 0, 0, 0.95);
   --card: #ffffff;
-  --card-foreground: #0a0a0a;
+  --card-foreground: rgba(0, 0, 0, 0.95);
   --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
-  --primary: #166534;
-  --primary-foreground: #faff69;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #0a0a0a;
-  --muted: #f4f4f5;
-  --muted-foreground: #525252;
-  --accent: #faff69;
-  --accent-foreground: #0a0a0a;
+  --popover-foreground: rgba(0, 0, 0, 0.95);
+  --primary: #0075de;
+  --primary-foreground: #ffffff;
+  --secondary: #f6f5f4;
+  --secondary-foreground: rgba(0, 0, 0, 0.95);
+  --muted: #f6f5f4;
+  --muted-foreground: #615d59;
+  --accent: rgba(0, 0, 0, 0.05);
+  --accent-foreground: rgba(0, 0, 0, 0.95);
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: rgba(65, 65, 65, 0.2);
-  --input: rgba(65, 65, 65, 0.2);
-  --ring: #faff69;
-  --chart-1: #faff69;
-  --chart-2: #166534;
-  --chart-3: #f4f692;
-  --chart-4: #0f4f28;
-  --chart-5: #a0a0a0;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: #dddddd;
+  --ring: #097fe8;
+  --chart-1: #0075de;
+  --chart-2: #213183;
+  --chart-3: #2a9d99;
+  --chart-4: #1aae39;
+  --chart-5: #dd5b00;
   --sidebar: #ffffff;
-  --sidebar-foreground: #0a0a0a;
-  --sidebar-primary: #166534;
-  --sidebar-primary-foreground: #faff69;
-  --sidebar-accent: #f4f4f5;
-  --sidebar-accent-foreground: #0a0a0a;
-  --sidebar-border: rgba(65, 65, 65, 0.2);
-  --sidebar-ring: #faff69;
+  --sidebar-foreground: rgba(0, 0, 0, 0.95);
+  --sidebar-primary: #0075de;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f6f5f4;
+  --sidebar-accent-foreground: rgba(0, 0, 0, 0.95);
+  --sidebar-border: rgba(0, 0, 0, 0.1);
+  --sidebar-ring: #097fe8;
 }
 
 .dark {
-  /* ClickHouse-inspired dark theme */
-  --background: #000000;
-  --foreground: #ffffff;
-  --card: #0a0a0a;
-  --card-foreground: #ffffff;
-  --popover: #141414;
-  --popover-foreground: #ffffff;
-  --primary: #faff69;
-  --primary-foreground: #000000;
-  --secondary: #141414;
-  --secondary-foreground: #ffffff;
-  --muted: #141414;
-  --muted-foreground: #a0a0a0;
-  --accent: #166534;
-  --accent-foreground: #faff69;
+  --background: #31302e;
+  --foreground: rgba(255, 255, 255, 0.95);
+  --card: rgba(0, 0, 0, 0.2);
+  --card-foreground: rgba(255, 255, 255, 0.95);
+  --popover: rgba(0, 0, 0, 0.35);
+  --popover-foreground: rgba(255, 255, 255, 0.95);
+  --primary: #62aef0;
+  --primary-foreground: rgba(0, 0, 0, 0.95);
+  --secondary: rgba(0, 0, 0, 0.25);
+  --secondary-foreground: rgba(255, 255, 255, 0.95);
+  --muted: rgba(0, 0, 0, 0.25);
+  --muted-foreground: rgba(255, 255, 255, 0.75);
+  --accent: rgba(255, 255, 255, 0.08);
+  --accent-foreground: rgba(255, 255, 255, 0.95);
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: rgba(65, 65, 65, 0.8);
-  --input: rgba(65, 65, 65, 0.8);
-  --ring: #faff69;
-  --chart-1: #faff69;
-  --chart-2: #166534;
-  --chart-3: #f4f692;
-  --chart-4: #0f4f28;
-  --chart-5: #a0a0a0;
-  --sidebar: #0a0a0a;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #faff69;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #141414;
-  --sidebar-accent-foreground: #faff69;
-  --sidebar-border: rgba(65, 65, 65, 0.8);
-  --sidebar-ring: #faff69;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.2);
+  --ring: #62aef0;
+  --chart-1: #62aef0;
+  --chart-2: #2a9d99;
+  --chart-3: #1aae39;
+  --chart-4: #dd5b00;
+  --chart-5: rgba(255, 255, 255, 0.75);
+  --sidebar: rgba(0, 0, 0, 0.2);
+  --sidebar-foreground: rgba(255, 255, 255, 0.95);
+  --sidebar-primary: #62aef0;
+  --sidebar-primary-foreground: rgba(0, 0, 0, 0.95);
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: rgba(255, 255, 255, 0.95);
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-ring: #62aef0;
 }
 
 @layer base {
@@ -136,22 +135,22 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    font-feature-settings: "ss01", "cv11";
+    font-feature-settings: "lnum", "locl";
   }
   code, pre, kbd, samp {
     font-family: var(--font-mono);
   }
 
-  /* Status badge palette — ClickHouse tones */
-  .status-researching   { background: rgba(160, 160, 160, 0.12); color: #e5e5e5; border: 1px solid rgba(160, 160, 160, 0.35); }
-  .status-es_preparing  { background: rgba(250, 255, 105, 0.10); color: #faff69; border: 1px solid rgba(250, 255, 105, 0.35); }
-  .status-es_submitted  { background: rgba(244, 246, 146, 0.12); color: #f4f692; border: 1px solid rgba(244, 246, 146, 0.35); }
-  .status-interview_1   { background: rgba(22, 101, 52, 0.18); color: #86efac; border: 1px solid rgba(22, 101, 52, 0.55); }
-  .status-interview_2   { background: rgba(22, 101, 52, 0.28); color: #bbf7d0; border: 1px solid rgba(22, 101, 52, 0.7); }
-  .status-interview_final { background: rgba(22, 101, 52, 0.4); color: #faff69; border: 1px solid rgba(250, 255, 105, 0.5); }
-  .status-offer         { background: #166534; color: #faff69; border: 1px solid #faff69; }
-  .status-rejected      { background: rgba(239, 68, 68, 0.12); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
-  .status-withdrawn     { background: rgba(65, 65, 65, 0.4); color: #a0a0a0; border: 1px solid rgba(65, 65, 65, 0.8); }
+  .status-researching { background: #f2f9ff; color: #097fe8; border: 1px solid rgba(9, 127, 232, 0.25); }
+  .status-applied { background: rgba(0, 0, 0, 0.04); color: #615d59; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-es_preparing { background: rgba(221, 91, 0, 0.12); color: #dd5b00; border: 1px solid rgba(221, 91, 0, 0.25); }
+  .status-es_submitted { background: rgba(57, 28, 87, 0.12); color: #391c57; border: 1px solid rgba(57, 28, 87, 0.22); }
+  .status-interview_1 { background: rgba(42, 157, 153, 0.12); color: #2a9d99; border: 1px solid rgba(42, 157, 153, 0.22); }
+  .status-interview_2 { background: rgba(26, 174, 57, 0.12); color: #1aae39; border: 1px solid rgba(26, 174, 57, 0.22); }
+  .status-interview_final { background: rgba(26, 174, 57, 0.18); color: #1aae39; border: 1px solid rgba(26, 174, 57, 0.3); }
+  .status-offer { background: rgba(26, 174, 57, 0.18); color: #1aae39; border: 1px solid rgba(26, 174, 57, 0.3); }
+  .status-rejected { background: rgba(0, 0, 0, 0.04); color: #a39e98; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-withdrawn { background: rgba(0, 0, 0, 0.04); color: #a39e98; border: 1px solid rgba(0, 0, 0, 0.1); }
 
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
