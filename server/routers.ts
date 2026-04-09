@@ -476,6 +476,7 @@ export const appRouter = router({
           id: z.number(),
           status: z.enum([
             "researching",
+            "applied",
             "es_preparing",
             "es_submitted",
             "interview_1",

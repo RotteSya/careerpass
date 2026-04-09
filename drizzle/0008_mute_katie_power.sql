@@ -1,0 +1,1 @@
+ALTER TABLE `job_applications` MODIFY COLUMN `status` enum('researching','applied','es_preparing','es_submitted','interview_1','interview_2','interview_final','offer','rejected','withdrawn') NOT NULL DEFAULT 'researching';

@@ -139,6 +139,7 @@ export const jobApplications = mysqlTable("job_applications", {
   position: varchar("position", { length: 255 }),
   status: mysqlEnum("status", [
     "researching",
+    "applied",
     "es_preparing",
     "es_submitted",
     "interview_1",
