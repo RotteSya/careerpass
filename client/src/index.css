@@ -6,9 +6,9 @@
 
 @theme inline {
   --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -49,13 +49,11 @@
   --color-warm-dark: #31302e;
   --color-warm-gray-500: #615d59;
   --color-warm-gray-300: #a39e98;
-  --color-text-primary: rgba(0, 0, 0, 0.95);
-  --shadow-card: rgba(0,0,0,0.04) 0px 4px 18px, rgba(0,0,0,0.027) 0px 2.025px 7.84688px, rgba(0,0,0,0.02) 0px 0.8px 2.925px, rgba(0,0,0,0.01) 0px 0.175px 1.04062px;
-  --shadow-deep: rgba(0,0,0,0.01) 0px 1px 3px, rgba(0,0,0,0.02) 0px 3px 7px, rgba(0,0,0,0.02) 0px 7px 15px, rgba(0,0,0,0.04) 0px 14px 28px, rgba(0,0,0,0.05) 0px 23px 52px;
+  --color-badge-blue-bg: #f2f9ff;
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.25rem;
   --font-sans: "Inter", "Noto Sans JP", system-ui, sans-serif;
   --font-mono: "Inconsolata", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
@@ -67,7 +65,7 @@
   --popover-foreground: rgba(0, 0, 0, 0.95);
   --primary: #0075de;
   --primary-foreground: #ffffff;
-  --secondary: #f6f5f4;
+  --secondary: rgba(0, 0, 0, 0.05);
   --secondary-foreground: rgba(0, 0, 0, 0.95);
   --muted: #f6f5f4;
   --muted-foreground: #615d59;
@@ -79,10 +77,10 @@
   --input: #dddddd;
   --ring: #097fe8;
   --chart-1: #0075de;
-  --chart-2: #213183;
-  --chart-3: #2a9d99;
-  --chart-4: #1aae39;
-  --chart-5: #dd5b00;
+  --chart-2: #005bab;
+  --chart-3: #62aef0;
+  --chart-4: #097fe8;
+  --chart-5: #615d59;
   --sidebar: #ffffff;
   --sidebar-foreground: rgba(0, 0, 0, 0.95);
   --sidebar-primary: #0075de;
@@ -95,35 +93,35 @@
 
 .dark {
   --background: #31302e;
-  --foreground: rgba(255, 255, 255, 0.95);
-  --card: rgba(0, 0, 0, 0.2);
-  --card-foreground: rgba(255, 255, 255, 0.95);
+  --foreground: rgba(255, 255, 255, 0.92);
+  --card: rgba(255, 255, 255, 0.06);
+  --card-foreground: rgba(255, 255, 255, 0.92);
   --popover: rgba(0, 0, 0, 0.35);
-  --popover-foreground: rgba(255, 255, 255, 0.95);
+  --popover-foreground: rgba(255, 255, 255, 0.92);
   --primary: #62aef0;
-  --primary-foreground: rgba(0, 0, 0, 0.95);
-  --secondary: rgba(0, 0, 0, 0.25);
-  --secondary-foreground: rgba(255, 255, 255, 0.95);
-  --muted: rgba(0, 0, 0, 0.25);
-  --muted-foreground: rgba(255, 255, 255, 0.75);
+  --primary-foreground: #0b1220;
+  --secondary: rgba(255, 255, 255, 0.08);
+  --secondary-foreground: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.06);
+  --muted-foreground: rgba(255, 255, 255, 0.7);
   --accent: rgba(255, 255, 255, 0.08);
-  --accent-foreground: rgba(255, 255, 255, 0.95);
+  --accent-foreground: rgba(255, 255, 255, 0.92);
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: rgba(255, 255, 255, 0.12);
-  --input: rgba(255, 255, 255, 0.2);
+  --input: rgba(255, 255, 255, 0.12);
   --ring: #62aef0;
   --chart-1: #62aef0;
-  --chart-2: #2a9d99;
-  --chart-3: #1aae39;
-  --chart-4: #dd5b00;
-  --chart-5: rgba(255, 255, 255, 0.75);
-  --sidebar: rgba(0, 0, 0, 0.2);
-  --sidebar-foreground: rgba(255, 255, 255, 0.95);
+  --chart-2: #097fe8;
+  --chart-3: rgba(255, 255, 255, 0.7);
+  --chart-4: rgba(255, 255, 255, 0.92);
+  --chart-5: rgba(255, 255, 255, 0.4);
+  --sidebar: rgba(255, 255, 255, 0.06);
+  --sidebar-foreground: rgba(255, 255, 255, 0.92);
   --sidebar-primary: #62aef0;
-  --sidebar-primary-foreground: rgba(0, 0, 0, 0.95);
-  --sidebar-accent: rgba(255, 255, 255, 0.08);
-  --sidebar-accent-foreground: rgba(255, 255, 255, 0.95);
+  --sidebar-primary-foreground: #0b1220;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-foreground: rgba(255, 255, 255, 0.92);
   --sidebar-border: rgba(255, 255, 255, 0.12);
   --sidebar-ring: #62aef0;
 }
@@ -135,20 +133,20 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    font-feature-settings: "lnum", "locl";
+    font-feature-settings: "ss01", "cv11", "lnum", "locl";
   }
   code, pre, kbd, samp {
     font-family: var(--font-mono);
   }
 
-  .status-researching { background: #f2f9ff; color: #097fe8; border: 1px solid rgba(9, 127, 232, 0.25); }
-  .status-applied { background: rgba(0, 0, 0, 0.04); color: #615d59; border: 1px solid rgba(0, 0, 0, 0.1); }
-  .status-es_preparing { background: rgba(221, 91, 0, 0.12); color: #dd5b00; border: 1px solid rgba(221, 91, 0, 0.25); }
-  .status-es_submitted { background: rgba(57, 28, 87, 0.12); color: #391c57; border: 1px solid rgba(57, 28, 87, 0.22); }
-  .status-interview_1 { background: rgba(42, 157, 153, 0.12); color: #2a9d99; border: 1px solid rgba(42, 157, 153, 0.22); }
-  .status-interview_2 { background: rgba(26, 174, 57, 0.12); color: #1aae39; border: 1px solid rgba(26, 174, 57, 0.22); }
-  .status-interview_final { background: rgba(26, 174, 57, 0.18); color: #1aae39; border: 1px solid rgba(26, 174, 57, 0.3); }
-  .status-offer { background: rgba(26, 174, 57, 0.18); color: #1aae39; border: 1px solid rgba(26, 174, 57, 0.3); }
+  .status-researching { background: rgba(0, 0, 0, 0.04); color: #615d59; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-applied { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.75); border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-es_preparing { background: #f2f9ff; color: #097fe8; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-es_submitted { background: rgba(9, 127, 232, 0.1); color: #0075de; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-interview_1 { background: rgba(221, 91, 0, 0.12); color: #dd5b00; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-interview_2 { background: rgba(221, 91, 0, 0.18); color: #dd5b00; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-interview_final { background: rgba(221, 91, 0, 0.25); color: #dd5b00; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-offer { background: rgba(26, 174, 57, 0.15); color: #1aae39; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-rejected { background: rgba(0, 0, 0, 0.04); color: #a39e98; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-withdrawn { background: rgba(0, 0, 0, 0.04); color: #a39e98; border: 1px solid rgba(0, 0, 0, 0.1); }
 
