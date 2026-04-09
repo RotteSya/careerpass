@@ -5,31 +5,33 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[4px] text-[15px] font-semibold transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default:
+          "bg-primary text-primary-foreground hover:bg-[var(--color-notion-blue-active)] active:scale-95",
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20",
         outline:
-          "border bg-transparent shadow-xs hover:bg-accent dark:bg-transparent dark:border-input dark:hover:bg-input/50",
+          "border border-border bg-transparent text-foreground hover:bg-black/5 active:scale-95",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-secondary text-foreground hover:bg-black/10 active:scale-95",
         ghost:
-          "hover:bg-accent dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-transparent text-foreground hover:bg-black/5 active:bg-black/10",
+        link:
+          "bg-transparent text-[var(--color-notion-blue)] underline-offset-4 hover:underline",
         neon:
-          "bg-[#faff69] text-black font-semibold hover:bg-[#f4f692] active:shadow-[rgba(0,0,0,0.14)_0px_4px_25px_inset] border border-[#faff69]",
+          "bg-primary text-primary-foreground hover:bg-[var(--color-notion-blue-active)] active:scale-95",
         forest:
-          "bg-[#166534] text-[#faff69] font-semibold hover:bg-[#0f4f28] border border-[#166534]",
+          "bg-secondary text-foreground hover:bg-black/10 active:scale-95",
         "ghost-olive":
-          "bg-transparent text-[#faff69] border border-[rgba(65,65,65,0.8)] hover:border-[#faff69] hover:bg-[#141414]",
+          "bg-transparent text-foreground border border-border hover:bg-black/5 active:bg-black/10",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        default: "h-10 px-4 py-2 has-[>svg]:px-3",
+        sm: "h-9 gap-1.5 px-3 text-[12px] tracking-[0.125px] has-[>svg]:px-2.5",
+        lg: "h-11 px-6 has-[>svg]:px-4",
         icon: "size-9",
         "icon-sm": "size-8",
         "icon-lg": "size-10",
