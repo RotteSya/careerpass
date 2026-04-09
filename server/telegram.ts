@@ -676,6 +676,21 @@ telegramRouter.post("/webhook", async (req, res) => {
           // Look up user in DB
           const user = await getUserById(userId);
 
+          // Returning user: this telegram_id is already bound to this same userId.
+          // Don't re-run the full welcome flow — just acknowledge and stop.
+          if (user && binding?.userId === userId && binding?.isActive) {
+            const lang = (user.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
+            const welcomeBack =
+              lang === "zh"
+                ? `欢迎回来，${user.name ?? "你"}。我还在岗，邮箱也一直帮你盯着。直接告诉我下一步要干什么就行。`
+                : lang === "en"
+                ? `Welcome back, ${user.name ?? "you"}. Still on the clock, still watching your inbox. Just tell me what you want to tackle next.`
+                : `おかえりなさい、${user.name ?? "あなた"}さん。まだ勤務中で、メールもずっと見ています。次にやりたいことを教えてください。`;
+            await sendTelegramBubbles(chatId, welcomeBack);
+            res.json({ ok: true });
+            return;
+          }
+
           if (user) {
             // Bind Telegram account
             await createTelegramBinding({
