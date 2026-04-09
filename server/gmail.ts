@@ -832,20 +832,139 @@ async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<
   return actions;
 }
 
+interface ComposeNotificationInput {
+  userId: number;
+  companyName: string | null;
+  eventType: EmailEvent["eventType"];
+  rawEventType: EmailEvent["eventType"];
+  date: string | null;
+  time: string | null;
+  location: string | null;
+  todoItems: string[];
+  mailLink: string;
+  boardLink: string | null;
+  progressLabel: string | null;
+  outcomeUncertain: boolean;
+  workflowTriggered: boolean;
+}
+
+function fallbackMailNotification(input: ComposeNotificationInput): string {
+  const { companyName, eventType, date, time, todoItems, mailLink, boardLink, progressLabel, outcomeUncertain, workflowTriggered } = input;
+  const primaryAction =
+    todoItems[0] ??
+    (date
+      ? `把 ${date}${time ? ` ${time}` : ""} JST 的${typeLabels[eventType]}加进日程并提前做准备`
+      : `打开原邮件确认${typeLabels[eventType]}的具体安排`);
+  const extra = todoItems.slice(1);
+  const lines: string[] = [];
+  lines.push(`下一步：${primaryAction}`);
+  lines.push("");
+  lines.push(
+    `${companyName ?? "这家公司"}发来一封${typeLabels[eventType]}邮件${
+      date ? `（${date}${time ? ` ${time}` : ""} JST）` : ""
+    }。`
+  );
+  lines.push(`[查看原邮件](${mailLink})`);
+  if (extra.length) {
+    lines.push("其他要做的：");
+    for (const t of extra) lines.push(`- ${t}`);
+  }
+  if (progressLabel) lines.push(`看板已更新到「${progressLabel}」。`);
+  if (boardLink) lines.push(`[打开求职看板](${boardLink})`);
+  if (outcomeUncertain) lines.push("这封邮件可能涉及结果，语义不够确定，我没有自动标记，方便时去看板确认。");
+  if (workflowTriggered) lines.push("这家公司的后续流程我已经帮你往前推进了。");
+  return lines.join("\n");
+}
+
+async function composeMailNotification(input: ComposeNotificationInput): Promise<string> {
+  try {
+    const soul = await loadAgentSoul("careerpass");
+    const agents = await loadAgentAgents("careerpass");
+
+    const facts = {
+      公司: input.companyName ?? "未知",
+      事件类型: typeLabels[input.eventType],
+      日期: input.date ?? null,
+      时间: input.time ? `${input.time} JST` : null,
+      地点或链接: input.location ?? null,
+      待办: input.todoItems,
+      原邮件链接: input.mailLink,
+      看板链接: input.boardLink,
+      看板已更新到: input.progressLabel,
+      结果语义不确定: input.outcomeUncertain,
+      已自动推进后续流程: input.workflowTriggered,
+    };
+
+    const systemPrompt =
+      `你是 CareerPass，给用户在 Telegram 发一条短消息播报刚收到的求职邮件。` +
+      `要求：\n` +
+      `- 像朋友一样自然口吻，每次措辞都不一样，不要套固定模板。\n` +
+      `- 开门见山点出「下一步要做什么」，但表达方式可以变化（不必每次都用「下一步：」开头）。\n` +
+      `- 邮件内容只用一句话带过，不要复述邮件主题。\n` +
+      `- 必须把「原邮件链接」用 markdown 链接的形式放进消息里，方便用户点开核对。\n` +
+      `- 如果有「看板链接」，也用 markdown 链接放进去。\n` +
+      `- 总长度控制在 4–8 行，不要长篇大论，不要寒暄废话。\n` +
+      `- 只输出最终消息正文，不要加引号、不要解释。` +
+      (soul.content ? `\n\n[SOUL]\n${soul.content}` : "") +
+      (agents.content ? `\n\n[AGENTS]\n${agents.content}` : "");
+
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content:
+            `这是刚识别到的求职邮件事实，请据此写一条 Telegram 通知：\n` +
+            JSON.stringify(facts, null, 2),
+        },
+      ],
+    });
+
+    const raw = response?.choices?.[0]?.message?.content;
+    const text = (typeof raw === "string" ? raw : "").trim();
+    if (!text || !text.includes(input.mailLink)) {
+      // LLM forgot the mail link — fall back to template to guarantee it.
+      return fallbackMailNotification(input);
+    }
+    return text;
+  } catch (err) {
+    console.error("[careerpassmail] composeMailNotification failed:", err);
+    return fallbackMailNotification(input);
+  }
+}
+
 async function processGmailMessageIds(params: {
   userId: number;
   telegramChatId?: string;
   accessToken: string;
   messageIds: string[];
+  notifyWindowDays?: number;
 }): Promise<MonitorResult> {
-  const { userId, telegramChatId, accessToken, messageIds } = params;
+  const { userId, telegramChatId, accessToken, messageIds, notifyWindowDays } = params;
   const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
   const detectedEvents: EmailEvent[] = [];
+  const latestCompanyMailTs = new Map<string, number>();
   let calendarCount = 0;
+
+  const notifyCutoffMs =
+    notifyWindowDays && notifyWindowDays > 0
+      ? Date.now() - notifyWindowDays * 24 * 60 * 60 * 1000
+      : null;
 
   for (const messageId of messageIds) {
     const detail = await fetchEmailDetail(accessToken, messageId);
     if (!detail) continue;
+
+    // Hard exclude マイナビ/リクナビ-style "站内通知" mails — they carry no real content.
+    const senderDomain = (getSenderDomain(detail.from) ?? "").toLowerCase();
+    const isJobBoardSender =
+      /mynavi|rikunabi|マイナビ|リクナビ/.test(detail.from) ||
+      /mynavi|rikunabi/.test(senderDomain);
+    const inboxNoticePattern =
+      /(新着メッセージ|メッセージが届|マイページに新しい|新着のお知らせ|站内|站内信|新しいお知らせが届)/;
+    if (isJobBoardSender && inboxNoticePattern.test(`${detail.subject}\n${detail.body}`)) {
+      continue;
+    }
 
     const decision = await runCareerpassmailAgent({
       subject: detail.subject,
@@ -930,51 +1049,57 @@ async function processGmailMessageIds(params: {
       }
     }
 
+    // Decide whether to notify the user about this mail.
+    // - First-scan window: skip notifications for mails older than notifyWindowDays
+    //   (the dashboard/Notion sync above still runs, so the board stays complete).
+    // - Same-company dedup: only notify for the newest mail per company in this batch.
+    const mailTs = Date.parse(detail.date);
+    const isWithinWindow =
+      notifyCutoffMs === null || (Number.isFinite(mailTs) && mailTs >= notifyCutoffMs);
+
+    const companyKey = companyName?.toLowerCase() ?? null;
+    let isNewestForCompany = true;
+    if (companyKey && Number.isFinite(mailTs)) {
+      const prevTs = latestCompanyMailTs.get(companyKey);
+      if (prevTs !== undefined && prevTs >= mailTs) {
+        isNewestForCompany = false;
+      } else {
+        latestCompanyMailTs.set(companyKey, mailTs);
+      }
+    }
+
+    const shouldNotify = isWithinWindow && isNewestForCompany;
+
     let orchestrationActions: string[] = [];
-    if (telegramChatId) {
+    if (telegramChatId && shouldNotify) {
       orchestrationActions = await orchestrateSubAgents(userId, emailEvent);
       const workflowTriggered = orchestrationActions.length > 0;
-      const todoText =
-        emailEvent.todoItems.length > 0
-          ? `\n我建议你先做这几件事：\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}`
-          : "";
-      const scheduleText = date
-        ? `时间大概是 ${date}${time ? ` ${time}` : ""} JST`
-        : "这封邮件里没有明确时间，我先不强行写死日程。";
-      const progressText =
-        progressUpdate && progressUpdate.jobId
-          ? `\n我已帮你把进度看板${progressUpdate.changed ? "更新" : "核对"}到「${jobStatusLabelZh(progressUpdate.nextStatus)}」。`
-          : desiredStatus && !companyName
-          ? `\n这封邮件像是「${jobStatusLabelZh(desiredStatus)}」阶段，但我没识别出公司名，所以还没自动改看板。`
-          : "";
-      const boardLinkText =
+
+      const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
+      const boardLink =
         progressUpdate && progressUpdate.jobId && progressUpdate.changed
-          ? `\n你可以在这里看详情：[打开求职看板](${buildDashboardUrl({ companyName })})`
-          : "";
-      const nextStepsText =
-        progressUpdate && progressUpdate.jobId
-          ? `\n接下来建议：\n${nextStepsZh(progressUpdate.nextStatus).map(s => `- ${s}`).join("\n")}`
-          : "";
-      const outcomeWarningText =
-        (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome
-          ? `\n这封邮件可能和结果有关，但语义不够确定，我先没有自动标记为 offer/未通过。你方便时在 Dashboard 看一眼确认就行。`
-          : "";
-      const workflowText =
-        workflowTriggered
-          ? `\n另外我已经把这家公司的后续流程往前推进了。`
-          : "";
-      const notifText =
-        `我刚看完一封和求职相关的邮件：\n\n` +
-        `${companyName ?? "这家公司"}（${typeLabels[eventType]}）\n` +
-        `${scheduleText}\n` +
-        `地点/链接：${emailEvent.location ?? "邮件里没写"}\n` +
-        `邮件主题：${detail.subject.slice(0, 80)}` +
-        todoText +
-        progressText +
-        boardLinkText +
-        nextStepsText +
-        outcomeWarningText +
-        workflowText;
+          ? buildDashboardUrl({ companyName })
+          : null;
+
+      const notifText = await composeMailNotification({
+        userId,
+        companyName,
+        eventType,
+        rawEventType,
+        date,
+        time,
+        location: emailEvent.location,
+        todoItems: emailEvent.todoItems,
+        mailLink,
+        boardLink,
+        progressLabel:
+          progressUpdate && progressUpdate.jobId && progressUpdate.changed
+            ? jobStatusLabelZh(progressUpdate.nextStatus)
+            : null,
+        outcomeUncertain:
+          (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome,
+        workflowTriggered,
+      });
       await sendTelegramMessage(telegramChatId, notifText);
     }
 
@@ -1015,7 +1140,8 @@ async function processGmailMessageIds(params: {
 
 export async function monitorGmailAndSync(
   userId: number,
-  telegramChatId?: string
+  telegramChatId?: string,
+  options?: { notifyWindowDays?: number }
 ): Promise<MonitorResult> {
   const accessToken = await getValidAccessToken(userId);
   if (!accessToken) {
@@ -1029,6 +1155,7 @@ export async function monitorGmailAndSync(
     telegramChatId,
     accessToken,
     messageIds: ids,
+    notifyWindowDays: options?.notifyWindowDays,
   });
 }
 
@@ -1046,7 +1173,9 @@ export async function syncGmailIncremental(
   const startHistoryId = state?.lastHistoryId ?? null;
 
   if (!startHistoryId) {
-    const fallback = await monitorGmailAndSync(userId, telegramChatId);
+    // First scan (no prior historyId) — sync everything to the board, but only
+    // notify the user about mails from the last 14 days to avoid an avalanche.
+    const fallback = await monitorGmailAndSync(userId, telegramChatId, { notifyWindowDays: 14 });
     const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
     if (profileHistoryId) {
       await updateGoogleLastHistoryIdIfNewer(userId, profileHistoryId);
@@ -1058,7 +1187,9 @@ export async function syncGmailIncremental(
 
   const changes = await listGmailHistoryChanges({ accessToken, startHistoryId });
   if (!changes) {
-    const fallback = await monitorGmailAndSync(userId, telegramChatId);
+    // First scan (no prior historyId) — sync everything to the board, but only
+    // notify the user about mails from the last 14 days to avoid an avalanche.
+    const fallback = await monitorGmailAndSync(userId, telegramChatId, { notifyWindowDays: 14 });
     const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
     if (profileHistoryId) {
       await updateGoogleLastHistoryIdIfNewer(userId, profileHistoryId);
