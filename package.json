@@ -10,8 +10,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "ops:backfill:gmail-mapping": "tsx scripts/backfill-gmail-mapping.ts"
+    "db:push": "drizzle-kit generate && drizzle-kit migrate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
