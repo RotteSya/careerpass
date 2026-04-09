@@ -188,11 +188,11 @@ function buildMailMonitoringKickoffText(nickname: string, lang: "ja" | "zh" | "e
 function extractNicknameFromReply(text: string): string {
   let t = (text ?? "").trim();
   // Strip common Chinese / Japanese / English wrappers.
-  t = t.replace(/^(请)?(叫我|喊我|管我叫|称呼我(?:为|叫)?|就叫我)\s*/u, "");
-  t = t.replace(/^(私のことは|私を)\s*/u, "");
-  t = t.replace(/(と呼んで(?:ください)?|でお願いします|でいい(?:です)?)$/u, "");
-  t = t.replace(/^(call me|i('?| a)?m|my name is|just call me)\s+/iu, "");
-  t = t.replace(/[。.!！?？\s]+$/u, "");
+  t = t.replace(/^(请)?(叫我|喊我|管我叫|称呼我(?:为|叫)?|就叫我)\s*/, "");
+  t = t.replace(/^(私のことは|私を)\s*/, "");
+  t = t.replace(/(と呼んで(?:ください)?|でお願いします|でいい(?:です)?)$/, "");
+  t = t.replace(/^(call me|i('?| a)?m|my name is|just call me)\s+/i, "");
+  t = t.replace(/[。.!！?？\s]+$/, "");
   t = t.trim();
   // Final guardrails.
   if (!t) return "你";
