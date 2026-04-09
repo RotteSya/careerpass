@@ -50,28 +50,28 @@ export default function CalendarCallback() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center space-y-4 p-8">
+    <div className="min-h-screen bg-[var(--color-warm-white)] flex items-center justify-center px-4">
+      <div className="text-center space-y-4 p-8 bg-white border border-black/10 rounded-2xl shadow-[rgba(0,0,0,0.04)_0px_4px_18px,rgba(0,0,0,0.027)_0px_2.025px_7.84688px,rgba(0,0,0,0.02)_0px_0.8px_2.925px,rgba(0,0,0,0.01)_0px_0.175px_1.04062px]">
         {status === "loading" && (
           <>
             <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-            <p className="text-lg font-medium">カレンダーと連携中...</p>
-            <p className="text-sm text-muted-foreground">しばらくお待ちください</p>
+            <p className="text-[22px] font-bold tracking-[-0.25px]">カレンダーと連携中...</p>
+            <p className="text-[14px] text-[var(--color-warm-gray-500)]">しばらくお待ちください</p>
           </>
         )}
         {status === "success" && (
           <>
-            <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto" />
-            <p className="text-lg font-medium text-green-300">{message}</p>
-            <p className="text-sm text-muted-foreground">ダッシュボードに戻ります...</p>
+            <CheckCircle2 className="w-12 h-12 text-[#1aae39] mx-auto" />
+            <p className="text-[22px] font-bold tracking-[-0.25px]">{message}</p>
+            <p className="text-[14px] text-[var(--color-warm-gray-500)]">ダッシュボードに戻ります...</p>
           </>
         )}
         {status === "error" && (
           <>
             <XCircle className="w-12 h-12 text-destructive mx-auto" />
-            <p className="text-lg font-medium text-destructive">連携に失敗しました</p>
-            <p className="text-sm text-muted-foreground">{message}</p>
-            <p className="text-xs text-muted-foreground">ダッシュボードに戻ります...</p>
+            <p className="text-[22px] font-bold tracking-[-0.25px] text-destructive">連携に失敗しました</p>
+            <p className="text-[14px] text-[var(--color-warm-gray-500)]">{message}</p>
+            <p className="text-[12px] text-[var(--color-warm-gray-300)]">ダッシュボードに戻ります...</p>
           </>
         )}
       </div>

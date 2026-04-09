@@ -2,21 +2,21 @@ import { Link } from "wouter";
 
 export default function Terms() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-[var(--color-warm-white)] text-foreground">
       {/* Header */}
-      <header className="border-b border-border px-6 py-4">
+      <header className="border-b border-black/10 bg-white px-6 py-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-primary font-bold text-lg hover:opacity-80 transition-opacity">
+          <Link href="/" className="flex items-center gap-2 text-[var(--color-notion-blue)] font-semibold text-[15px] hover:opacity-80 transition-opacity">
             ← 就活パス CareerPass
           </Link>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold mb-2">利用規約</h1>
-        <p className="text-muted-foreground mb-8">Terms of Service — 最終更新日：2025年4月5日</p>
+        <h1 className="text-[26px] leading-tight tracking-[-0.625px] font-bold mb-2">利用規約</h1>
+        <p className="text-[14px] text-[var(--color-warm-gray-500)] mb-8">Terms of Service — 最終更新日：2025年4月5日</p>
 
-        <div className="space-y-8 text-sm leading-relaxed">
+        <div className="bg-white border border-black/10 rounded-2xl shadow-[rgba(0,0,0,0.04)_0px_4px_18px,rgba(0,0,0,0.027)_0px_2.025px_7.84688px,rgba(0,0,0,0.02)_0px_0.8px_2.925px,rgba(0,0,0,0.01)_0px_0.175px_1.04062px] p-8 space-y-8 text-[14px] leading-relaxed">
 
           <section>
             <h2 className="text-xl font-semibold mb-3">第1条（適用）</h2>
@@ -132,11 +132,11 @@ export default function Terms() {
         </div>
       </main>
 
-      <footer className="border-t border-border mt-16 px-6 py-8 text-center text-muted-foreground text-sm">
+      <footer className="border-t border-black/10 mt-16 px-6 py-8 text-center text-[var(--color-warm-gray-500)] text-[12px]">
         <p>© 2025 就活パス CareerPass. All rights reserved.</p>
         <div className="flex justify-center gap-6 mt-2">
-          <Link href="/privacy" className="hover:text-foreground transition-colors">プライバシーポリシー</Link>
-          <Link href="/terms" className="hover:text-foreground transition-colors">利用規約</Link>
+          <Link href="/privacy" className="hover:text-[var(--color-notion-blue)] transition-colors">プライバシーポリシー</Link>
+          <Link href="/terms" className="hover:text-[var(--color-notion-blue)] transition-colors">利用規約</Link>
         </div>
       </footer>
     </div>
