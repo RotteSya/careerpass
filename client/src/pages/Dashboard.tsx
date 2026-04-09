@@ -462,7 +462,7 @@ export default function Dashboard() {
               <div className="p-4 rounded-xl border border-border bg-secondary/20 opacity-60">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-[#faff69] flex items-center justify-center">
                       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
                         <path d="M7 4C5.34 4 4 5.34 4 7v10c0 1.66 1.34 3 3 3h10c1.66 0 3-1.34 3-3V7c0-1.66-1.34-3-3-3H7zm0 2h10c.55 0 1 .45 1 1v1H6V7c0-.55.45-1 1-1zm-1 4h12v7c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-7z"/>
                       </svg>
@@ -735,7 +735,7 @@ export default function Dashboard() {
               </div>
               <Button
                 onClick={() => setBoardDialogOpen(true)}
-                className="bg-[#0075de] hover:bg-[#005bab] text-white"
+                className="bg-[#faff69] hover:bg-[#f4f692] text-black"
               >
                 动态看板を開く
               </Button>
@@ -839,21 +839,21 @@ export default function Dashboard() {
 
       <Dialog open={boardDialogOpen} onOpenChange={setBoardDialogOpen}>
         <DialogContent
-          className="bg-white text-[rgba(0,0,0,0.95)] border-black/10 rounded-2xl p-0 shadow-[0_1px_3px_rgba(0,0,0,0.01),0_3px_7px_rgba(0,0,0,0.02),0_7px_15px_rgba(0,0,0,0.02),0_14px_28px_rgba(0,0,0,0.04),0_23px_52px_rgba(0,0,0,0.05)] sm:max-w-6xl"
+          className="bg-white text-[rgba(0,0,0,0.95)] border-[rgba(65,65,65,0.8)] rounded-2xl p-0 shadow-[0_1px_3px_rgba(0,0,0,0.01),0_3px_7px_rgba(0,0,0,0.02),0_7px_15px_rgba(0,0,0,0.02),0_14px_28px_rgba(0,0,0,0.04),0_23px_52px_rgba(0,0,0,0.05)] sm:max-w-6xl"
         >
-          <div className="px-6 pt-6 pb-4 border-b border-black/10">
+          <div className="px-6 pt-6 pb-4 border-b border-[rgba(65,65,65,0.8)]">
             <div className="flex flex-col gap-1">
               <DialogTitle className="text-[22px] font-bold tracking-[-0.25px]">
                 动态看板（求職進捗）
               </DialogTitle>
-              <DialogDescription className="text-[14px] text-[#615d59]">
+              <DialogDescription className="text-[14px] text-[#a0a0a0]">
                 Notion 風のレイアウトで、企業ごとの進捗と生成物（企業深報 / ES / 面試ログ）をまとめて確認できます
               </DialogDescription>
               <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
-                <span className="px-2 py-1 rounded-full border border-black/10 bg-[#f6f5f4] text-[#615d59]">
+                <span className="px-2 py-1 rounded-full border border-[rgba(65,65,65,0.8)] bg-[#0a0a0a] text-[#a0a0a0]">
                   企業数 {jobs.length}
                 </span>
-                <span className="px-2 py-1 rounded-full border border-black/10 bg-[#f6f5f4] text-[#615d59]">
+                <span className="px-2 py-1 rounded-full border border-[rgba(65,65,65,0.8)] bg-[#0a0a0a] text-[#a0a0a0]">
                   進行中 {columns.inResearch.length + columns.inES.length + columns.inInterview.length}
                 </span>
               </div>
@@ -866,14 +866,14 @@ export default function Dashboard() {
                 value={companyQuery}
                 onChange={(e) => setCompanyQuery(e.target.value)}
                 placeholder="搜索公司（中文/日文/英文）"
-                className="w-full sm:max-w-md h-10 rounded-[4px] border border-black/10 bg-white px-3 text-[14px] text-[rgba(0,0,0,0.95)] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
+                className="w-full sm:max-w-md h-10 rounded-[4px] border border-[rgba(65,65,65,0.8)] bg-white px-3 text-[14px] text-[rgba(0,0,0,0.95)] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
               />
               {telegramDeepLink?.deepLink ? (
                 <a
                   href={telegramDeepLink.deepLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center h-10 px-4 rounded-[4px] bg-[#0075de] hover:bg-[#005bab] text-white text-[15px] font-semibold"
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-[4px] bg-[#faff69] hover:bg-[#f4f692] text-black text-[15px] font-semibold"
                 >
                   Telegram へ
                 </a>
@@ -883,7 +883,7 @@ export default function Dashboard() {
             <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
               <div className="min-w-0">
                 {jobsLoading ? (
-                  <div className="py-10 text-center text-[14px] text-[#615d59]">読み込み中...</div>
+                  <div className="py-10 text-center text-[14px] text-[#a0a0a0]">読み込み中...</div>
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2">
                     <BoardColumn
@@ -924,16 +924,16 @@ export default function Dashboard() {
 
               <div className="min-w-0">
                 {selectedCard ? (
-                  <div className="rounded-xl border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.84688px_rgba(0,0,0,0.027),0_0.8px_2.925px_rgba(0,0,0,0.02),0_0.175px_1.04062px_rgba(0,0,0,0.01)] p-4">
+                  <div className="rounded-xl border border-[rgba(65,65,65,0.8)] bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.84688px_rgba(0,0,0,0.027),0_0.8px_2.925px_rgba(0,0,0,0.02),0_0.175px_1.04062px_rgba(0,0,0,0.01)] p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[16px] font-semibold truncate">{selectedCard.job.companyNameJa}</p>
                         {selectedCard.job.companyNameEn ? (
-                          <p className="text-[12px] text-[#615d59] truncate">{selectedCard.job.companyNameEn}</p>
+                          <p className="text-[12px] text-[#a0a0a0] truncate">{selectedCard.job.companyNameEn}</p>
                         ) : null}
                       </div>
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-1 text-[12px] font-semibold tracking-[0.125px] border border-black/10 bg-[#f2f9ff] text-[#097fe8] status-${selectedCard.job.status}`}
+                        className={`inline-flex items-center rounded-full px-2 py-1 text-[12px] font-semibold tracking-[0.125px] border border-[rgba(65,65,65,0.8)] bg-[#faff69]/10 text-[#faff69] status-${selectedCard.job.status}`}
                       >
                         {statusLabel(selectedCard.job.status)}
                       </span>
@@ -949,7 +949,7 @@ export default function Dashboard() {
                             status,
                           });
                         }}
-                        className="h-9 w-full rounded-[4px] border border-black/10 bg-white px-2 text-[14px] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
+                        className="h-9 w-full rounded-[4px] border border-[rgba(65,65,65,0.8)] bg-white px-2 text-[14px] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
                       >
                         {JOB_STATUS_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>
@@ -960,37 +960,37 @@ export default function Dashboard() {
                     </div>
 
                     <div className="mt-4 space-y-3 text-[14px]">
-                      <div className="rounded-lg border border-black/10 bg-[#f6f5f4] p-3">
-                        <p className="text-[12px] text-[#615d59] mb-1 flex items-center gap-1">
+                      <div className="rounded-lg border border-[rgba(65,65,65,0.8)] bg-[#0a0a0a] p-3">
+                        <p className="text-[12px] text-[#a0a0a0] mb-1 flex items-center gap-1">
                           <ShieldCheck className="w-3.5 h-3.5" /> 企业深报
                         </p>
                         <p className="line-clamp-4">{selectedCard.recon?.content?.slice(0, 180) ?? "未生成"}</p>
                       </div>
-                      <div className="rounded-lg border border-black/10 bg-[#f6f5f4] p-3">
-                        <p className="text-[12px] text-[#615d59] mb-1 flex items-center gap-1">
+                      <div className="rounded-lg border border-[rgba(65,65,65,0.8)] bg-[#0a0a0a] p-3">
+                        <p className="text-[12px] text-[#a0a0a0] mb-1 flex items-center gap-1">
                           <FileText className="w-3.5 h-3.5" /> ES 草稿
                         </p>
                         <p className="line-clamp-4">{selectedCard.es?.content?.slice(0, 180) ?? "未生成"}</p>
                       </div>
-                      <div className="rounded-lg border border-black/10 bg-[#f6f5f4] p-3">
-                        <p className="text-[12px] text-[#615d59] mb-1 flex items-center gap-1">
+                      <div className="rounded-lg border border-[rgba(65,65,65,0.8)] bg-[#0a0a0a] p-3">
+                        <p className="text-[12px] text-[#a0a0a0] mb-1 flex items-center gap-1">
                           <Mic className="w-3.5 h-3.5" /> 面试日志
                         </p>
                         <p className="line-clamp-4">{selectedCard.interview?.content?.slice(0, 180) ?? "未生成"}</p>
                       </div>
                     </div>
 
-                    <div className="mt-4 rounded-lg border border-black/10 bg-white p-3">
-                      <p className="text-[12px] text-[#615d59] mb-2 flex items-center gap-1">
+                    <div className="mt-4 rounded-lg border border-[rgba(65,65,65,0.8)] bg-white p-3">
+                      <p className="text-[12px] text-[#a0a0a0] mb-2 flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" /> 更新记录
                       </p>
                       {statusEvents.length === 0 ? (
-                        <p className="text-[12px] text-[#a39e98]">暂无</p>
+                        <p className="text-[12px] text-[#414141]">暂无</p>
                       ) : (
                         <div className="space-y-2">
                           {statusEvents.slice(0, 8).map((e: any) => (
                             <div key={e.id} className="text-[12px]">
-                              <div className="flex flex-wrap gap-x-2 gap-y-1 text-[#a39e98]">
+                              <div className="flex flex-wrap gap-x-2 gap-y-1 text-[#414141]">
                                 <span>{e.createdAt ? new Date(e.createdAt).toLocaleString() : ""}</span>
                                 <span>{e.source ?? ""}</span>
                                 <span>{(e.prevStatus ?? "-") + " → " + (e.nextStatus ?? "-")}</span>
@@ -1001,7 +1001,7 @@ export default function Dashboard() {
                                 </div>
                               ) : null}
                               {e.mailFrom ? (
-                                <div className="text-[#615d59]">{String(e.mailFrom).slice(0, 120)}</div>
+                                <div className="text-[#a0a0a0]">{String(e.mailFrom).slice(0, 120)}</div>
                               ) : null}
                             </div>
                           ))}
@@ -1010,7 +1010,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-black/10 bg-[#f6f5f4] p-4 text-[14px] text-[#615d59]">
+                  <div className="rounded-xl border border-[rgba(65,65,65,0.8)] bg-[#0a0a0a] p-4 text-[14px] text-[#a0a0a0]">
                     左のカードを選ぶと詳細が表示されます
                   </div>
                 )}
@@ -1079,19 +1079,19 @@ function BoardColumn(props: {
 }) {
   const { title, subtitle, count, cards, selectedJobId, onSelect } = props;
   return (
-    <div className="min-w-[260px] w-[260px] rounded-xl border border-black/10 bg-[#f6f5f4] p-3">
+    <div className="min-w-[260px] w-[260px] rounded-xl border border-[rgba(65,65,65,0.8)] bg-[#0a0a0a] p-3">
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0">
           <p className="text-[15px] font-semibold truncate">{title}</p>
-          <p className="text-[12px] text-[#615d59]">{subtitle}</p>
+          <p className="text-[12px] text-[#a0a0a0]">{subtitle}</p>
         </div>
-        <span className="text-[12px] px-2 py-0.5 rounded-full bg-white border border-black/10 text-[#615d59]">
+        <span className="text-[12px] px-2 py-0.5 rounded-full bg-white border border-[rgba(65,65,65,0.8)] text-[#a0a0a0]">
           {count}
         </span>
       </div>
       <div className="space-y-2">
         {cards.length === 0 ? (
-          <div className="text-[12px] text-[#a39e98] py-6 text-center">暂无</div>
+          <div className="text-[12px] text-[#414141] py-6 text-center">暂无</div>
         ) : (
           cards.map((c) => {
             const selected = c.job.id === selectedJobId;
@@ -1102,17 +1102,17 @@ function BoardColumn(props: {
                 className={`w-full text-left p-3 rounded-xl border bg-white transition-shadow ${
                   selected
                     ? "border-[#097fe8] shadow-[0_0_0_2px_rgba(9,127,232,0.15)]"
-                    : "border-black/10 shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.84688px_rgba(0,0,0,0.027),0_0.8px_2.925px_rgba(0,0,0,0.02),0_0.175px_1.04062px_rgba(0,0,0,0.01)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.045),0_2.5px_9px_rgba(0,0,0,0.03),0_1px_3.5px_rgba(0,0,0,0.02)]"
+                    : "border-[rgba(65,65,65,0.8)] shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.84688px_rgba(0,0,0,0.027),0_0.8px_2.925px_rgba(0,0,0,0.02),0_0.175px_1.04062px_rgba(0,0,0,0.01)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.045),0_2.5px_9px_rgba(0,0,0,0.03),0_1px_3.5px_rgba(0,0,0,0.02)]"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-[14px] font-semibold truncate">{c.job.companyNameJa}</p>
-                    <p className="text-[12px] text-[#615d59] mt-0.5">
+                    <p className="text-[12px] text-[#a0a0a0] mt-0.5">
                       {c.job.updatedAt ? new Date(c.job.updatedAt).toLocaleDateString() : ""}
                     </p>
                   </div>
-                  <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-1 text-[12px] font-semibold tracking-[0.125px] border border-black/10 bg-[#f2f9ff] text-[#097fe8] status-${c.job.status}`}>
+                  <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-1 text-[12px] font-semibold tracking-[0.125px] border border-[rgba(65,65,65,0.8)] bg-[#faff69]/10 text-[#faff69] status-${c.job.status}`}>
                     {statusLabel(c.job.status)}
                   </span>
                 </div>
