@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function EmailVerified() {
@@ -43,21 +43,25 @@ export default function EmailVerified() {
   }, [token]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-black flex items-center justify-center px-4 text-white">
       <div className="w-full max-w-md text-center space-y-6">
         {status === "verifying" && (
           <>
-            <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto" />
-            <h1 className="text-xl font-bold text-white">メールアドレスを確認中...</h1>
-            <p className="text-gray-500 text-sm">しばらくお待ちください</p>
+            <Loader2 className="w-12 h-12 animate-spin text-[#faff69] mx-auto" />
+            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#faff69]">// VERIFYING</p>
+            <h1 className="text-2xl font-black tracking-tight">メールアドレスを確認中...</h1>
+            <p className="text-[#a0a0a0] text-sm">しばらくお待ちください</p>
           </>
         )}
 
         {status === "success" && (
           <>
-            <div className="text-6xl">✅</div>
-            <h1 className="text-2xl font-bold text-white">確認完了！</h1>
-            <p className="text-gray-400 text-sm">
+            <div className="w-14 h-14 mx-auto rounded-sm bg-[#faff69] flex items-center justify-center">
+              <CheckCircle2 className="w-7 h-7 text-black" />
+            </div>
+            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#faff69]">// VERIFIED</p>
+            <h1 className="text-2xl font-black tracking-tight">確認完了！</h1>
+            <p className="text-[#a0a0a0] text-sm">
               メールアドレスの確認が完了しました。<br />
               プロフィール入力ページへ移動します...
             </p>
@@ -66,12 +70,16 @@ export default function EmailVerified() {
 
         {status === "error" && (
           <>
-            <div className="text-6xl">❌</div>
-            <h1 className="text-2xl font-bold text-white">確認に失敗しました</h1>
-            <p className="text-red-400 text-sm">{errorMsg}</p>
+            <div className="w-14 h-14 mx-auto rounded-sm bg-red-950 border border-red-700 flex items-center justify-center">
+              <XCircle className="w-7 h-7 text-red-400" />
+            </div>
+            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-red-400">// ERROR</p>
+            <h1 className="text-2xl font-black tracking-tight">確認に失敗しました</h1>
+            <p className="text-red-400 text-sm font-mono">{errorMsg}</p>
             <div className="space-y-3 pt-2">
               <Button
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                variant="neon"
+                className="w-full rounded-sm"
                 onClick={() => navigate("/signup")}
               >
                 新規登録に戻る
