@@ -42,12 +42,14 @@ import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
 const navItems = [
-  { icon: User, label: "プロフィール", labelZh: "个人资料", path: "/dashboard" },
+  { icon: User, label: "个人中心", path: "/dashboard/profile" },
+  { icon: Calendar, label: "カレンダー連携", path: "/dashboard/calendar" },
 ];
 
 export default function Dashboard() {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const [currentPath, navigate] = useLocation();
+  const pathOnly = currentPath.split("?")[0] ?? currentPath;
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [companyQuery, setCompanyQuery] = useState("");
   const [boardDialogOpen, setBoardDialogOpen] = useState(false);
@@ -163,6 +165,12 @@ export default function Dashboard() {
   );
 
   useEffect(() => {
+    if (!loading && isAuthenticated && pathOnly === "/dashboard") {
+      navigate("/dashboard/profile");
+    }
+  }, [loading, isAuthenticated, pathOnly]);
+
+  useEffect(() => {
     if (!loading && !isAuthenticated) navigate("/");
     // Only redirect to /register when profile has fully loaded AND profileCompleted is false
     // profileLoading guard prevents race condition when navigating from /register
@@ -261,6 +269,7 @@ export default function Dashboard() {
   }, [boardCards]);
 
   const selectedCard = boardCards.find((c: any) => c.job.id === selectedJobId) ?? null;
+  const isCalendarPage = pathOnly === "/dashboard/calendar";
 
   if (loading) {
     return (
@@ -291,7 +300,7 @@ export default function Dashboard() {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                currentPath === item.path
+                pathOnly === item.path
                   ? "bg-primary/15 text-primary font-medium"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
@@ -396,91 +405,91 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* Module 1: Calendar OAuth */}
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="flex items-start justify-between mb-5">
-              <div>
-                <h2 className="text-lg font-bold flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  カレンダー連携
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  面接・説明会のメールを自動検知してカレンダーに登録します
-                </p>
+          {isCalendarPage && (
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    カレンダー連携
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    面接・説明会のメールを自動検知してカレンダーに登録します
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Google Calendar */}
-              <div className="p-4 rounded-xl border border-border bg-secondary/20">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
-                      <svg viewBox="0 0 24 24" className="w-5 h-5">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                      </svg>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl border border-border bg-secondary/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5">
+                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                      </div>
+                      <span className="font-medium text-sm">Google Calendar</span>
                     </div>
-                    <span className="font-medium text-sm">Google Calendar</span>
+                    {calendarStatus?.google ? (
+                      <span className="flex items-center gap-1 text-xs text-green-400">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> 連携済
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <XCircle className="w-3.5 h-3.5" /> 未連携
+                      </span>
+                    )}
                   </div>
                   {calendarStatus?.google ? (
-                    <span className="flex items-center gap-1 text-xs text-green-400">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> 連携済
-                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full bg-transparent text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={() => disconnectCalendar.mutate({ provider: "google" })}
+                      disabled={disconnectCalendar.isPending}
+                    >
+                      連携解除
+                    </Button>
                   ) : (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <XCircle className="w-3.5 h-3.5" /> 未連携
-                    </span>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => googleAuthUrl && (window.location.href = googleAuthUrl.url)}
+                      disabled={!googleAuthUrl}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                      Google と連携する
+                    </Button>
                   )}
                 </div>
-                {calendarStatus?.google ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full bg-transparent text-destructive border-destructive/30 hover:bg-destructive/10"
-                    onClick={() => disconnectCalendar.mutate({ provider: "google" })}
-                    disabled={disconnectCalendar.isPending}
-                  >
-                    連携解除
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    onClick={() => googleAuthUrl && (window.location.href = googleAuthUrl.url)}
-                    disabled={!googleAuthUrl}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                    Google と連携する
-                  </Button>
-                )}
-              </div>
 
-              {/* Outlook Calendar - Coming Soon */}
-              <div className="p-4 rounded-xl border border-border bg-secondary/20 opacity-60">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
-                        <path d="M7 4C5.34 4 4 5.34 4 7v10c0 1.66 1.34 3 3 3h10c1.66 0 3-1.34 3-3V7c0-1.66-1.34-3-3-3H7zm0 2h10c.55 0 1 .45 1 1v1H6V7c0-.55.45-1 1-1zm-1 4h12v7c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-7z"/>
-                      </svg>
+                <div className="p-4 rounded-xl border border-border bg-secondary/20 opacity-60">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white">
+                          <path d="M7 4C5.34 4 4 5.34 4 7v10c0 1.66 1.34 3 3 3h10c1.66 0 3-1.34 3-3V7c0-1.66-1.34-3-3-3H7zm0 2h10c.55 0 1 .45 1 1v1H6V7c0-.55.45-1 1-1zm-1 4h12v7c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-7z"/>
+                        </svg>
+                      </div>
+                      <span className="font-medium text-sm">Outlook Calendar</span>
                     </div>
-                    <span className="font-medium text-sm">Outlook Calendar</span>
+                    <span className="flex items-center gap-1 text-xs text-amber-400">
+                      準備中
+                    </span>
                   </div>
-                  <span className="flex items-center gap-1 text-xs text-amber-400">
-                    準備中
-                  </span>
+                  <Button size="sm" className="w-full" disabled>
+                    近日公開予定
+                  </Button>
                 </div>
-                <Button size="sm" className="w-full" disabled>
-                  近日公開予定
-                </Button>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Module 2: Chat Platform Binding */}
+          {!isCalendarPage && (
+            <>
           <div className="rounded-2xl border border-border bg-card p-6">
             <div className="mb-5">
               <h2 className="text-lg font-bold flex items-center gap-2">
@@ -496,9 +505,15 @@ export default function Dashboard() {
               <div className="p-4 rounded-xl border border-border bg-secondary/20">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold">Telegram</p>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#2AABEE]/15 text-[#2AABEE] border border-[#2AABEE]/30">
-                    可用
-                  </span>
+                  {telegramStatus?.bound ? (
+                    <span className="flex items-center gap-1 text-xs text-green-400">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> 連携済
+                    </span>
+                  ) : (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#2AABEE]/15 text-[#2AABEE] border border-[#2AABEE]/30">
+                      可用
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground min-h-[32px]">
                   当前主通道，支持扫码绑定和消息通知。
@@ -741,6 +756,8 @@ export default function Dashboard() {
               </Button>
             </div>
           </div>
+            </>
+          )}
 
         </div>
       </main>

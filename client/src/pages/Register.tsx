@@ -45,12 +45,20 @@ export default function Register() {
 
   const utils = trpc.useUtils();
 
+  const { data: calendarStatus, refetch: refetchCalendarStatus } = trpc.calendar.getStatus.useQuery(undefined, {
+    enabled: isAuthenticated && step === 3,
+  });
+
+  const { data: googleAuthUrl } = trpc.calendar.getAuthUrl.useQuery(
+    { provider: "google", origin: typeof window !== "undefined" ? window.location.origin : "" },
+    { enabled: isAuthenticated && step === 3 }
+  );
+
   const completeRegistration = trpc.user.completeRegistration.useMutation({
     onSuccess: async () => {
-      toast.success("登録が完了しました！ / 注册成功！");
-      // Invalidate profile cache BEFORE navigating so Dashboard reads updated profileCompleted=true
+      toast.success("基本信息已保存，请继续绑定邮箱");
       await utils.user.getProfile.invalidate();
-      navigate("/dashboard");
+      setStep(3);
     },
     onError: (err) => {
       toast.error(err.message);
@@ -106,12 +114,12 @@ export default function Register() {
         </div>
 
         <p className="text-[12px] text-[var(--color-warm-gray-500)] text-center mb-4">
-          STEP {step} / 2
+          STEP {step} / 3
         </p>
 
         {/* Progress */}
         <div className="flex items-center gap-2 mb-8">
-          {[1, 2].map((s) => (
+          {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2 flex-1">
               <div
                 className={`w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-semibold transition-colors ${
@@ -124,7 +132,7 @@ export default function Register() {
               >
                 {step > s ? <CheckCircle2 className="w-4 h-4" /> : s}
               </div>
-              {s < 2 && (
+              {s < 3 && (
                 <div
                   className={`flex-1 h-px ${step > s ? "bg-[#1aae39]/40" : "bg-black/10"}`}
                 />
@@ -262,8 +270,67 @@ export default function Register() {
                   {completeRegistration.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    "登録完了"
+                    "次へ"
                   )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-[22px] font-bold tracking-[-0.25px]">绑定邮箱</h2>
+                <p className="text-[14px] text-[var(--color-warm-gray-500)] mt-1">
+                  绑定 Gmail 后，将自动识别面试/说明会邮件并同步到日历与看板
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl border border-black/10 bg-white space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm">Google / Gmail</span>
+                  {calendarStatus?.google ? (
+                    <span className="flex items-center gap-1 text-xs text-green-600">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> 已绑定
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[var(--color-warm-gray-500)]">未绑定</span>
+                  )}
+                </div>
+
+                {calendarStatus?.google ? (
+                  <Button className="w-full h-11" onClick={() => navigate("/dashboard")}>
+                    进入 Dashboard
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full h-11"
+                    onClick={() => {
+                      if (!googleAuthUrl?.url) {
+                        toast.error("Google OAuth 未正确配置，请检查 GOOGLE_CLIENT_ID");
+                        return;
+                      }
+                      window.location.href = googleAuthUrl.url;
+                    }}
+                    disabled={!googleAuthUrl?.url}
+                  >
+                    绑定 Gmail
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1 h-11" onClick={() => setStep(2)}>
+                  戻る
+                </Button>
+                <Button
+                  className="flex-1 h-11"
+                  variant="outline"
+                  onClick={() => refetchCalendarStatus()}
+                  disabled={!isAuthenticated}
+                >
+                  重新检查
                 </Button>
               </div>
             </div>
