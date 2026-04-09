@@ -83,96 +83,105 @@ export default function Register() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <Loader2 className="w-8 h-8 animate-spin text-[#faff69]" />
       </div>
     );
   }
 
+  const inputCls =
+    "bg-black border-[rgba(65,65,65,0.8)] text-white placeholder:text-[#414141] focus-visible:border-[#faff69] focus-visible:ring-[#faff69]/30 h-11 rounded-sm";
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <BrainCircuit className="w-6 h-6 text-primary-foreground" />
+          <div className="w-9 h-9 rounded-sm bg-[#faff69] flex items-center justify-center">
+            <BrainCircuit className="w-5 h-5 text-black" />
           </div>
           <div>
-            <p className="font-bold text-lg leading-tight">就活パス</p>
-            <p className="text-xs text-muted-foreground">CareerPass</p>
+            <p className="font-black text-lg leading-tight">就活パス</p>
+            <p className="text-[10px] font-mono text-[#a0a0a0]">CareerPass</p>
           </div>
         </div>
 
+        <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#faff69] text-center mb-3">
+          // ONBOARDING — STEP {step} / 2
+        </p>
+
         {/* Progress */}
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-2 mb-8">
           {[1, 2].map((s) => (
             <div key={s} className="flex items-center gap-2 flex-1">
               <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                className={`w-7 h-7 rounded-sm flex items-center justify-center text-xs font-black font-mono transition-colors ${
                   step > s
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-[#faff69] text-black"
                     : step === s
-                    ? "bg-primary/20 text-primary border border-primary"
-                    : "bg-muted text-muted-foreground"
+                    ? "bg-transparent text-[#faff69] border border-[#faff69]"
+                    : "bg-[#0a0a0a] text-[#414141] border border-[rgba(65,65,65,0.8)]"
                 }`}
               >
                 {step > s ? <CheckCircle2 className="w-4 h-4" /> : s}
               </div>
-              {s < 2 && <div className={`flex-1 h-0.5 ${step > s ? "bg-primary" : "bg-border"}`} />}
+              {s < 2 && (
+                <div
+                  className={`flex-1 h-px ${step > s ? "bg-[#faff69]" : "bg-[rgba(65,65,65,0.8)]"}`}
+                />
+              )}
             </div>
           ))}
         </div>
 
-        {/* Card */}
-        <div className="bg-card border border-border rounded-2xl p-6 shadow-xl">
+        <div className="bg-[#0a0a0a] border border-[rgba(65,65,65,0.8)] rounded-sm p-6">
           {step === 1 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-bold">基本情報の入力</h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <h2 className="text-2xl font-black tracking-tight">基本情報の入力</h2>
+                <p className="text-sm text-[#a0a0a0] mt-1">
                   就活サポートに必要な基本情報を入力してください
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="name">
-                    氏名 / 姓名 <span className="text-destructive">*</span>
+                  <Label htmlFor="name" className="text-[#a0a0a0] text-xs uppercase tracking-wider font-mono">
+                    氏名 / 姓名 <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     id="name"
                     placeholder="例：山田 太郎 / 张三"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="bg-input border-border"
+                    className={inputCls}
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="birthDate">
-                    生年月日 / 出生日期 <span className="text-destructive">*</span>
+                  <Label htmlFor="birthDate" className="text-[#a0a0a0] text-xs uppercase tracking-wider font-mono">
+                    生年月日 / 出生日期 <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     id="birthDate"
                     type="date"
                     value={form.birthDate}
                     onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                    className="bg-input border-border"
+                    className={inputCls}
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>
-                    最終学歴 / 最高学历 <span className="text-destructive">*</span>
+                  <Label className="text-[#a0a0a0] text-xs uppercase tracking-wider font-mono">
+                    最終学歴 / 最高学历 <span className="text-red-400">*</span>
                   </Label>
                   <Select
                     value={form.education}
                     onValueChange={(v) => setForm({ ...form, education: v })}
                   >
-                    <SelectTrigger className="bg-input border-border">
+                    <SelectTrigger className={inputCls}>
                       <SelectValue placeholder="学歴を選択 / 选择学历" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-[#0a0a0a] border-[rgba(65,65,65,0.8)] rounded-sm">
                       {educationOptions.map((o) => (
                         <SelectItem key={o.value} value={o.value}>
                           {o.label}
@@ -183,21 +192,22 @@ export default function Register() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="university">
-                    大学名 / 大学名称 <span className="text-destructive">*</span>
+                  <Label htmlFor="university" className="text-[#a0a0a0] text-xs uppercase tracking-wider font-mono">
+                    大学名 / 大学名称 <span className="text-red-400">*</span>
                   </Label>
                   <Input
                     id="university"
                     placeholder="例：立命館大学 / 贵州大学"
                     value={form.universityName}
                     onChange={(e) => setForm({ ...form, universityName: e.target.value })}
-                    className="bg-input border-border"
+                    className={inputCls}
                   />
                 </div>
               </div>
 
               <Button
-                className="w-full"
+                variant="neon"
+                className="w-full rounded-sm h-11"
                 onClick={() => {
                   if (!form.name || !form.birthDate || !form.education || !form.universityName) {
                     toast.error("全ての項目を入力してください");
@@ -214,8 +224,8 @@ export default function Register() {
           {step === 2 && (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-bold">言語設定</h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <h2 className="text-2xl font-black tracking-tight">言語設定</h2>
+                <p className="text-sm text-[#a0a0a0] mt-1">
                   AIコーチとの会話言語を選択してください
                 </p>
               </div>
@@ -225,16 +235,16 @@ export default function Register() {
                   <button
                     key={lang.value}
                     onClick={() => setForm({ ...form, preferredLanguage: lang.value })}
-                    className={`w-full p-4 rounded-xl border text-left transition-all ${
+                    className={`w-full p-4 rounded-sm border text-left transition-all ${
                       form.preferredLanguage === lang.value
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-secondary/30 text-foreground hover:border-primary/40"
+                        ? "border-[#faff69] bg-[#faff69]/10 text-[#faff69]"
+                        : "border-[rgba(65,65,65,0.8)] bg-black text-white hover:border-[#faff69]/50"
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">{lang.label}</span>
+                      <span className="font-semibold">{lang.label}</span>
                       {form.preferredLanguage === lang.value && (
-                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                        <CheckCircle2 className="w-5 h-5 text-[#faff69]" />
                       )}
                     </div>
                   </button>
@@ -242,11 +252,12 @@ export default function Register() {
               </div>
 
               <div className="flex gap-3">
-                <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setStep(1)}>
+                <Button variant="ghost-olive" className="flex-1 rounded-sm h-11" onClick={() => setStep(1)}>
                   戻る
                 </Button>
                 <Button
-                  className="flex-1"
+                  variant="neon"
+                  className="flex-1 rounded-sm h-11"
                   onClick={handleSubmit}
                   disabled={completeRegistration.isPending}
                 >
@@ -261,8 +272,8 @@ export default function Register() {
           )}
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-4">
-          登録することで、利用規約とプライバシーポリシーに同意したものとみなします
+        <p className="text-center text-xs font-mono text-[#a0a0a0]/60 mt-5">
+          // 登録することで、利用規約とプライバシーポリシーに同意したものとみなします
         </p>
       </div>
     </div>
