@@ -18,8 +18,6 @@ import {
   startCompanyWorkflow,
 } from "./agents";
 import { startMailMonitoringAndCheckmail } from "./mailMonitoring";
-import { invokeLLM } from "./_core/llm";
-import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import type { User } from "../drizzle/schema";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
@@ -169,55 +167,37 @@ function buildTelegramFixedOpening(user: User, sessionId: string): string {
   );
 }
 
-function fallbackMailMonitoringKickoffText(lang: "ja" | "zh" | "en"): string {
+/**
+ * Fixed kickoff line sent right after the user replies with what they want to
+ * be called. Uses the nickname they just gave us.
+ */
+function buildMailMonitoringKickoffText(nickname: string, lang: "ja" | "zh" | "en"): string {
   if (lang === "zh") {
-    return "顺便说一句，我已经开始工作了，正在帮你检查邮箱，待会儿要是看到说明会、笔试、面试、截止之类的，会第一时间戳你。";
+    return `好的 ${nickname}，我已经开始工作了，正在帮你检查邮箱，待会儿要是看到说明会、笔试、面试、截止之类的，会第一时间戳你。`;
   }
   if (lang === "en") {
-    return "By the way, I’m already on the clock — going through your inbox right now. The second I spot a briefing, test, interview, or deadline, I’ll ping you.";
+    return `Got it, ${nickname}. I’m already on the clock — going through your inbox right now. The second I spot a briefing, test, interview, or deadline, I’ll ping you.`;
   }
-  return "ちなみに、もう仕事を始めています。今あなたのメールを確認中で、説明会・Webテスト・面接・締切を見つけ次第すぐお知らせしますね。";
+  return `了解しました、${nickname}さん。もう仕事を始めていて、今あなたのメールを確認中です。説明会・Webテスト・面接・締切を見つけ次第、すぐお知らせしますね。`;
 }
 
 /**
- * LLM-composed "I'm already on it, scanning your inbox" line, in careerpass's
- * voice. Each /start gets a slightly different phrasing instead of a fixed
- * template. Falls back to a hand-written line if the LLM call fails.
+ * Heuristic nickname extractor: users may reply with the bare name ("张三"),
+ * or a sentence ("叫我小张就好"). Trim, strip common prefixes, cap length.
  */
-async function composeMailMonitoringKickoffText(lang: "ja" | "zh" | "en"): Promise<string> {
-  try {
-    const soul = await loadAgentSoul("careerpass");
-    const agents = await loadAgentAgents("careerpass");
-
-    const langName = lang === "zh" ? "中文" : lang === "en" ? "English" : "日本語";
-
-    const systemPrompt =
-      `你是「就活パス」的员工。刚和用户打完招呼，现在需要紧接着发一句话告诉对方：你已经开始干活了，正在帮 Ta 检查邮箱，看到说明会 / 笔试 / 面试 / 截止之类的会第一时间通知。\n` +
-      `要求：\n` +
-      `- 用 ${langName} 输出。\n` +
-      `- 每次措辞都不一样，绝对不要套固定模板。\n` +
-      `- 一句话或两句话即可，不要换行，不要列表。\n` +
-      `- 自然口吻，符合「被老板压榨但靠谱的员工」人设；可以稍微随意，但不要油腻、不要卖惨过头。\n` +
-      `- 必须明确传达：(1) 已经开始工作了 / 已经在检查邮箱 (2) 抓到说明会、笔试、面试、截止会马上提醒。\n` +
-      `- 不要用「偷偷盯着」「监视」之类的措辞。\n` +
-      `- 只输出最终一句话，不要加引号、不要解释。` +
-      (soul.content ? `\n\n[SOUL]\n${soul.content}` : "") +
-      (agents.content ? `\n\n[AGENTS]\n${agents.content}` : "");
-
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `请按要求生成这一句话。` },
-      ],
-    });
-    const raw = response?.choices?.[0]?.message?.content;
-    const text = (typeof raw === "string" ? raw : "").trim();
-    if (!text) return fallbackMailMonitoringKickoffText(lang);
-    return text;
-  } catch (err) {
-    console.error("[Telegram] composeMailMonitoringKickoffText failed:", err);
-    return fallbackMailMonitoringKickoffText(lang);
-  }
+function extractNicknameFromReply(text: string): string {
+  let t = (text ?? "").trim();
+  // Strip common Chinese / Japanese / English wrappers.
+  t = t.replace(/^(请)?(叫我|喊我|管我叫|称呼我(?:为|叫)?|就叫我)\s*/u, "");
+  t = t.replace(/^(私のことは|私を)\s*/u, "");
+  t = t.replace(/(と呼んで(?:ください)?|でお願いします|でいい(?:です)?)$/u, "");
+  t = t.replace(/^(call me|i('?| a)?m|my name is|just call me)\s+/iu, "");
+  t = t.replace(/[。.!！?？\s]+$/u, "");
+  t = t.trim();
+  // Final guardrails.
+  if (!t) return "你";
+  if (t.length > 24) t = t.slice(0, 24);
+  return t;
 }
 
 function formatEventTypeLabel(lang: "ja" | "zh" | "en", eventType: string): string {
@@ -723,8 +703,13 @@ telegramRouter.post("/webhook", async (req, res) => {
             await updateAgentSession(userId!, {
               sessionState: {
                 ...initialSessionState,
+                // Wait for the user's reply so we can use whatever they ask to be
+                // called as the nickname in the kickoff message. This flag is
+                // independent of onboarding.stage so the background mail-scan
+                // result can still advance onboarding without racing us.
+                awaitingNickname: true,
                 onboarding: {
-                  stage: "schedule",
+                  stage: "awaiting_nickname",
                   updatedAt: new Date().toISOString(),
                 },
               },
@@ -799,12 +784,9 @@ telegramRouter.post("/webhook", async (req, res) => {
             })();
             void backgroundScan;
 
-            // Now send the greeting + kickoff text. The scan above is already running.
+            // Now send only the greeting. The kickoff line will be sent after
+            // the user replies with what they want to be called.
             await sendTelegramBubbles(chatId, greeting);
-            const kickoffText = await composeMailMonitoringKickoffText(
-              (user.preferredLanguage ?? "ja") as "ja" | "zh" | "en"
-            );
-            await sendTelegramBubbles(chatId, kickoffText);
             await saveAgentMemory({
               userId,
               memoryType: "conversation",
@@ -833,6 +815,36 @@ telegramRouter.post("/webhook", async (req, res) => {
       const session = await getOrCreateAgentSession(userId, String(chatId));
       const sessionId = String(session.id);
       const uid = userId;
+
+      // First reply after the opening greeting: capture the nickname the user
+      // wants to be called by, save it, then send the kickoff line.
+      const sessionStateForNickname =
+        (session.sessionState as Record<string, any> | null) ?? {};
+      if (sessionStateForNickname.awaitingNickname) {
+        const user = await getUserById(uid);
+        const lang = ((user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en");
+        const nickname = extractNicknameFromReply(text);
+        await updateAgentSession(uid, {
+          sessionState: {
+            ...sessionStateForNickname,
+            awaitingNickname: false,
+            preferredNickname: nickname,
+            onboarding: {
+              stage: "schedule",
+              updatedAt: new Date().toISOString(),
+            },
+          },
+        });
+        await sendTelegramBubbles(chatId, buildMailMonitoringKickoffText(nickname, lang));
+        await saveAgentMemory({
+          userId: uid,
+          memoryType: "conversation",
+          title: `Chat ${new Date().toISOString()}`,
+          content: `User: ${text}\nAssistant: ${buildMailMonitoringKickoffText(nickname, lang)}`,
+          metadata: { sessionId, source: "nickname_capture" },
+        });
+        return res.json({ ok: true });
+      }
 
       // Simple routing based on session state or commands
       if (text.startsWith("/board") || text.startsWith("/kanban") || /看板|进度|求职.*板|board|kanban/i.test(text)) {
