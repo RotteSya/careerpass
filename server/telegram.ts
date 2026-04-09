@@ -137,6 +137,7 @@ function buildTelegramFixedOpening(user: User, sessionId: string): string {
       `- 维护一份动态求职看板，每家公司走到哪一步我都帮你记着\n` +
       `- 帮你做企业调研、ES 草稿、面试要点整理\n` +
       `- 把面试 / 截止自动写进你的 Google 日历\n` +
+      `未来会支持的功能：模拟面试陪练、OB/OG 智能匹配、内定后的入社准备跟进，敬请期待。\n` +
       `对了——为了让我能下班，先问一句：我应该怎么称呼你比较顺口？`
     );
   }
@@ -149,6 +150,7 @@ function buildTelegramFixedOpening(user: User, sessionId: string): string {
       `- Keep a live job board so we always know where each company stands\n` +
       `- Run company research, draft ES, and prep interview talking points\n` +
       `- Auto-write interviews and deadlines into your Google Calendar\n` +
+      `Coming soon: mock interview practice, OB/OG smart matching, and post-offer onboarding follow-up — stay tuned.\n` +
       `Quick one so I can eventually go home — what should I call you?`
     );
   }
@@ -160,6 +162,7 @@ function buildTelegramFixedOpening(user: User, sessionId: string): string {
     `- 動的な就活ボードを更新し、各社の進捗を常に最新に保つ\n` +
     `- 企業調査・ES下書き・面接対策の論点整理\n` +
     `- 面接や締切を Google カレンダーへ自動登録\n` +
+    `今後対応予定：模擬面接の練習、OB/OG マッチング、内定後の入社準備フォローなど。お楽しみに。\n` +
     `さて、私が帰宅できる日のために最初に一つだけ——あなたのことは何とお呼びすればよいですか？`
   );
 }
