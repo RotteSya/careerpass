@@ -792,6 +792,26 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
   }
 }
 
+/**
+ * Send a notification as multiple Telegram bubbles, splitting on blank lines so
+ * the user gets readable, not-cramped messages.
+ */
+async function sendTelegramBubbles(chatId: string, text: string): Promise<boolean> {
+  const trimmed = (text ?? "").trim();
+  if (!trimmed) return false;
+  const chunks = trimmed.split(/\n\s*\n+/).map(s => s.trim()).filter(Boolean);
+  if (chunks.length <= 1 || trimmed.length < 140) {
+    return sendTelegramMessage(chatId, trimmed);
+  }
+  let allOk = true;
+  for (let i = 0; i < chunks.length; i++) {
+    const ok = await sendTelegramMessage(chatId, chunks[i]);
+    if (!ok) allOk = false;
+    if (i < chunks.length - 1) await new Promise(r => setTimeout(r, 350));
+  }
+  return allOk;
+}
+
 // ─── Main Monitor Function ────────────────────────────────────────────────────
 
 export interface MonitorResult {
@@ -903,7 +923,8 @@ async function composeMailNotification(input: ComposeNotificationInput): Promise
       `- 邮件内容只用一句话带过，不要复述邮件主题。\n` +
       `- 必须把「原邮件链接」用 markdown 链接的形式放进消息里，方便用户点开核对。\n` +
       `- 如果有「看板链接」，也用 markdown 链接放进去。\n` +
-      `- 总长度控制在 4–8 行，不要长篇大论，不要寒暄废话。\n` +
+      `- **重要：把消息切成 2–4 个气泡**。每个气泡 1–3 句话，用 \`\\n\\n\` 空行分隔，不要把所有内容挤在一段里。\n` +
+      `- 一条气泡里不要塞超过 3 行的内容，方便用户在 Telegram 上阅读。\n` +
       `- 只输出最终消息正文，不要加引号、不要解释。` +
       (soul.content ? `\n\n[SOUL]\n${soul.content}` : "") +
       (agents.content ? `\n\n[AGENTS]\n${agents.content}` : "");
@@ -1100,7 +1121,7 @@ async function processGmailMessageIds(params: {
           (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome,
         workflowTriggered,
       });
-      await sendTelegramMessage(telegramChatId, notifText);
+      await sendTelegramBubbles(telegramChatId, notifText);
     }
 
     if (date && CALENDAR_WRITABLE_TYPES.includes(eventType)) {

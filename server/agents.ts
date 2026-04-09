@@ -131,24 +131,7 @@ const AGENT_TOOLS: Tool[] = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "startMockInterview",
-      description: "Enter mock interview mode and generate the first interview question (requires explicit user consent)",
-      parameters: {
-        type: "object",
-        properties: {
-          companyName: { type: "string", description: "Target company name" },
-          position: {
-            type: "string",
-            description: "Target position, default to 総合職 when omitted",
-          },
-        },
-        required: ["companyName"],
-      },
-    },
-  },
+  // NOTE: startMockInterview is temporarily disabled — careerpassinterview is offline.
 ];
 
 export async function startCompanyWorkflow(
@@ -325,7 +308,9 @@ export async function handleAgentChat(
 4. 当用户想要了解某家公司时，调用 runRecon 工具进行侦察。
 5. 不要重复询问用户语言偏好和/register里已有的基础信息（姓名、生日、学历、学校）。
 6. 当用户要求修改自动日程颜色时，调用 setCalendarColor（类别: 说明会/面试/締切）。
-7. 当用户明确给出目标企业并希望推进求职动作时，调用 startCompanyWorkflow 自动串联 recon -> ES -> interview。
+7. 当用户明确给出目标企业并希望推进求职动作时，调用 startCompanyWorkflow 自动串联 recon -> ES。
+8. 模拟面试模块暂时停用，不要提议进行模拟面试，也不要调用任何面试相关工具。
+9. 排版要求：你的回复会被系统按空行切成多个 Telegram 气泡。请用空行（\n\n）把消息分成 2–5 个短气泡，每个气泡 1–3 句话，绝不要把一大段话挤在一起。短回复不需要分。
 请用中文与用户交流。
 ${profileContextZh}`
       : lang === "en"
@@ -336,7 +321,9 @@ ${profileContextZh}`
 4. Research companies via runRecon tool when requested.
 5. Never re-ask language preference or basic profile fields already filled in /register.
 6. If user asks to change auto-calendar event colors, call setCalendarColor.
-7. If user gives a target company and wants to proceed, call startCompanyWorkflow for recon -> ES -> interview handoff.
+7. If user gives a target company and wants to proceed, call startCompanyWorkflow for recon -> ES handoff.
+8. The mock interview module is temporarily disabled. Do not suggest or attempt to start a mock interview.
+9. Formatting: your reply will be split into Telegram bubbles by blank lines. Use \n\n to break a long message into 2–5 short bubbles (1–3 sentences each). Never cram everything into one paragraph. Short replies need no splitting.
 Please communicate in English.
 ${profileContextEn}`
       : `あなたは「就活パス」専属のAIキャリアアドバイザーです。
@@ -346,7 +333,9 @@ ${profileContextEn}`
 3. 企業について知りたいと言われたら、runReconツールで調査を行う。
 4. /registerで入力済みの言語設定・基本プロフィール（氏名、生年月日、学歴、学校名）を再質問しない。
 5. 自動作成カレンダー予定の色変更を依頼されたら、setCalendarColorを使う（説明会/面接/締切）。
-6. 目標企業が明示され、就活プロセス前進の意図がある場合は、startCompanyWorkflowで recon -> ES -> interview を自動連携する。
+6. 目標企業が明示され、就活プロセス前進の意図がある場合は、startCompanyWorkflowで recon -> ES を自動連携する。
+7. 模擬面接モジュールは一時的に停止中です。模擬面接を提案したり、面接関連ツールを呼び出したりしないでください。
+8. 表示ルール：返信はシステムが空行で分割し、Telegram の複数の吹き出しとして送信されます。長めの返信は \n\n で 2〜5 個の短い吹き出しに分けてください（各吹き出しは 1〜3 文）。一つの段落に詰め込まないこと。短い返信は分割不要です。
 日本語でユーザーとコミュニケーションしてください。
 ${profileContextJa}`;
 
@@ -421,14 +410,8 @@ ${profileContextJa}`;
           );
         }
       } else if (toolCall.function.name === "startMockInterview") {
-        const companyName = String(args.companyName ?? "").trim();
-        const position = String(args.position ?? "総合職").trim() || "総合職";
-        if (!companyName) {
-          results.push("Missing companyName for startMockInterview");
-        } else {
-          const interview = await startMockInterview(userId, companyName, position, sid);
-          results.push(`Mock interview started for ${companyName} (${position}).\nFirstQuestion: ${interview.firstQuestion}`);
-        }
+        // careerpassinterview is temporarily disabled.
+        results.push("Mock interview module is temporarily disabled. Tell the user it will be back soon and offer to help with other things instead.");
       }
     }
 

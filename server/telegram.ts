@@ -511,6 +511,49 @@ export async function sendTelegramMessage(chatId: string | number, text: string,
   }
 }
 
+/**
+ * Send a long reply as multiple Telegram messages ("bubbles") instead of one
+ * dense block. Splits on blank lines so each paragraph becomes its own bubble.
+ * Falls back to a single message if the text has no blank-line separators.
+ */
+export async function sendTelegramBubbles(
+  chatId: string | number,
+  text: string,
+  parseMode = "Markdown"
+): Promise<boolean> {
+  const trimmed = (text ?? "").trim();
+  if (!trimmed) return false;
+
+  // Split on one or more blank lines.
+  const rawChunks = trimmed.split(/\n\s*\n+/).map(s => s.trim()).filter(Boolean);
+
+  // If the message is short, keep it as one bubble.
+  if (rawChunks.length <= 1 || trimmed.length < 140) {
+    return sendTelegramMessage(chatId, trimmed, parseMode);
+  }
+
+  // Telegram has a 4096 char limit per message; further split any oversized chunk.
+  const chunks: string[] = [];
+  for (const chunk of rawChunks) {
+    if (chunk.length <= 3500) {
+      chunks.push(chunk);
+    } else {
+      for (let i = 0; i < chunk.length; i += 3500) {
+        chunks.push(chunk.slice(i, i + 3500));
+      }
+    }
+  }
+
+  let allOk = true;
+  for (let i = 0; i < chunks.length; i++) {
+    const ok = await sendTelegramMessage(chatId, chunks[i], parseMode);
+    if (!ok) allOk = false;
+    // Small gap so Telegram preserves order and the user perceives separate bubbles.
+    if (i < chunks.length - 1) await new Promise(r => setTimeout(r, 350));
+  }
+  return allOk;
+}
+
 // Webhook endpoint: POST /api/telegram/webhook
 telegramRouter.post("/webhook", async (req, res) => {
   try {
@@ -589,17 +632,6 @@ telegramRouter.post("/webhook", async (req, res) => {
             }
 
             const greeting = buildTelegramFixedOpening(user, sessionId);
-            await sendTelegramMessage(chatId, greeting);
-            await saveAgentMemory({
-              userId,
-              memoryType: "conversation",
-              title: `Chat ${new Date().toISOString()}`,
-              content: `User: /start user_${userId}\nAssistant: ${greeting}`,
-              metadata: { sessionId },
-            });
-
-            await sendTelegramMessage(chatId, buildMailMonitoringKickoffText((user.preferredLanguage ?? "ja") as "ja" | "zh" | "en"));
-
             const initialSessionState = (session?.sessionState as Record<string, unknown> | null) ?? {};
             await updateAgentSession(userId!, {
               sessionState: {
@@ -611,7 +643,9 @@ telegramRouter.post("/webhook", async (req, res) => {
               },
             });
 
-            void (async () => {
+            // Fire mail monitoring in parallel with the greeting — the user sees
+            // the intro and the scan starts at the same instant.
+            const backgroundScan = (async () => {
               try {
                 const { needsOAuth, watchOk, result } = await startMailMonitoringAndCheckmail({
                   userId: userId!,
@@ -676,6 +710,21 @@ telegramRouter.post("/webhook", async (req, res) => {
                 console.error("[Telegram] /start background mail monitoring failed:", err);
               }
             })();
+            void backgroundScan;
+
+            // Now send the greeting + kickoff text. The scan above is already running.
+            await sendTelegramBubbles(chatId, greeting);
+            await sendTelegramBubbles(
+              chatId,
+              buildMailMonitoringKickoffText((user.preferredLanguage ?? "ja") as "ja" | "zh" | "en")
+            );
+            await saveAgentMemory({
+              userId,
+              memoryType: "conversation",
+              title: `Chat ${new Date().toISOString()}`,
+              content: `User: /start user_${userId}\nAssistant: ${greeting}`,
+              metadata: { sessionId },
+            });
           } else {
             await sendTelegramMessage(
               chatId,
@@ -744,14 +793,11 @@ telegramRouter.post("/webhook", async (req, res) => {
           await sendTelegramMessage(chatId, `✅ ${companyName} のES案が完成しました：\n\n${es.slice(0, 4000)}`);
         }
       } else if (text.startsWith("/interview")) {
-        const companyName = text.replace("/interview", "").trim();
-        if (!companyName) {
-          await sendTelegramMessage(chatId, "企業名を入力してください。例: `/interview トヨタ`", "Markdown");
-        } else {
-          await updateAgentSession(uid, { interviewMode: true, currentAgent: "careerpassinterview" });
-          const question = await runAgentInterview(uid, companyName, "総合職");
-          await sendTelegramMessage(chatId, `🎤 ${companyName} の模擬面接を開始します。私は面接官です。失礼いたします。\n\n${question}`);
-        }
+        // 模擬面接モジュールは一時的に停止中。
+        await sendTelegramMessage(
+          chatId,
+          "模拟面试功能暂时停用中，过段时间再开放。\n\n这段时间我可以帮你做企业调研、ES、看板更新或者整理面试要点。"
+        );
       } else if (text === "/stop") {
         await updateAgentSession(uid, { interviewMode: false, currentAgent: "careerpass" });
         await sendTelegramMessage(chatId, "対話を終了し、メインメニューに戻ります。");
@@ -862,7 +908,7 @@ telegramRouter.post("/webhook", async (req, res) => {
           }
 
           const { reply } = await handleAgentChat(userId, text, sessionId, history, extraSystemInstruction);
-          await sendTelegramMessage(chatId, reply);
+          await sendTelegramBubbles(chatId, reply);
         }
       }
     } else {
