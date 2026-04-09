@@ -18,6 +18,8 @@ import {
   startCompanyWorkflow,
 } from "./agents";
 import { startMailMonitoringAndCheckmail } from "./mailMonitoring";
+import { invokeLLM } from "./_core/llm";
+import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import type { User } from "../drizzle/schema";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
@@ -167,14 +169,55 @@ function buildTelegramFixedOpening(user: User, sessionId: string): string {
   );
 }
 
-function buildMailMonitoringKickoffText(lang: "ja" | "zh" | "en"): string {
+function fallbackMailMonitoringKickoffText(lang: "ja" | "zh" | "en"): string {
   if (lang === "zh") {
-    return "顺便说一句，我现在已经开始翻你的邮箱了，待会儿要是看到说明会、笔试、面试、截止之类的，会第一时间戳你。";
+    return "顺便说一句，我已经开始工作了，正在帮你检查邮箱，待会儿要是看到说明会、笔试、面试、截止之类的，会第一时间戳你。";
   }
   if (lang === "en") {
-    return "By the way, I’ve already started going through your inbox. The moment I spot a briefing, test, interview, or deadline, I’ll ping you straight away.";
+    return "By the way, I’m already on the clock — going through your inbox right now. The second I spot a briefing, test, interview, or deadline, I’ll ping you.";
   }
-  return "ちなみに、もうあなたのメールに目を通し始めています。説明会・Webテスト・面接・締切を見つけ次第、すぐお知らせしますね。";
+  return "ちなみに、もう仕事を始めています。今あなたのメールを確認中で、説明会・Webテスト・面接・締切を見つけ次第すぐお知らせしますね。";
+}
+
+/**
+ * LLM-composed "I'm already on it, scanning your inbox" line, in careerpass's
+ * voice. Each /start gets a slightly different phrasing instead of a fixed
+ * template. Falls back to a hand-written line if the LLM call fails.
+ */
+async function composeMailMonitoringKickoffText(lang: "ja" | "zh" | "en"): Promise<string> {
+  try {
+    const soul = await loadAgentSoul("careerpass");
+    const agents = await loadAgentAgents("careerpass");
+
+    const langName = lang === "zh" ? "中文" : lang === "en" ? "English" : "日本語";
+
+    const systemPrompt =
+      `你是「就活パス」的员工。刚和用户打完招呼，现在需要紧接着发一句话告诉对方：你已经开始干活了，正在帮 Ta 检查邮箱，看到说明会 / 笔试 / 面试 / 截止之类的会第一时间通知。\n` +
+      `要求：\n` +
+      `- 用 ${langName} 输出。\n` +
+      `- 每次措辞都不一样，绝对不要套固定模板。\n` +
+      `- 一句话或两句话即可，不要换行，不要列表。\n` +
+      `- 自然口吻，符合「被老板压榨但靠谱的员工」人设；可以稍微随意，但不要油腻、不要卖惨过头。\n` +
+      `- 必须明确传达：(1) 已经开始工作了 / 已经在检查邮箱 (2) 抓到说明会、笔试、面试、截止会马上提醒。\n` +
+      `- 不要用「偷偷盯着」「监视」之类的措辞。\n` +
+      `- 只输出最终一句话，不要加引号、不要解释。` +
+      (soul.content ? `\n\n[SOUL]\n${soul.content}` : "") +
+      (agents.content ? `\n\n[AGENTS]\n${agents.content}` : "");
+
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `请按要求生成这一句话。` },
+      ],
+    });
+    const raw = response?.choices?.[0]?.message?.content;
+    const text = (typeof raw === "string" ? raw : "").trim();
+    if (!text) return fallbackMailMonitoringKickoffText(lang);
+    return text;
+  } catch (err) {
+    console.error("[Telegram] composeMailMonitoringKickoffText failed:", err);
+    return fallbackMailMonitoringKickoffText(lang);
+  }
 }
 
 function formatEventTypeLabel(lang: "ja" | "zh" | "en", eventType: string): string {
@@ -743,10 +786,10 @@ telegramRouter.post("/webhook", async (req, res) => {
 
             // Now send the greeting + kickoff text. The scan above is already running.
             await sendTelegramBubbles(chatId, greeting);
-            await sendTelegramBubbles(
-              chatId,
-              buildMailMonitoringKickoffText((user.preferredLanguage ?? "ja") as "ja" | "zh" | "en")
+            const kickoffText = await composeMailMonitoringKickoffText(
+              (user.preferredLanguage ?? "ja") as "ja" | "zh" | "en"
             );
+            await sendTelegramBubbles(chatId, kickoffText);
             await saveAgentMemory({
               userId,
               memoryType: "conversation",
