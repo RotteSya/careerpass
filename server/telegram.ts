@@ -169,12 +169,12 @@ function buildTelegramFixedOpening(user: User, sessionId: string): string {
 
 function buildMailMonitoringKickoffText(lang: "ja" | "zh" | "en"): string {
   if (lang === "zh") {
-    return "已开始监控你的邮箱，并马上自动检查一次。之后只要有新的求职相关邮件，会主动通知你。";
+    return "顺便说一句，我现在已经开始翻你的邮箱了，待会儿要是看到说明会、笔试、面试、截止之类的，会第一时间戳你。";
   }
   if (lang === "en") {
-    return "Mail monitoring is now enabled. I’ll run one check right away. After that, I’ll proactively notify you when job-related emails arrive.";
+    return "By the way, I’ve already started going through your inbox. The moment I spot a briefing, test, interview, or deadline, I’ll ping you straight away.";
   }
-  return "メール監視を開始しました。今すぐ1回チェックします。以後、就活関連メールが来たら自動で通知します。";
+  return "ちなみに、もうあなたのメールに目を通し始めています。説明会・Webテスト・面接・締切を見つけ次第、すぐお知らせしますね。";
 }
 
 function formatEventTypeLabel(lang: "ja" | "zh" | "en", eventType: string): string {
