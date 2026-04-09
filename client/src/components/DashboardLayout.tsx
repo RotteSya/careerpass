@@ -58,10 +58,10 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--color-warm-white)]">
+        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full bg-white border border-black/10 rounded-2xl shadow-[rgba(0,0,0,0.04)_0px_4px_18px,rgba(0,0,0,0.027)_0px_2.025px_7.84688px,rgba(0,0,0,0.02)_0px_0.8px_2.925px,rgba(0,0,0,0.01)_0px_0.175px_1.04062px]">
           <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
+            <h1 className="text-[26px] leading-tight tracking-[-0.625px] font-bold text-center">
               Sign in to continue
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
@@ -73,7 +73,7 @@ export default function DashboardLayout({
               window.location.href = getLoginUrl();
             }}
             size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
+            className="w-full h-11"
           >
             Sign in
           </Button>
