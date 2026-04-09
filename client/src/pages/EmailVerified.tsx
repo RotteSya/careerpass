@@ -43,47 +43,46 @@ export default function EmailVerified() {
   }, [token]);
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 text-white">
+    <div className="min-h-screen bg-[var(--color-warm-white)] flex items-center justify-center px-4 text-foreground">
       <div className="w-full max-w-md text-center space-y-6">
         {status === "verifying" && (
           <>
-            <Loader2 className="w-12 h-12 animate-spin text-[#faff69] mx-auto" />
-            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#faff69]">// VERIFYING</p>
-            <h1 className="text-2xl font-black tracking-tight">メールアドレスを確認中...</h1>
-            <p className="text-[#a0a0a0] text-sm">しばらくお待ちください</p>
+            <div className="bg-white border border-black/10 rounded-2xl p-8 shadow-[rgba(0,0,0,0.04)_0px_4px_18px,rgba(0,0,0,0.027)_0px_2.025px_7.84688px,rgba(0,0,0,0.02)_0px_0.8px_2.925px,rgba(0,0,0,0.01)_0px_0.175px_1.04062px]">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+              <h1 className="mt-6 text-[26px] leading-tight tracking-[-0.625px] font-bold">メールアドレスを確認中...</h1>
+              <p className="mt-2 text-[14px] text-[var(--color-warm-gray-500)]">しばらくお待ちください</p>
+            </div>
           </>
         )}
 
         {status === "success" && (
           <>
-            <div className="w-14 h-14 mx-auto rounded-sm bg-[#faff69] flex items-center justify-center">
-              <CheckCircle2 className="w-7 h-7 text-black" />
+            <div className="bg-white border border-black/10 rounded-2xl p-8 shadow-[rgba(0,0,0,0.04)_0px_4px_18px,rgba(0,0,0,0.027)_0px_2.025px_7.84688px,rgba(0,0,0,0.02)_0px_0.8px_2.925px,rgba(0,0,0,0.01)_0px_0.175px_1.04062px]">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-[rgba(26,174,57,0.15)] border border-black/10 flex items-center justify-center">
+                <CheckCircle2 className="w-7 h-7 text-[#1aae39]" />
+              </div>
+              <h1 className="mt-6 text-[26px] leading-tight tracking-[-0.625px] font-bold">確認完了！</h1>
+              <p className="mt-2 text-[14px] text-[var(--color-warm-gray-500)]">
+                メールアドレスの確認が完了しました。<br />
+                プロフィール入力ページへ移動します...
+              </p>
             </div>
-            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-[#faff69]">// VERIFIED</p>
-            <h1 className="text-2xl font-black tracking-tight">確認完了！</h1>
-            <p className="text-[#a0a0a0] text-sm">
-              メールアドレスの確認が完了しました。<br />
-              プロフィール入力ページへ移動します...
-            </p>
           </>
         )}
 
         {status === "error" && (
           <>
-            <div className="w-14 h-14 mx-auto rounded-sm bg-red-950 border border-red-700 flex items-center justify-center">
-              <XCircle className="w-7 h-7 text-red-400" />
-            </div>
-            <p className="text-[10px] uppercase tracking-[0.2em] font-mono text-red-400">// ERROR</p>
-            <h1 className="text-2xl font-black tracking-tight">確認に失敗しました</h1>
-            <p className="text-red-400 text-sm font-mono">{errorMsg}</p>
-            <div className="space-y-3 pt-2">
-              <Button
-                variant="neon"
-                className="w-full rounded-sm"
-                onClick={() => navigate("/signup")}
-              >
-                新規登録に戻る
-              </Button>
+            <div className="bg-white border border-black/10 rounded-2xl p-8 shadow-[rgba(0,0,0,0.04)_0px_4px_18px,rgba(0,0,0,0.027)_0px_2.025px_7.84688px,rgba(0,0,0,0.02)_0px_0.8px_2.925px,rgba(0,0,0,0.01)_0px_0.175px_1.04062px]">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center">
+                <XCircle className="w-7 h-7 text-destructive" />
+              </div>
+              <h1 className="mt-6 text-[26px] leading-tight tracking-[-0.625px] font-bold">確認に失敗しました</h1>
+              <p className="mt-2 text-[14px] text-destructive">{errorMsg}</p>
+              <div className="space-y-3 pt-6">
+                <Button className="w-full h-11" onClick={() => navigate("/signup")}>
+                  新規登録に戻る
+                </Button>
+              </div>
             </div>
           </>
         )}
