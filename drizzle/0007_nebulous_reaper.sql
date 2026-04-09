@@ -1,0 +1,2 @@
+ALTER TABLE `oauth_provider_accounts` MODIFY COLUMN `provider` enum('google','outlook','notion') NOT NULL;--> statement-breakpoint
+ALTER TABLE `oauth_tokens` MODIFY COLUMN `provider` enum('google','outlook','notion') NOT NULL;
