@@ -431,6 +431,31 @@ function jobStatusLabelZh(status: JobStatus): string {
   return status;
 }
 
+// Detect platform stub notifications (マイナビ/リクナビ/OfferBox 等的「站内有新消息」壳邮件）。
+// 这种邮件没有具体公司/日时/动作，只是把用户引向站内信，应该直接丢弃。
+function isPlatformStubNotification(input: { from: string; subject: string; body: string }): boolean {
+  const from = (input.from || "").toLowerCase();
+  const text = `${input.subject}\n${input.body}`;
+  const platformDomain = /(mynavi|rikunabi|offerbox|onecareer|en-japan|doda|wantedly|levtech|recruit-ms)\./i.test(from);
+  if (!platformDomain) return false;
+  const stubSignal =
+    /(メッセージが届|新着メッセージ|新しいメッセージ|お知らせが届|新着.*お知らせ|站内信|サイト内.*メッセージ)/.test(text) ||
+    /(マイページ.*(確認|ログイン)|ログイン.*(マイページ|確認)|サイトにて.*確認)/.test(text);
+  // 如果壳信号成立，再确认正文里没有具体的日时（具体的日时通常意味着真事件，应保留）。
+  if (!stubSignal) return false;
+  const hasConcreteDateTime = /\d{4}[\/年.-]\d{1,2}[\/月.-]\d{1,2}.*\d{1,2}[:：時]/.test(text);
+  return !hasConcreteDateTime;
+}
+
+function parseEmailDateMs(s: string): number {
+  const t = Date.parse(s || "");
+  return Number.isFinite(t) ? t : 0;
+}
+
+function buildGmailMessageUrl(messageId: string): string {
+  return `https://mail.google.com/mail/u/0/#all/${messageId}`;
+}
+
 function normalizeCompanyName(name: string | null | undefined): string | null {
   const raw = (name ?? "").trim();
   if (!raw) return null;
@@ -843,16 +868,57 @@ async function processGmailMessageIds(params: {
   const detectedEvents: EmailEvent[] = [];
   let calendarCount = 0;
 
+  // ── Pre-pass: 拉取 + 语义判断 + 过滤平台壳邮件 + 同公司去重（仅保留最新）──
+  type Prepared = {
+    messageId: string;
+    detail: NonNullable<Awaited<ReturnType<typeof fetchEmailDetail>>>;
+    decision: CareerpassmailDecision;
+    dateMs: number;
+    companyKey: string | null;
+  };
+  const prepared: Prepared[] = [];
   for (const messageId of messageIds) {
     const detail = await fetchEmailDetail(accessToken, messageId);
     if (!detail) continue;
-
+    if (isPlatformStubNotification(detail)) {
+      console.log("[careerpassmail] skip platform stub notification:", detail.from, "/", detail.subject);
+      continue;
+    }
     const decision = await runCareerpassmailAgent({
       subject: detail.subject,
       body: detail.body,
       from: detail.from,
     });
     if (!decision.isJobRelated) continue;
+    const company =
+      normalizeCompanyName(decision.companyName) ??
+      normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
+      null;
+    prepared.push({
+      messageId,
+      detail,
+      decision,
+      dateMs: parseEmailDateMs(detail.date),
+      companyKey: company ? company.toLowerCase() : null,
+    });
+  }
+  // 同公司只保留最新一封；没识别出公司名的邮件全部保留（不能误合并）。
+  const latestByCompany = new Map<string, Prepared>();
+  const keptNoCompany: Prepared[] = [];
+  for (const p of prepared) {
+    if (!p.companyKey) {
+      keptNoCompany.push(p);
+      continue;
+    }
+    const cur = latestByCompany.get(p.companyKey);
+    if (!cur || p.dateMs >= cur.dateMs) latestByCompany.set(p.companyKey, p);
+  }
+  const kept = [...latestByCompany.values(), ...keptNoCompany];
+
+  for (const item of kept) {
+    const messageId = item.messageId;
+    const detail = item.detail;
+    const decision = item.decision;
 
     const mailText = `${detail.subject}\n${detail.body}`;
     const hardOutcome = inferHardOutcomeStatusFromText(mailText);
@@ -934,13 +1000,16 @@ async function processGmailMessageIds(params: {
     if (telegramChatId) {
       orchestrationActions = await orchestrateSubAgents(userId, emailEvent);
       const workflowTriggered = orchestrationActions.length > 0;
-      const todoText =
+      // 用户面消息：直接告诉用户「要干什么」，不暴露邮件主题，仅简单提一句内容。
+      const actionLines =
         emailEvent.todoItems.length > 0
-          ? `\n我建议你先做这几件事：\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}`
-          : "";
+          ? emailEvent.todoItems.map(t => `- ${t}`).join("\n")
+          : `- 打开下方原邮件链接确认细节`;
       const scheduleText = date
-        ? `时间大概是 ${date}${time ? ` ${time}` : ""} JST`
-        : "这封邮件里没有明确时间，我先不强行写死日程。";
+        ? `时间：${date}${time ? ` ${time}` : ""} JST`
+        : "";
+      const mailLink = buildGmailMessageUrl(messageId);
+      const briefLine = `${companyName ?? "某公司"} · ${typeLabels[eventType]}${scheduleText ? `（${scheduleText}）` : ""}`;
       const progressText =
         progressUpdate && progressUpdate.jobId
           ? `\n我已帮你把进度看板${progressUpdate.changed ? "更新" : "核对"}到「${jobStatusLabelZh(progressUpdate.nextStatus)}」。`
@@ -964,12 +1033,9 @@ async function processGmailMessageIds(params: {
           ? `\n另外我已经把这家公司的后续流程往前推进了。`
           : "";
       const notifText =
-        `我刚看完一封和求职相关的邮件：\n\n` +
-        `${companyName ?? "这家公司"}（${typeLabels[eventType]}）\n` +
-        `${scheduleText}\n` +
-        `地点/链接：${emailEvent.location ?? "邮件里没写"}\n` +
-        `邮件主题：${detail.subject.slice(0, 80)}` +
-        todoText +
+        `你接下来要做的：\n${actionLines}\n\n` +
+        `（${briefLine}）\n` +
+        `[打开原邮件](${mailLink})` +
         progressText +
         boardLinkText +
         nextStepsText +
