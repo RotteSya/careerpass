@@ -128,14 +128,41 @@ function buildTelegramFixedOpening(user: User, sessionId: string): string {
     (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
 
   if (lang === "zh") {
-    return `您好，${name}。我是就活パス。\n\n我先帮你把“动态看板”和“日程”跑起来：我会监控你的邮箱，识别说明会/笔试/面试/截止等事件，并主动提醒你。\n\n你的档案ID：*${profileId}*（*${birthDate}*出生，*${education}*，*${university}*）`;
+    return (
+      `您好 ${name}，我是就活パス的员工。说实话，我老板放话了——不帮你找到工作，今晚就别想下班。所以接下来这段时间，咱俩算是绑一起了。\n\n` +
+      `我能帮你做这些事：\n` +
+      `- 自动盯着你的邮箱，把说明会 / 笔试 / 面试 / 截止全部抓出来，第一时间提醒你\n` +
+      `- 维护一份动态求职看板，每家公司走到哪一步我都帮你记着\n` +
+      `- 帮你做企业调研、ES 草稿、面试要点整理\n` +
+      `- 把面试 / 截止自动写进你的 Google 日历\n\n` +
+      `档案 ID：*${profileId}*（*${birthDate}*，*${education}*，*${university}*）\n\n` +
+      `对了——为了让我能下班，先问一句：我应该怎么称呼你比较顺口？`
+    );
   }
 
   if (lang === "en") {
-    return `Hello, ${name}. I am CareerPass.\n\nI’ll first set up your dynamic board and schedules: I will monitor your mailbox, detect briefing/tests/interviews/deadlines, and proactively notify you.\n\nYour profile ID: *${profileId}* (born on *${birthDate}*, *${education}*, from *${university}*).`;
+    return (
+      `Hi ${name}, I’m an employee at CareerPass. Real talk: my boss said I’m not allowed to clock out until I’ve helped you land a job. So you and I are kind of stuck together for a while.\n\n` +
+      `Here’s what I can do for you:\n` +
+      `- Watch your inbox and surface every briefing / test / interview / deadline the moment it lands\n` +
+      `- Keep a live job board so we always know where each company stands\n` +
+      `- Run company research, draft ES, and prep interview talking points\n` +
+      `- Auto-write interviews and deadlines into your Google Calendar\n\n` +
+      `Profile ID: *${profileId}* (*${birthDate}*, *${education}*, *${university}*)\n\n` +
+      `Quick one so I can eventually go home — what should I call you?`
+    );
   }
 
-  return `こんにちは、${name}さん。私は就活パスです。\n\nまずは「動的看板」と「日程」を整えます。メールを監視して、説明会・Webテスト・面接・締切などを検知し、自動で通知します。\n\nあなたのプロフィールIDは *${profileId}* です（*${birthDate}* 生まれ、*${education}*、*${university}*）。`;
+  return (
+    `${name}さん、はじめまして。私は就活パスの社員です。正直に言うと、上司から「この子を内定までもっていくまで帰るな」と言われていまして……というわけで、しばらくの間、私はあなたと運命共同体です。\n\n` +
+    `私ができること：\n` +
+    `- メールを監視して、説明会・Webテスト・面接・締切を検知したらすぐ通知\n` +
+    `- 動的な就活ボードを更新し、各社の進捗を常に最新に保つ\n` +
+    `- 企業調査・ES下書き・面接対策の論点整理\n` +
+    `- 面接や締切を Google カレンダーへ自動登録\n\n` +
+    `プロフィール ID：*${profileId}*（*${birthDate}*、*${education}*、*${university}*）\n\n` +
+    `さて、私が帰宅できる日のために最初に一つだけ——あなたのことは何とお呼びすればよいですか？`
+  );
 }
 
 function buildMailMonitoringKickoffText(lang: "ja" | "zh" | "en"): string {
