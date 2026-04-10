@@ -36,10 +36,11 @@ import {
   User,
   XCircle,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
+import confetti from "canvas-confetti";
 
 const navItems = [
   { icon: User, label: "个人中心", path: "/dashboard/profile" },
@@ -251,6 +252,22 @@ export default function Dashboard() {
     }, 5000);
     return () => clearInterval(interval);
   }, [isAuthenticated]);
+
+  // One-time celebration when Telegram binding succeeds
+  const prevBound = useRef(telegramStatus?.bound);
+  useEffect(() => {
+    if (prevBound.current === false && telegramStatus?.bound === true) {
+      const end = Date.now() + 1500;
+      const frame = () => {
+        confetti({ particleCount: 40, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } });
+        confetti({ particleCount: 40, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      };
+      frame();
+      toast.success("🎉 Telegram 绑定成功！");
+    }
+    prevBound.current = telegramStatus?.bound;
+  }, [telegramStatus?.bound]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -984,144 +1001,92 @@ export default function Dashboard() {
               </DialogContent>
             </Dialog>
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex flex-wrap gap-2 text-xs">
-                <span className="px-2 py-1 rounded-full border border-border bg-secondary/20 text-muted-foreground">
-                  To-do {columns.todo.length}
-                </span>
-                <span className="px-2 py-1 rounded-full border border-border bg-secondary/20 text-muted-foreground">
-                  In progress {columns.inProgress.length}
-                </span>
-                <span className="px-2 py-1 rounded-full border border-border bg-secondary/20 text-muted-foreground">
-                  Complete {columns.complete.length}
-                </span>
-              </div>
-            </div>
-
             <div className="mt-4 rounded-2xl border border-black/10 bg-white text-[rgba(0,0,0,0.95)] shadow-[0_1px_3px_rgba(0,0,0,0.01),0_3px_7px_rgba(0,0,0,0.02),0_7px_15px_rgba(0,0,0,0.02),0_14px_28px_rgba(0,0,0,0.04),0_23px_52px_rgba(0,0,0,0.05)]">
               <div className="px-6 pt-6 pb-4 border-b border-black/10">
                 <div className="flex flex-col gap-1">
                   <p className="text-[22px] font-bold tracking-[-0.25px]">日本求职进度追踪（动态看板）</p>
                   <p className="text-[14px] text-[var(--color-warm-gray-500)]">
-                    视图与 Notion 模板一致，按 To-do / In progress / Complete 分组展示
+                    全部企業一覧 — 公司名称 / 申请状态 / 职位名称 / 締切 / 联系方式 / 优先级
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
                     <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
                       企業数 {jobs.length}
-                    </span>
-                    <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
-                      進行中 {columns.todo.length + columns.inProgress.length}
                     </span>
                   </div>
                 </div>
               </div>
 
               <div className="px-6 py-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <input
-                    value={companyQuery}
-                    onChange={(e) => setCompanyQuery(e.target.value)}
-                    placeholder="搜索公司（中文/日文/英文）"
-                    className="w-full sm:max-w-md h-10 rounded-[4px] border border-black/10 bg-white px-3 text-[14px] text-[rgba(0,0,0,0.95)] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
-                  />
-                  {telegramDeepLink?.deepLink ? (
-                    <a
-                      href={telegramDeepLink.deepLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center h-10 px-4 rounded-[4px] bg-[var(--color-notion-blue)] hover:bg-[var(--color-notion-blue-active)] text-white text-[15px] font-semibold"
-                    >
-                      Telegram へ
-                    </a>
-                  ) : null}
-                </div>
+                <input
+                  value={companyQuery}
+                  onChange={(e) => setCompanyQuery(e.target.value)}
+                  placeholder="搜索公司（中文/日文/英文）"
+                  className="w-full sm:max-w-md h-10 rounded-[4px] border border-black/10 bg-white px-3 text-[14px] text-[rgba(0,0,0,0.95)] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
+                />
 
-                <div className="mt-4 space-y-4">
-                  {[
-                    { key: "todo", title: "To-do", items: columns.todo as any[] },
-                    { key: "inProgress", title: "In progress", items: columns.inProgress as any[] },
-                    { key: "complete", title: "Complete", items: columns.complete as any[] },
-                  ].map((g) => (
-                    <div
-                      key={g.key}
-                      className="rounded-xl border border-black/10 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.01),0_3px_7px_rgba(0,0,0,0.02)]"
-                    >
-                      <div className="px-4 py-3 border-b border-black/10 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[15px] font-semibold truncate">{g.title}</p>
-                          <p className="text-[12px] text-[var(--color-warm-gray-500)]">按申请状态分组</p>
-                        </div>
-                        <span className="text-[12px] px-2 py-0.5 rounded-full bg-[var(--color-warm-white)] border border-black/10 text-[var(--color-warm-gray-500)]">
-                          {g.items.length}
-                        </span>
-                      </div>
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-[14px]">
-                          <thead className="bg-[var(--color-warm-white)] text-[12px] text-[var(--color-warm-gray-500)]">
-                            <tr>
-                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">公司名称</th>
-                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">申请状态</th>
-                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">职位名称</th>
-                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">締切</th>
-                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">联系方式</th>
-                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">优先级</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {jobsLoading ? (
-                              <tr>
-                                <td colSpan={6} className="px-4 py-6 text-center text-[14px] text-[var(--color-warm-gray-500)]">
-                                  読み込み中...
-                                </td>
-                              </tr>
-                            ) : g.items.length === 0 ? (
-                              <tr>
-                                <td colSpan={6} className="px-4 py-6 text-center text-[14px] text-[var(--color-warm-gray-500)]">
-                                  暂无
-                                </td>
-                              </tr>
-                            ) : (
-                              g.items.map((c: any) => (
-                                <tr key={c.job.id} className="border-t border-black/5">
-                                  <td className="px-4 py-3 min-w-[220px]">
-                                    <div className="font-semibold truncate">{c.job.companyNameJa}</div>
-                                    {c.job.companyNameEn ? (
-                                      <div className="text-[12px] text-[var(--color-warm-gray-500)] truncate">
-                                        {c.job.companyNameEn}
-                                      </div>
-                                    ) : null}
-                                  </td>
-                                  <td className="px-4 py-3 min-w-[160px]">
-                                    <select
-                                      value={c.job.status}
-                                      onChange={(e) => {
-                                        const status = e.target.value as JobStatusValue;
-                                        updateJobStatusMutation.mutate({ id: c.job.id, status });
-                                      }}
-                                      className="h-8 w-full rounded-[4px] border border-black/10 bg-white px-2 text-[14px] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
-                                    >
-                                      {JOB_STATUS_OPTIONS.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                          {opt.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </td>
-                                  <td className="px-4 py-3 min-w-[180px] truncate">{c.job.position ?? "—"}</td>
-                                  <td className="px-4 py-3 min-w-[120px] whitespace-nowrap">
-                                    {c.job.nextActionAt ? new Date(c.job.nextActionAt).toLocaleDateString("ja-JP") : "—"}
-                                  </td>
-                                  <td className="px-4 py-3 min-w-[140px] truncate">—</td>
-                                  <td className="px-4 py-3 min-w-[100px] truncate">—</td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-[14px]">
+                    <thead className="bg-[var(--color-warm-white)] text-[12px] text-[var(--color-warm-gray-500)]">
+                      <tr>
+                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">公司名称</th>
+                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">申请状态</th>
+                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">职位名称</th>
+                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">締切</th>
+                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">联系方式</th>
+                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">优先级</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {jobsLoading ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-6 text-center text-[14px] text-[var(--color-warm-gray-500)]">
+                            読み込み中...
+                          </td>
+                        </tr>
+                      ) : boardCards.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-6 text-center text-[14px] text-[var(--color-warm-gray-500)]">
+                            暂无
+                          </td>
+                        </tr>
+                      ) : (
+                        boardCards.map((c: any) => (
+                          <tr key={c.job.id} className="border-t border-black/5">
+                            <td className="px-4 py-3 min-w-[220px]">
+                              <div className="font-semibold truncate">{c.job.companyNameJa}</div>
+                              {c.job.companyNameEn ? (
+                                <div className="text-[12px] text-[var(--color-warm-gray-500)] truncate">
+                                  {c.job.companyNameEn}
+                                </div>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-3 min-w-[160px]">
+                              <select
+                                value={c.job.status}
+                                onChange={(e) => {
+                                  const status = e.target.value as JobStatusValue;
+                                  updateJobStatusMutation.mutate({ id: c.job.id, status });
+                                }}
+                                className="h-8 w-full rounded-[4px] border border-black/10 bg-white px-2 text-[14px] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
+                              >
+                                {JOB_STATUS_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-4 py-3 min-w-[180px] truncate">{c.job.position ?? "—"}</td>
+                            <td className="px-4 py-3 min-w-[120px] whitespace-nowrap">
+                              {c.job.nextActionAt ? new Date(c.job.nextActionAt).toLocaleDateString("ja-JP") : "—"}
+                            </td>
+                            <td className="px-4 py-3 min-w-[140px] truncate">—</td>
+                            <td className="px-4 py-3 min-w-[100px] truncate">—</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
