@@ -1,6 +1,12 @@
 import express from "express";
-import { getTelegramBinding, getUserByEmail, getUserIdByOauthProviderAccount } from "./db";
-import { monitorGmailAndSync, syncGmailIncremental } from "./gmail";
+import {
+  getBillingFeatureAccess,
+  getTelegramBinding,
+  getUserByEmail,
+  getUserIdByOauthProviderAccount,
+} from "./db";
+import { monitorGmailAndSync, sendTelegramMessage, syncGmailIncremental } from "./gmail";
+import { collectTrialNudges, markTrialNudgeDelivered } from "./billing";
 
 export const gmailPushRouter = express.Router();
 
@@ -68,9 +74,30 @@ gmailPushRouter.post("/push", (req, res) => {
       const endHistoryId = payload?.historyId;
 
       await enqueuePerUser(user.id, async () => {
+        const access = await getBillingFeatureAccess(user.id);
+        if (chatId) {
+          const nudges = await collectTrialNudges(user.id);
+          for (const n of nudges) {
+            const ok = await sendTelegramMessage(chatId, n.text);
+            if (ok) await markTrialNudgeDelivered(user.id, n.kind);
+          }
+        }
+        if (!access.autoMonitoringEnabled) {
+          console.log("[GmailPush] Auto monitoring disabled by billing gate:", {
+            userId: user.id,
+            phase: access.phase,
+          });
+          return;
+        }
         const result = endHistoryId
-          ? await syncGmailIncremental(user.id, chatId, endHistoryId)
-          : await monitorGmailAndSync(user.id, chatId);
+          ? await syncGmailIncremental(user.id, chatId, endHistoryId, {
+              enableAutoBoardWrite: access.autoBoardWriteEnabled,
+              enableAutoWorkflow: access.autoWorkflowEnabled,
+            })
+          : await monitorGmailAndSync(user.id, chatId, {
+              enableAutoBoardWrite: access.autoBoardWriteEnabled,
+              enableAutoWorkflow: access.autoWorkflowEnabled,
+            });
         console.log("[GmailPush] Processed:", {
           userId: user.id,
           emailAddress,

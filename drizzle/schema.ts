@@ -219,3 +219,49 @@ export const agentSessions = mysqlTable("agent_sessions", {
 
 export type AgentSession = typeof agentSessions.$inferSelect;
 export type InsertAgentSession = typeof agentSessions.$inferInsert;
+
+// ─── Billing & Trial ──────────────────────────────────────────────────────────
+export const billingAccounts = mysqlTable("billing_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  billingMode: mysqlEnum("billingMode", ["monthly", "company"]).default("company").notNull(),
+  companyPlanLimit: int("companyPlanLimit").default(10), // 10 or 20 for company-based pricing
+  cycleStartedAt: timestamp("cycleStartedAt").notNull(),
+  cycleEndsAt: timestamp("cycleEndsAt"),
+  trialStartedAt: timestamp("trialStartedAt").notNull(),
+  trialEndsAt: timestamp("trialEndsAt").notNull(),
+  graceEndsAt: timestamp("graceEndsAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BillingAccount = typeof billingAccounts.$inferSelect;
+export type InsertBillingAccount = typeof billingAccounts.$inferInsert;
+
+export const billingCompanyLedger = mysqlTable("billing_company_ledger", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  companyKey: varchar("companyKey", { length: 255 }).notNull(),
+  companyName: varchar("companyName", { length: 255 }).notNull(),
+  firstStatus: varchar("firstStatus", { length: 32 }),
+  countable: boolean("countable").default(true).notNull(),
+  firstSeenAt: timestamp("firstSeenAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BillingCompanyLedger = typeof billingCompanyLedger.$inferSelect;
+export type InsertBillingCompanyLedger = typeof billingCompanyLedger.$inferInsert;
+
+export const billingNotifications = mysqlTable("billing_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  day10SentAt: timestamp("day10SentAt"),
+  day13SentAt: timestamp("day13SentAt"),
+  suspensionSentAt: timestamp("suspensionSentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BillingNotification = typeof billingNotifications.$inferSelect;
+export type InsertBillingNotification = typeof billingNotifications.$inferInsert;

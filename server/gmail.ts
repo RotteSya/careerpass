@@ -24,11 +24,11 @@ import {
   updateGoogleLastHistoryIdIfNewer,
   upsertOauthToken,
   upsertOauthProviderAccount,
+  trackCompanyForBilling,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import {
-  reconCompany as runAgentRecon,
   startCompanyWorkflow,
 } from "./agents";
 import { syncJobToNotionBoard } from "./notion";
@@ -841,10 +841,6 @@ async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<
       const sid = `mail-${Date.now()}`;
       await startCompanyWorkflow(userId, companyName, "総合職", sid);
       actions.push(`careerpass:workflow-started:${companyName}`);
-    } else if (event.eventType === "rejection") {
-      // Rejection mails still update company intelligence, but do not start interview workflow.
-      await runAgentRecon(userId, companyName);
-      actions.push(`recon:${companyName}`);
     }
   } catch (err) {
     console.error("[Gmail] Sub-agent orchestration failed:", err);
@@ -961,8 +957,18 @@ async function processGmailMessageIds(params: {
   accessToken: string;
   messageIds: string[];
   notifyWindowDays?: number;
+  enableAutoBoardWrite?: boolean;
+  enableAutoWorkflow?: boolean;
 }): Promise<MonitorResult> {
-  const { userId, telegramChatId, accessToken, messageIds, notifyWindowDays } = params;
+  const {
+    userId,
+    telegramChatId,
+    accessToken,
+    messageIds,
+    notifyWindowDays,
+    enableAutoBoardWrite = true,
+    enableAutoWorkflow = true,
+  } = params;
   const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
   const detectedEvents: EmailEvent[] = [];
   const isFirstForCompanyInBatch = createCompanyBatchDeduper();
@@ -1053,7 +1059,7 @@ async function processGmailMessageIds(params: {
     const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(rawEventType);
     const inferredStatus = companyName ? desiredStatus : null;
     const progressUpdate =
-      inferredStatus && companyName
+      enableAutoBoardWrite && inferredStatus && companyName
         ? await upsertJobProgressFromMail({
             userId,
             companyName,
@@ -1069,6 +1075,15 @@ async function processGmailMessageIds(params: {
         : null;
 
     if (companyName) {
+      await trackCompanyForBilling({
+        userId,
+        companyName,
+        firstStatus: inferredStatus,
+        occurredAt: Number.isFinite(Date.parse(detail.date)) ? new Date(detail.date) : null,
+      });
+    }
+
+    if (enableAutoBoardWrite && companyName) {
       try {
         await syncJobToNotionBoard({
           userId,
@@ -1101,7 +1116,9 @@ async function processGmailMessageIds(params: {
 
     let orchestrationActions: string[] = [];
     if (telegramChatId && shouldNotify) {
-      orchestrationActions = await orchestrateSubAgents(userId, emailEvent);
+      orchestrationActions = enableAutoWorkflow
+        ? await orchestrateSubAgents(userId, emailEvent)
+        : [];
       const workflowTriggered = orchestrationActions.length > 0;
 
       const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
@@ -1191,7 +1208,11 @@ async function processGmailMessageIds(params: {
 export async function monitorGmailAndSync(
   userId: number,
   telegramChatId?: string,
-  options?: { notifyWindowDays?: number }
+  options?: {
+    notifyWindowDays?: number;
+    enableAutoBoardWrite?: boolean;
+    enableAutoWorkflow?: boolean;
+  }
 ): Promise<MonitorResult> {
   const accessToken = await getValidAccessToken(userId);
   if (!accessToken) {
@@ -1206,13 +1227,19 @@ export async function monitorGmailAndSync(
     accessToken,
     messageIds: ids,
     notifyWindowDays: options?.notifyWindowDays,
+    enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
+    enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
   });
 }
 
 export async function syncGmailIncremental(
   userId: number,
   telegramChatId: string | undefined,
-  endHistoryId: string
+  endHistoryId: string,
+  options?: {
+    enableAutoBoardWrite?: boolean;
+    enableAutoWorkflow?: boolean;
+  }
 ): Promise<MonitorResult> {
   const accessToken = await getValidAccessToken(userId);
   if (!accessToken) {
@@ -1225,7 +1252,11 @@ export async function syncGmailIncremental(
   if (!startHistoryId) {
     // First scan (no prior historyId) — sync everything to the board, but only
     // notify the user about mails from the last 14 days to avoid an avalanche.
-    const fallback = await monitorGmailAndSync(userId, telegramChatId, { notifyWindowDays: 14 });
+    const fallback = await monitorGmailAndSync(userId, telegramChatId, {
+      notifyWindowDays: 14,
+      enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
+      enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
+    });
     const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
     if (profileHistoryId) {
       await updateGoogleLastHistoryIdIfNewer(userId, profileHistoryId);
@@ -1239,7 +1270,11 @@ export async function syncGmailIncremental(
   if (!changes) {
     // First scan (no prior historyId) — sync everything to the board, but only
     // notify the user about mails from the last 14 days to avoid an avalanche.
-    const fallback = await monitorGmailAndSync(userId, telegramChatId, { notifyWindowDays: 14 });
+    const fallback = await monitorGmailAndSync(userId, telegramChatId, {
+      notifyWindowDays: 14,
+      enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
+      enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
+    });
     const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
     if (profileHistoryId) {
       await updateGoogleLastHistoryIdIfNewer(userId, profileHistoryId);
@@ -1254,6 +1289,8 @@ export async function syncGmailIncremental(
     telegramChatId,
     accessToken,
     messageIds: changes.messageIds,
+    enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
+    enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
   });
 
   if (changes.latestHistoryId) {

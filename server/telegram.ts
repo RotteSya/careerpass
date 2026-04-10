@@ -9,6 +9,7 @@ import {
   getTelegramBindingByTelegramId,
   getJobApplications,
   listJobStatusEvents,
+  getBillingFeatureAccess,
 } from "./db";
 import {
   handleAgentChat,
@@ -18,6 +19,11 @@ import {
   startCompanyWorkflow,
 } from "./agents";
 import { startMailMonitoringAndCheckmail } from "./mailMonitoring";
+import {
+  collectTrialNudges,
+  manualScanUpsellLine,
+  markTrialNudgeDelivered,
+} from "./billing";
 import type { User } from "../drizzle/schema";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
@@ -431,10 +437,14 @@ function normalizeCompanyKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
-function uniqueCompanyNamesFromEvents(events: Array<{ companyName: string | null }>): string[] {
+function uniqueCompanyNamesFromEvents(
+  events: Array<{ companyName: string | null; eventType?: string | null }>
+): string[] {
   const seen = new Set<string>();
   const names: string[] = [];
   for (const e of events) {
+    // Rejected/withdrawn companies should not trigger recon/ES auto workflow.
+    if (e.eventType === "rejection") continue;
     const raw = e.companyName?.trim();
     if (!raw) continue;
     const key = normalizeCompanyKey(raw);
@@ -461,7 +471,7 @@ async function autoStartWorkflowsIfNeeded(params: {
   sessionId: string;
   chatId: string | number;
   lang: "ja" | "zh" | "en";
-  events: Array<{ companyName: string | null }>;
+  events: Array<{ companyName: string | null; eventType?: string | null }>;
 }) {
   const companyNames = uniqueCompanyNamesFromEvents(params.events).slice(0, 3);
   if (companyNames.length === 0) return;
@@ -606,6 +616,16 @@ export async function sendTelegramBubbles(
   return allOk;
 }
 
+async function maybeSendTrialLifecycleNudges(userId: number, chatId: string | number) {
+  const nudges = await collectTrialNudges(userId);
+  for (const n of nudges) {
+    const ok = await sendTelegramMessage(chatId, n.text);
+    if (ok) {
+      await markTrialNudgeDelivered(userId, n.kind);
+    }
+  }
+}
+
 // Webhook endpoint: POST /api/telegram/webhook
 telegramRouter.post("/webhook", async (req, res) => {
   try {
@@ -660,13 +680,21 @@ telegramRouter.post("/webhook", async (req, res) => {
           // Don't re-run the full welcome flow — just acknowledge and stop.
           if (user && binding?.userId === userId && binding?.isActive) {
             const lang = (user.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
+            const access = await getBillingFeatureAccess(userId);
             const welcomeBack =
               lang === "zh"
-                ? `欢迎回来，${user.name ?? "你"}。我还在岗，邮箱也一直帮你盯着。直接告诉我下一步要干什么就行。`
+                ? access.autoMonitoringEnabled
+                  ? `欢迎回来，${user.name ?? "你"}。我还在岗，邮箱也一直帮你盯着。直接告诉我下一步要干什么就行。`
+                  : `欢迎回来，${user.name ?? "你"}。历史数据都在；自动盯邮箱已暂停，你仍可随时手动发 /checkmail。`
                 : lang === "en"
-                ? `Welcome back, ${user.name ?? "you"}. Still on the clock, still watching your inbox. Just tell me what you want to tackle next.`
-                : `おかえりなさい、${user.name ?? "あなた"}さん。まだ勤務中で、メールもずっと見ています。次にやりたいことを教えてください。`;
+                ? access.autoMonitoringEnabled
+                  ? `Welcome back, ${user.name ?? "you"}. Still on the clock, still watching your inbox. Just tell me what you want to tackle next.`
+                  : `Welcome back, ${user.name ?? "you"}. Your history is safe; auto inbox watch is paused, and you can still run /checkmail manually.`
+                : access.autoMonitoringEnabled
+                ? `おかえりなさい、${user.name ?? "あなた"}さん。まだ勤務中で、メールもずっと見ています。次にやりたいことを教えてください。`
+                : `おかえりなさい、${user.name ?? "あなた"}さん。履歴データはそのままです。自動メール監視は停止中ですが、/checkmail で手動確認できます。`;
             await sendTelegramBubbles(chatId, welcomeBack);
+            await maybeSendTrialLifecycleNudges(userId, chatId);
             res.json({ ok: true });
             return;
           }
@@ -719,9 +747,10 @@ telegramRouter.post("/webhook", async (req, res) => {
             // the intro and the scan starts at the same instant.
             const backgroundScan = (async () => {
               try {
-                const { needsOAuth, watchOk, result } = await startMailMonitoringAndCheckmail({
+                const { needsOAuth, watchOk, result, blockedByBilling } = await startMailMonitoringAndCheckmail({
                   userId: userId!,
                   telegramChatId: String(chatId),
+                  mode: "auto",
                 });
 
                 // Re-read session from DB to avoid overwriting fields set while
@@ -746,6 +775,14 @@ telegramRouter.post("/webhook", async (req, res) => {
                     },
                   },
                 });
+
+                if (blockedByBilling) {
+                  await sendTelegramMessage(
+                    chatId,
+                    "免费期已结束：自动邮箱监控和自动写入看板已暂停。你仍可手动发送 /checkmail 触发一次扫描。"
+                  );
+                  return;
+                }
 
                 if (needsOAuth) {
                   await sendTelegramMessage(
@@ -819,6 +856,7 @@ telegramRouter.post("/webhook", async (req, res) => {
       const session = await getOrCreateAgentSession(userId, String(chatId));
       const sessionId = String(session.id);
       const uid = userId;
+      await maybeSendTrialLifecycleNudges(uid, chatId);
 
       // First reply after the opening greeting: capture the nickname the user
       // wants to be called by, save it, then send the kickoff line.
@@ -912,14 +950,16 @@ telegramRouter.post("/webhook", async (req, res) => {
         // Run asynchronously and return webhook response quickly.
         void (async () => {
           try {
-            const { needsOAuth, result } = await startMailMonitoringAndCheckmail({
+            const { needsOAuth, result, access } = await startMailMonitoringAndCheckmail({
               userId: userId!,
               telegramChatId: String(chatId),
+              mode: "manual",
             });
+            const upsell = access.autoMonitoringEnabled ? "" : `\n\n${manualScanUpsellLine()}`;
             if (needsOAuth) {
               await sendTelegramMessage(
                 chatId,
-                `⚠️ 还没连接 Google 邮箱/日历。\n请先在网页 Dashboard 完成 Google 授权后再试。\n\n${APP_DOMAIN}`
+                `⚠️ 还没连接 Google 邮箱/日历。\n请先在网页 Dashboard 完成 Google 授权后再试。\n\n${APP_DOMAIN}${upsell}`
               );
               await updateAgentSession(userId!, {
                 sessionState: {
@@ -930,7 +970,7 @@ telegramRouter.post("/webhook", async (req, res) => {
               return;
             }
             if (!result) {
-              await sendTelegramMessage(chatId, "⚠️ 邮箱检查失败，请稍后重试。");
+              await sendTelegramMessage(chatId, `⚠️ 邮箱检查失败，请稍后重试。${upsell}`);
               return;
             }
             await updateAgentSession(userId!, {
@@ -942,12 +982,12 @@ telegramRouter.post("/webhook", async (req, res) => {
             if (result.detected > 0) {
               await sendTelegramMessage(
                 chatId,
-                `我刚帮你查完邮箱：看了 ${result.scanned} 封，识别到 ${result.detected} 条有效事件，已同步 ${result.calendarEvents} 条到日历。`
+                `我刚帮你查完邮箱：看了 ${result.scanned} 封，识别到 ${result.detected} 条有效事件，已同步 ${result.calendarEvents} 条到日历。${upsell}`
               );
             } else {
               await sendTelegramMessage(
                 chatId,
-                `这次我查了 ${result.scanned} 封邮件，暂时没有发现需要你立即处理的求职事件。`
+                `这次我查了 ${result.scanned} 封邮件，暂时没有发现需要你立即处理的求职事件。${upsell}`
               );
             }
 

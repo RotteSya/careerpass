@@ -32,6 +32,7 @@ import {
   Mic,
   ShieldCheck,
   KeyRound,
+  CreditCard,
   Trash2,
   User,
   XCircle,
@@ -57,6 +58,7 @@ export default function Dashboard() {
   const [notionGuideOpen, setNotionGuideOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [billingDialogOpen, setBillingDialogOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -424,6 +426,10 @@ export default function Dashboard() {
                 <Trash2 className="w-4 h-4" />
                 删除账号
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setBillingDialogOpen(true)} className="cursor-pointer">
+                <CreditCard className="w-4 h-4" />
+                订阅与计费
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={logout} className="cursor-pointer">
                 <LogOut className="w-4 h-4" />
                 ログアウト
@@ -467,6 +473,10 @@ export default function Dashboard() {
               <DropdownMenuItem onClick={() => setDeleteDialogOpen(true)} variant="destructive" className="cursor-pointer">
                 <Trash2 className="w-4 h-4" />
                 删除账号
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setBillingDialogOpen(true)} className="cursor-pointer">
+                <CreditCard className="w-4 h-4" />
+                订阅与计费
               </DropdownMenuItem>
               <DropdownMenuItem onClick={logout} className="cursor-pointer">
                 <LogOut className="w-4 h-4" />
@@ -1185,6 +1195,36 @@ export default function Dashboard() {
             >
               {deleteAccountMutation.isPending ? "删除中..." : "确认删除账号"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={billingDialogOpen} onOpenChange={setBillingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>订阅与计费</DialogTitle>
+            <DialogDescription>
+              双轨计费：可选月订阅制或公司数量制（同一计费周期内累计不重置）。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className="rounded-lg border border-border p-3">
+              <p className="font-medium">公司数量制</p>
+              <p className="text-muted-foreground mt-1">10 家公司：¥1,980 / 计费周期</p>
+              <p className="text-muted-foreground">20 家公司：¥3,980 / 计费周期</p>
+            </div>
+            <div className="rounded-lg border border-border p-3">
+              <p className="font-medium">免费试用</p>
+              <p className="text-muted-foreground mt-1">
+                新用户前 14 天功能全开；第 15 天起自动邮箱监控和自动写入看板暂停，历史数据仍可查看。
+              </p>
+              <p className="text-muted-foreground mt-1">
+                暂停后手动扫描仍可用，并附带开通引导。
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setBillingDialogOpen(false)}>我知道了</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
