@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -438,6 +438,32 @@ export async function getAgentMemory(userId: number, memoryType?: InsertAgentMem
     .from(agentMemory)
     .where(conditions)
     .orderBy(desc(agentMemory.updatedAt));
+}
+
+// ── Memory cap helpers (Harness Pattern: bounded memory index) ───────────
+export async function countAgentMemory(userId: number, memoryType: InsertAgentMemory["memoryType"]): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const [row] = await db
+    .select({ value: count() })
+    .from(agentMemory)
+    .where(and(eq(agentMemory.userId, userId), eq(agentMemory.memoryType, memoryType)));
+  return row?.value ?? 0;
+}
+
+export async function deleteOldestAgentMemory(userId: number, memoryType: InsertAgentMemory["memoryType"], deleteCount: number): Promise<void> {
+  const db = await getDb();
+  if (!db || deleteCount <= 0) return;
+  const oldest = await db
+    .select({ id: agentMemory.id })
+    .from(agentMemory)
+    .where(and(eq(agentMemory.userId, userId), eq(agentMemory.memoryType, memoryType)))
+    .orderBy(asc(agentMemory.updatedAt))
+    .limit(deleteCount);
+  if (oldest.length === 0) return;
+  await db
+    .delete(agentMemory)
+    .where(inArray(agentMemory.id, oldest.map((r) => r.id)));
 }
 
 // ─── Agent Sessions ────────────────────────────────────────────────────────
