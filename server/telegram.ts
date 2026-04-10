@@ -724,10 +724,14 @@ telegramRouter.post("/webhook", async (req, res) => {
                   telegramChatId: String(chatId),
                 });
 
-                const sessionState = (session?.sessionState as Record<string, unknown> | null) ?? {};
+                // Re-read session from DB to avoid overwriting fields set while
+                // the background scan was in flight (e.g. awaitingNickname,
+                // preferredNickname set by the nickname-capture handler).
+                const freshSession = await getOrCreateAgentSession(userId!, String(chatId));
+                const freshState = (freshSession?.sessionState as Record<string, unknown> | null) ?? {};
                 await updateAgentSession(userId!, {
                   sessionState: {
-                    ...sessionState,
+                    ...freshState,
                     mailMonitoring: {
                       enabled: true,
                       watchOk,
