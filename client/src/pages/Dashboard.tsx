@@ -52,7 +52,7 @@ export default function Dashboard() {
   const pathOnly = currentPath.split("?")[0] ?? currentPath;
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [companyQuery, setCompanyQuery] = useState("");
-  const [boardDialogOpen, setBoardDialogOpen] = useState(false);
+  const [notionGuideOpen, setNotionGuideOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -724,6 +724,15 @@ export default function Dashboard() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-transparent"
+                    onClick={() => setNotionGuideOpen(true)}
+                  >
+                    <FileText className="w-3.5 h-3.5 mr-1.5" />
+                    使用指南
+                  </Button>
                   {notionStatus?.connected ? (
                     <>
                       <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/30">
@@ -811,6 +820,75 @@ export default function Dashboard() {
                 <div className="mt-3 text-xs text-muted-foreground">已绑定 Database: {notionStatus.databaseId}</div>
               ) : null}
             </div>
+
+            <Dialog open={notionGuideOpen} onOpenChange={setNotionGuideOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Notion 看板使用指南</DialogTitle>
+                  <DialogDescription>按模板一键创建/绑定，看板与系统状态自动同步</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 text-sm text-muted-foreground">
+                  <div className="space-y-2">
+                    <p className="font-medium text-foreground">快速开始</p>
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">
+                          1
+                        </span>
+                        <span>先点击「连接 Notion」完成授权（只需要一次）。</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">
+                          2
+                        </span>
+                        <span>点击「一键创建 Notion 看板」，系统会按模板创建「日本求职进度追踪」并自动绑定到你的账号。</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">
+                          3
+                        </span>
+                        <span>之后邮件识别、网页改状态、Agent 更新都会同步到该 Notion Database。</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="font-medium text-foreground">常见问题</p>
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-secondary text-muted-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">
+                          Q
+                        </span>
+                        <span>
+                          如果提示“未找到可用于创建 Database 的 Notion 页面”，请在 Notion 新建任意页面并分享给本集成（Share → Invite →
+                          选择该 Integration），然后再点一次「一键创建」。
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="w-5 h-5 rounded-full bg-secondary text-muted-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">
+                          Q
+                        </span>
+                        <span>如果你已经有自己的看板，用「已有看板？手动绑定」粘贴 Database 链接或 database_id 绑定即可。</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="font-medium text-foreground">同步内容</p>
+                    <div className="text-xs leading-relaxed">
+                      公司名称、申请状态（To-do / In progress / Complete）、职位名称、下次跟进日期，以及邮件识别的事件类型/时间/来源等会写入到你的
+                      Notion Database（字段名按模板匹配）。你可以在 Notion 里自由补充信息，不影响同步。
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setNotionGuideOpen(false)}>
+                    关闭
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex flex-wrap gap-2 text-xs">
                 <span className="px-2 py-1 rounded-full border border-border bg-secondary/20 text-muted-foreground">
@@ -823,12 +901,175 @@ export default function Dashboard() {
                   Complete {columns.complete.length}
                 </span>
               </div>
-              <Button
-                onClick={() => setBoardDialogOpen(true)}
-                className="bg-[var(--color-notion-blue)] hover:bg-[var(--color-notion-blue-active)] text-white"
-              >
-                打开动态看板
-              </Button>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-black/10 bg-white text-[rgba(0,0,0,0.95)] shadow-[0_1px_3px_rgba(0,0,0,0.01),0_3px_7px_rgba(0,0,0,0.02),0_7px_15px_rgba(0,0,0,0.02),0_14px_28px_rgba(0,0,0,0.04),0_23px_52px_rgba(0,0,0,0.05)]">
+              <div className="px-6 pt-6 pb-4 border-b border-black/10">
+                <div className="flex flex-col gap-1">
+                  <p className="text-[22px] font-bold tracking-[-0.25px]">日本求职进度追踪（动态看板）</p>
+                  <p className="text-[14px] text-[var(--color-warm-gray-500)]">
+                    视图与 Notion 模板一致，按 To-do / In progress / Complete 分组展示
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
+                    <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
+                      企業数 {jobs.length}
+                    </span>
+                    <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
+                      進行中 {columns.todo.length + columns.inProgress.length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 py-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <input
+                    value={companyQuery}
+                    onChange={(e) => setCompanyQuery(e.target.value)}
+                    placeholder="搜索公司（中文/日文/英文）"
+                    className="w-full sm:max-w-md h-10 rounded-[4px] border border-black/10 bg-white px-3 text-[14px] text-[rgba(0,0,0,0.95)] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
+                  />
+                  {telegramDeepLink?.deepLink ? (
+                    <a
+                      href={telegramDeepLink.deepLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center h-10 px-4 rounded-[4px] bg-[var(--color-notion-blue)] hover:bg-[var(--color-notion-blue-active)] text-white text-[15px] font-semibold"
+                    >
+                      Telegram へ
+                    </a>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+                  <div className="min-w-0">
+                    {jobsLoading ? (
+                      <div className="py-10 text-center text-[14px] text-[var(--color-warm-gray-500)]">読み込み中...</div>
+                    ) : (
+                      <div className="flex gap-3 overflow-x-auto pb-2">
+                        <BoardColumn
+                          title="待办"
+                          subtitle="To-do"
+                          count={columns.todo.length}
+                          cards={columns.todo}
+                          selectedJobId={selectedJobId}
+                          onSelect={setSelectedJobId}
+                        />
+                        <BoardColumn
+                          title="进行中"
+                          subtitle="In progress"
+                          count={columns.inProgress.length}
+                          cards={columns.inProgress}
+                          selectedJobId={selectedJobId}
+                          onSelect={setSelectedJobId}
+                        />
+                        <BoardColumn
+                          title="已完成"
+                          subtitle="Complete"
+                          count={columns.complete.length}
+                          cards={columns.complete}
+                          selectedJobId={selectedJobId}
+                          onSelect={setSelectedJobId}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    {selectedCard ? (
+                      <div className="rounded-xl border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.84688px_rgba(0,0,0,0.027),0_0.8px_2.925px_rgba(0,0,0,0.02),0_0.175px_1.04062px_rgba(0,0,0,0.01)] p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[16px] font-semibold truncate">{selectedCard.job.companyNameJa}</p>
+                            {selectedCard.job.companyNameEn ? (
+                              <p className="text-[12px] text-[var(--color-warm-gray-500)] truncate">{selectedCard.job.companyNameEn}</p>
+                            ) : null}
+                          </div>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-1 text-[12px] font-semibold tracking-[0.125px] status-${selectedCard.job.status}`}
+                          >
+                            {statusLabel(selectedCard.job.status)}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 flex items-center gap-2">
+                          <select
+                            value={selectedCard.job.status}
+                            onChange={(e) => {
+                              const status = e.target.value as JobStatusValue;
+                              updateJobStatusMutation.mutate({
+                                id: selectedCard.job.id,
+                                status,
+                              });
+                            }}
+                            className="h-9 w-full rounded-[4px] border border-black/10 bg-white px-2 text-[14px] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
+                          >
+                            {JOB_STATUS_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="mt-4 space-y-3 text-[14px]">
+                          <div className="rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3">
+                            <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-1 flex items-center gap-1">
+                              <ShieldCheck className="w-3.5 h-3.5" /> 企业深报
+                            </p>
+                            <p className="line-clamp-4">{selectedCard.recon?.content?.slice(0, 180) ?? "未生成"}</p>
+                          </div>
+                          <div className="rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3">
+                            <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-1 flex items-center gap-1">
+                              <FileText className="w-3.5 h-3.5" /> ES 草稿
+                            </p>
+                            <p className="line-clamp-4">{selectedCard.es?.content?.slice(0, 180) ?? "未生成"}</p>
+                          </div>
+                          <div className="rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3">
+                            <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-1 flex items-center gap-1">
+                              <Mic className="w-3.5 h-3.5" /> 面试日志
+                            </p>
+                            <p className="line-clamp-4">{selectedCard.interview?.content?.slice(0, 180) ?? "未生成"}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 rounded-lg border border-black/10 bg-white p-3">
+                          <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-2 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> 更新记录
+                          </p>
+                          {statusEvents.length === 0 ? (
+                            <p className="text-[12px] text-[var(--color-warm-gray-300)]">暂无</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {statusEvents.slice(0, 8).map((e: any) => (
+                                <div key={e.id} className="text-[12px]">
+                                  <div className="flex flex-wrap gap-x-2 gap-y-1 text-[var(--color-warm-gray-300)]">
+                                    <span>{e.createdAt ? new Date(e.createdAt).toLocaleString() : ""}</span>
+                                    <span>{e.source ?? ""}</span>
+                                    <span>{(e.prevStatus ?? "-") + " → " + (e.nextStatus ?? "-")}</span>
+                                  </div>
+                                  {e.mailSubject ? (
+                                    <div className="mt-0.5 text-[rgba(0,0,0,0.95)]">
+                                      {String(e.mailSubject).slice(0, 120)}
+                                    </div>
+                                  ) : null}
+                                  {e.mailFrom ? (
+                                    <div className="text-[var(--color-warm-gray-500)]">{String(e.mailFrom).slice(0, 120)}</div>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-black/10 bg-[var(--color-warm-white)] p-4 text-[14px] text-[var(--color-warm-gray-500)]">
+                        左のカードを選ぶと詳細が表示されます
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
             </>
@@ -926,181 +1167,6 @@ export default function Dashboard() {
               {deleteAccountMutation.isPending ? "删除中..." : "确认删除账号"}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={boardDialogOpen} onOpenChange={setBoardDialogOpen}>
-        <DialogContent
-          className="bg-white text-[rgba(0,0,0,0.95)] border-black/10 rounded-2xl p-0 shadow-[0_1px_3px_rgba(0,0,0,0.01),0_3px_7px_rgba(0,0,0,0.02),0_7px_15px_rgba(0,0,0,0.02),0_14px_28px_rgba(0,0,0,0.04),0_23px_52px_rgba(0,0,0,0.05)] sm:max-w-6xl"
-        >
-          <div className="px-6 pt-6 pb-4 border-b border-black/10">
-            <div className="flex flex-col gap-1">
-              <DialogTitle className="text-[22px] font-bold tracking-[-0.25px]">
-                日本求职进度追踪（动态看板）
-              </DialogTitle>
-              <DialogDescription className="text-[14px] text-[var(--color-warm-gray-500)]">
-                视图与 Notion 模板一致，按 To-do / In progress / Complete 分组展示
-              </DialogDescription>
-              <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
-                <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
-                  企業数 {jobs.length}
-                </span>
-                <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
-                  進行中 {columns.todo.length + columns.inProgress.length}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="px-6 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <input
-                value={companyQuery}
-                onChange={(e) => setCompanyQuery(e.target.value)}
-                placeholder="搜索公司（中文/日文/英文）"
-                className="w-full sm:max-w-md h-10 rounded-[4px] border border-black/10 bg-white px-3 text-[14px] text-[rgba(0,0,0,0.95)] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
-              />
-              {telegramDeepLink?.deepLink ? (
-                <a
-                  href={telegramDeepLink.deepLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center h-10 px-4 rounded-[4px] bg-[var(--color-notion-blue)] hover:bg-[var(--color-notion-blue-active)] text-white text-[15px] font-semibold"
-                >
-                  Telegram へ
-                </a>
-              ) : null}
-            </div>
-
-            <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-              <div className="min-w-0">
-                {jobsLoading ? (
-                  <div className="py-10 text-center text-[14px] text-[var(--color-warm-gray-500)]">読み込み中...</div>
-                ) : (
-                  <div className="flex gap-3 overflow-x-auto pb-2">
-                    <BoardColumn
-                      title="待办"
-                      subtitle="To-do"
-                      count={columns.todo.length}
-                      cards={columns.todo}
-                      selectedJobId={selectedJobId}
-                      onSelect={setSelectedJobId}
-                    />
-                    <BoardColumn
-                      title="进行中"
-                      subtitle="In progress"
-                      count={columns.inProgress.length}
-                      cards={columns.inProgress}
-                      selectedJobId={selectedJobId}
-                      onSelect={setSelectedJobId}
-                    />
-                    <BoardColumn
-                      title="已完成"
-                      subtitle="Complete"
-                      count={columns.complete.length}
-                      cards={columns.complete}
-                      selectedJobId={selectedJobId}
-                      onSelect={setSelectedJobId}
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="min-w-0">
-                {selectedCard ? (
-                  <div className="rounded-xl border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.84688px_rgba(0,0,0,0.027),0_0.8px_2.925px_rgba(0,0,0,0.02),0_0.175px_1.04062px_rgba(0,0,0,0.01)] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[16px] font-semibold truncate">{selectedCard.job.companyNameJa}</p>
-                        {selectedCard.job.companyNameEn ? (
-                          <p className="text-[12px] text-[var(--color-warm-gray-500)] truncate">{selectedCard.job.companyNameEn}</p>
-                        ) : null}
-                      </div>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-1 text-[12px] font-semibold tracking-[0.125px] status-${selectedCard.job.status}`}
-                      >
-                        {statusLabel(selectedCard.job.status)}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 flex items-center gap-2">
-                      <select
-                        value={selectedCard.job.status}
-                        onChange={(e) => {
-                          const status = e.target.value as JobStatusValue;
-                          updateJobStatusMutation.mutate({
-                            id: selectedCard.job.id,
-                            status,
-                          });
-                        }}
-                      className="h-9 w-full rounded-[4px] border border-black/10 bg-white px-2 text-[14px] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
-                      >
-                        {JOB_STATUS_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="mt-4 space-y-3 text-[14px]">
-                      <div className="rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3">
-                        <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-1 flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5" /> 企业深报
-                        </p>
-                        <p className="line-clamp-4">{selectedCard.recon?.content?.slice(0, 180) ?? "未生成"}</p>
-                      </div>
-                      <div className="rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3">
-                        <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-1 flex items-center gap-1">
-                          <FileText className="w-3.5 h-3.5" /> ES 草稿
-                        </p>
-                        <p className="line-clamp-4">{selectedCard.es?.content?.slice(0, 180) ?? "未生成"}</p>
-                      </div>
-                      <div className="rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3">
-                        <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-1 flex items-center gap-1">
-                          <Mic className="w-3.5 h-3.5" /> 面试日志
-                        </p>
-                        <p className="line-clamp-4">{selectedCard.interview?.content?.slice(0, 180) ?? "未生成"}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-lg border border-black/10 bg-white p-3">
-                      <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-2 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> 更新记录
-                      </p>
-                      {statusEvents.length === 0 ? (
-                        <p className="text-[12px] text-[var(--color-warm-gray-300)]">暂无</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {statusEvents.slice(0, 8).map((e: any) => (
-                            <div key={e.id} className="text-[12px]">
-                              <div className="flex flex-wrap gap-x-2 gap-y-1 text-[var(--color-warm-gray-300)]">
-                                <span>{e.createdAt ? new Date(e.createdAt).toLocaleString() : ""}</span>
-                                <span>{e.source ?? ""}</span>
-                                <span>{(e.prevStatus ?? "-") + " → " + (e.nextStatus ?? "-")}</span>
-                              </div>
-                              {e.mailSubject ? (
-                                <div className="mt-0.5 text-[rgba(0,0,0,0.95)]">
-                                  {String(e.mailSubject).slice(0, 120)}
-                                </div>
-                              ) : null}
-                              {e.mailFrom ? (
-                                <div className="text-[var(--color-warm-gray-500)]">{String(e.mailFrom).slice(0, 120)}</div>
-                              ) : null}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-black/10 bg-[var(--color-warm-white)] p-4 text-[14px] text-[var(--color-warm-gray-500)]">
-                    左のカードを選ぶと詳細が表示されます
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 
