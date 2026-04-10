@@ -32,6 +32,7 @@ import {
   startCompanyWorkflow,
 } from "./agents";
 import { syncJobToNotionBoard } from "./notion";
+import { createCompanyBatchDeduper, sortMailItemsByTsDesc } from "./gmail_dedup";
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
@@ -964,7 +965,7 @@ async function processGmailMessageIds(params: {
   const { userId, telegramChatId, accessToken, messageIds, notifyWindowDays } = params;
   const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
   const detectedEvents: EmailEvent[] = [];
-  const latestCompanyMailTs = new Map<string, number>();
+  const isFirstForCompanyInBatch = createCompanyBatchDeduper();
   let calendarCount = 0;
 
   const notifyCutoffMs =
@@ -972,9 +973,24 @@ async function processGmailMessageIds(params: {
       ? Date.now() - notifyWindowDays * 24 * 60 * 60 * 1000
       : null;
 
+  const fetched: Array<{
+    messageId: string;
+    detail: { subject: string; from: string; date: string; body: string };
+    mailTs: number;
+  }> = [];
   for (const messageId of messageIds) {
     const detail = await fetchEmailDetail(accessToken, messageId);
     if (!detail) continue;
+    fetched.push({ messageId, detail, mailTs: Date.parse(detail.date) });
+  }
+
+  const sorted = sortMailItemsByTsDesc(
+    fetched.map((x) => ({ messageId: x.messageId, mailTs: x.mailTs, value: x.detail }))
+  );
+
+  for (const item of sorted) {
+    const messageId = item.messageId;
+    const detail = item.value;
 
     // Hard exclude マイナビ/リクナビ-style "站内通知" mails — they carry no real content.
     const senderDomain = (getSenderDomain(detail.from) ?? "").toLowerCase();
@@ -1074,20 +1090,12 @@ async function processGmailMessageIds(params: {
     // - First-scan window: skip notifications for mails older than notifyWindowDays
     //   (the dashboard/Notion sync above still runs, so the board stays complete).
     // - Same-company dedup: only notify for the newest mail per company in this batch.
-    const mailTs = Date.parse(detail.date);
+    const mailTs = item.mailTs;
     const isWithinWindow =
       notifyCutoffMs === null || (Number.isFinite(mailTs) && mailTs >= notifyCutoffMs);
 
     const companyKey = companyName?.toLowerCase() ?? null;
-    let isNewestForCompany = true;
-    if (companyKey && Number.isFinite(mailTs)) {
-      const prevTs = latestCompanyMailTs.get(companyKey);
-      if (prevTs !== undefined && prevTs >= mailTs) {
-        isNewestForCompany = false;
-      } else {
-        latestCompanyMailTs.set(companyKey, mailTs);
-      }
-    }
+    const isNewestForCompany = isFirstForCompanyInBatch(companyKey);
 
     const shouldNotify = isWithinWindow && isNewestForCompany;
 

@@ -23,7 +23,7 @@ import {
 import { invokeLLM } from "./_core/llm";
 import crypto from "crypto";
 import { reconCompany as runRecon, searchMemories } from "./recon";
-import { monitorGmailAndSync, sendTelegramMessage } from "./gmail";
+import { getValidAccessToken, monitorGmailAndSync, sendTelegramMessage } from "./gmail";
 import { createNotionJobBoardFromTemplate, syncJobToNotionBoard } from "./notion";
 import {
   handleAgentChat,
@@ -489,6 +489,53 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await deleteOauthToken(ctx.user.id, input.provider);
         return { success: true };
+      }),
+
+    listRecentAutoEvents: protectedProcedure
+      .input(z.object({ max: z.number().min(1).max(50).optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const accessToken = await getValidAccessToken(ctx.user.id);
+        if (!accessToken) return { events: [] as any[] };
+
+        const max = input?.max ?? 20;
+        const timeMin = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+        const url = new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");
+        url.searchParams.set("timeMin", timeMin);
+        url.searchParams.set("maxResults", String(max));
+        url.searchParams.set("singleEvents", "true");
+        url.searchParams.set("orderBy", "startTime");
+        url.searchParams.set("q", "CareerPass 自動登録");
+
+        const res = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(`Google Calendar API error: ${t.slice(0, 200)}`);
+        }
+        const data = (await res.json()) as {
+          items?: Array<{
+            id?: string;
+            summary?: string;
+            description?: string;
+            htmlLink?: string;
+            start?: { dateTime?: string; date?: string };
+            end?: { dateTime?: string; date?: string };
+            updated?: string;
+          }>;
+        };
+        const events = (data.items ?? [])
+          .filter((e) => (e.description ?? "").includes("CareerPass"))
+          .map((e) => ({
+            id: e.id ?? "",
+            summary: e.summary ?? "",
+            description: e.description ?? "",
+            htmlLink: e.htmlLink ?? "",
+            start: e.start?.dateTime ?? e.start?.date ?? "",
+            end: e.end?.dateTime ?? e.end?.date ?? "",
+            updated: e.updated ?? "",
+          }));
+        return { events };
       }),
   }),
 

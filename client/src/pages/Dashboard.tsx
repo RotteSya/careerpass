@@ -50,6 +50,7 @@ export default function Dashboard() {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const [currentPath, navigate] = useLocation();
   const pathOnly = currentPath.split("?")[0] ?? currentPath;
+  const isCalendarPage = pathOnly === "/dashboard/calendar";
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [companyQuery, setCompanyQuery] = useState("");
   const [notionGuideOpen, setNotionGuideOpen] = useState(false);
@@ -71,6 +72,14 @@ export default function Dashboard() {
     undefined,
     { enabled: isAuthenticated }
   );
+  const {
+    data: recentCalendarEvents,
+    isLoading: recentCalendarEventsLoading,
+    refetch: refetchRecentCalendarEvents,
+  } = trpc.calendar.listRecentAutoEvents.useQuery(undefined, {
+    enabled: isAuthenticated && isCalendarPage && !!calendarStatus?.google,
+    retry: false,
+  });
 
   const { data: telegramStatus, refetch: refetchTelegram } = trpc.telegram.getBindingStatus.useQuery(
     undefined,
@@ -293,7 +302,6 @@ export default function Dashboard() {
   }, [boardCards]);
 
   const selectedCard = boardCards.find((c: any) => c.job.id === selectedJobId) ?? null;
-  const isCalendarPage = pathOnly === "/dashboard/calendar";
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -309,6 +317,32 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const copyText = async (text: string) => {
+    const t = (text ?? "").trim();
+    if (!t) {
+      toast.error("没有可复制的内容");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(t);
+      toast.success("已复制");
+    } catch {
+      try {
+        const el = document.createElement("textarea");
+        el.value = t;
+        el.style.position = "fixed";
+        el.style.left = "-9999px";
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+        toast.success("已复制");
+      } catch {
+        toast.error("复制失败");
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -516,6 +550,73 @@ export default function Dashboard() {
                   </Button>
                 </div>
               </div>
+
+              {calendarStatus?.google ? (
+                <div className="mt-6 rounded-xl border border-border bg-secondary/10 p-4">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-sm font-semibold">最近自动写入的日程</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        点击“一键复制备注”可直接复制优化后的日程备注内容用于分享（不包含邮件正文）
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-transparent"
+                      onClick={() => refetchRecentCalendarEvents()}
+                      disabled={recentCalendarEventsLoading}
+                    >
+                      {recentCalendarEventsLoading ? "刷新中..." : "刷新"}
+                    </Button>
+                  </div>
+
+                  {recentCalendarEventsLoading ? (
+                    <div className="py-6 text-center text-sm text-muted-foreground">读取中...</div>
+                  ) : (recentCalendarEvents?.events?.length ?? 0) === 0 ? (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                      暂无可复制的自动日程。后续有新邮件触发写入后，这里会显示最近的事件。
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {recentCalendarEvents!.events.slice(0, 10).map((e: any) => (
+                        <div
+                          key={e.id}
+                          className="rounded-lg border border-border bg-background/60 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{e.summary || "（无标题）"}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {e.start ? new Date(e.start).toLocaleString() : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="bg-transparent"
+                              onClick={() => copyText(e.description)}
+                              disabled={!e.description}
+                            >
+                              一键复制备注
+                            </Button>
+                            {e.htmlLink ? (
+                              <a
+                                href={e.htmlLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center h-8 px-3 rounded-md border border-border bg-transparent text-xs font-medium hover:bg-secondary"
+                              >
+                                打开
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -948,139 +1049,92 @@ export default function Dashboard() {
                   ) : null}
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-                  <div className="min-w-0">
-                    {jobsLoading ? (
-                      <div className="py-10 text-center text-[14px] text-[var(--color-warm-gray-500)]">読み込み中...</div>
-                    ) : (
-                      <div className="flex gap-3 overflow-x-auto pb-2">
-                        <BoardColumn
-                          title="待办"
-                          subtitle="To-do"
-                          count={columns.todo.length}
-                          cards={columns.todo}
-                          selectedJobId={selectedJobId}
-                          onSelect={setSelectedJobId}
-                        />
-                        <BoardColumn
-                          title="进行中"
-                          subtitle="In progress"
-                          count={columns.inProgress.length}
-                          cards={columns.inProgress}
-                          selectedJobId={selectedJobId}
-                          onSelect={setSelectedJobId}
-                        />
-                        <BoardColumn
-                          title="已完成"
-                          subtitle="Complete"
-                          count={columns.complete.length}
-                          cards={columns.complete}
-                          selectedJobId={selectedJobId}
-                          onSelect={setSelectedJobId}
-                        />
+                <div className="mt-4 space-y-4">
+                  {[
+                    { key: "todo", title: "To-do", items: columns.todo as any[] },
+                    { key: "inProgress", title: "In progress", items: columns.inProgress as any[] },
+                    { key: "complete", title: "Complete", items: columns.complete as any[] },
+                  ].map((g) => (
+                    <div
+                      key={g.key}
+                      className="rounded-xl border border-black/10 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.01),0_3px_7px_rgba(0,0,0,0.02)]"
+                    >
+                      <div className="px-4 py-3 border-b border-black/10 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[15px] font-semibold truncate">{g.title}</p>
+                          <p className="text-[12px] text-[var(--color-warm-gray-500)]">按申请状态分组</p>
+                        </div>
+                        <span className="text-[12px] px-2 py-0.5 rounded-full bg-[var(--color-warm-white)] border border-black/10 text-[var(--color-warm-gray-500)]">
+                          {g.items.length}
+                        </span>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="min-w-0">
-                    {selectedCard ? (
-                      <div className="rounded-xl border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.84688px_rgba(0,0,0,0.027),0_0.8px_2.925px_rgba(0,0,0,0.02),0_0.175px_1.04062px_rgba(0,0,0,0.01)] p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[16px] font-semibold truncate">{selectedCard.job.companyNameJa}</p>
-                            {selectedCard.job.companyNameEn ? (
-                              <p className="text-[12px] text-[var(--color-warm-gray-500)] truncate">{selectedCard.job.companyNameEn}</p>
-                            ) : null}
-                          </div>
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-1 text-[12px] font-semibold tracking-[0.125px] status-${selectedCard.job.status}`}
-                          >
-                            {statusLabel(selectedCard.job.status)}
-                          </span>
-                        </div>
-
-                        <div className="mt-3 flex items-center gap-2">
-                          <select
-                            value={selectedCard.job.status}
-                            onChange={(e) => {
-                              const status = e.target.value as JobStatusValue;
-                              updateJobStatusMutation.mutate({
-                                id: selectedCard.job.id,
-                                status,
-                              });
-                            }}
-                            className="h-9 w-full rounded-[4px] border border-black/10 bg-white px-2 text-[14px] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
-                          >
-                            {JOB_STATUS_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="mt-4 rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3 text-[14px]">
-                          <div className="grid grid-cols-[96px_1fr] gap-x-3 gap-y-2">
-                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">公司名称</div>
-                            <div className="min-w-0">
-                              <div className="truncate">{selectedCard.job.companyNameJa}</div>
-                              {selectedCard.job.companyNameEn ? (
-                                <div className="text-[12px] text-[var(--color-warm-gray-500)] truncate">
-                                  {selectedCard.job.companyNameEn}
-                                </div>
-                              ) : null}
-                            </div>
-
-                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">申请状态</div>
-                            <div className="truncate">{statusLabel(selectedCard.job.status)}</div>
-
-                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">职位名称</div>
-                            <div className="truncate">{selectedCard.job.position ?? "—"}</div>
-
-                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">締切</div>
-                            <div className="truncate">
-                              {selectedCard.job.nextActionAt ? new Date(selectedCard.job.nextActionAt).toLocaleDateString() : "—"}
-                            </div>
-
-                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">联系方式</div>
-                            <div className="truncate">—</div>
-
-                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">优先级</div>
-                            <div className="truncate">—</div>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 rounded-lg border border-black/10 bg-white p-3">
-                          <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-2 flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> 更新记录
-                          </p>
-                          {statusEvents.length === 0 ? (
-                            <p className="text-[12px] text-[var(--color-warm-gray-300)]">暂无</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {statusEvents.slice(0, 8).map((e: any) => (
-                                <div key={e.id} className="text-[12px]">
-                                  <div className="flex flex-wrap gap-x-2 gap-y-1 text-[var(--color-warm-gray-300)]">
-                                    <span>{e.createdAt ? new Date(e.createdAt).toLocaleString() : ""}</span>
-                                    <span>{e.source ?? ""}</span>
-                                    <span>{(e.prevStatus ?? "-") + " → " + (e.nextStatus ?? "-")}</span>
-                                  </div>
-                                  {e.mailSubject ? (
-                                    <div className="mt-0.5 text-[rgba(0,0,0,0.95)]">
-                                      {String(e.mailSubject).slice(0, 120)}
-                                    </div>
-                                  ) : null}
-                                  {e.mailFrom ? (
-                                    <div className="text-[var(--color-warm-gray-500)]">{String(e.mailFrom).slice(0, 120)}</div>
-                                  ) : null}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[14px]">
+                          <thead className="bg-[var(--color-warm-white)] text-[12px] text-[var(--color-warm-gray-500)]">
+                            <tr>
+                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">公司名称</th>
+                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">申请状态</th>
+                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">职位名称</th>
+                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">締切</th>
+                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">联系方式</th>
+                              <th className="text-left font-medium px-4 py-2 whitespace-nowrap">优先级</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {jobsLoading ? (
+                              <tr>
+                                <td colSpan={6} className="px-4 py-6 text-center text-[14px] text-[var(--color-warm-gray-500)]">
+                                  読み込み中...
+                                </td>
+                              </tr>
+                            ) : g.items.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="px-4 py-6 text-center text-[14px] text-[var(--color-warm-gray-500)]">
+                                  暂无
+                                </td>
+                              </tr>
+                            ) : (
+                              g.items.map((c: any) => (
+                                <tr key={c.job.id} className="border-t border-black/5">
+                                  <td className="px-4 py-3 min-w-[220px]">
+                                    <div className="font-semibold truncate">{c.job.companyNameJa}</div>
+                                    {c.job.companyNameEn ? (
+                                      <div className="text-[12px] text-[var(--color-warm-gray-500)] truncate">
+                                        {c.job.companyNameEn}
+                                      </div>
+                                    ) : null}
+                                  </td>
+                                  <td className="px-4 py-3 min-w-[160px]">
+                                    <select
+                                      value={c.job.status}
+                                      onChange={(e) => {
+                                        const status = e.target.value as JobStatusValue;
+                                        updateJobStatusMutation.mutate({ id: c.job.id, status });
+                                      }}
+                                      className="h-8 w-full rounded-[4px] border border-black/10 bg-white px-2 text-[14px] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
+                                    >
+                                      {JOB_STATUS_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                          {opt.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </td>
+                                  <td className="px-4 py-3 min-w-[180px] truncate">{c.job.position ?? "—"}</td>
+                                  <td className="px-4 py-3 min-w-[120px] whitespace-nowrap">
+                                    {c.job.nextActionAt ? new Date(c.job.nextActionAt).toLocaleDateString("ja-JP") : "—"}
+                                  </td>
+                                  <td className="px-4 py-3 min-w-[140px] truncate">—</td>
+                                  <td className="px-4 py-3 min-w-[100px] truncate">—</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
                       </div>
-                    ) : null}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
