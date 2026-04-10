@@ -38,6 +38,8 @@ vi.mock("./db", () => ({
   getAgentMemory: vi.fn().mockResolvedValue([]),
   createTelegramBinding: vi.fn().mockResolvedValue(undefined),
   getOrCreateAgentSession: vi.fn().mockResolvedValue({ id: 1, chatId: "12345" }),
+  countAgentMemory: vi.fn().mockResolvedValue(0),
+  deleteOldestAgentMemory: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("./_core/llm", () => ({
