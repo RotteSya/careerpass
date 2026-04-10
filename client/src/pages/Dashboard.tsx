@@ -639,7 +639,7 @@ export default function Dashboard() {
                   <p className="text-sm font-semibold">Telegram</p>
                   {telegramStatus?.bound ? (
                     <span className="flex items-center gap-1 text-xs text-green-400">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> 連携済
+                      <CheckCircle2 className="w-3.5 h-3.5" /> 已绑定
                     </span>
                   ) : (
                     <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#2AABEE]/15 text-[#2AABEE] border border-[#2AABEE]/30">
@@ -717,26 +717,12 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {!telegramStatus?.bound && (
+              <>
             <div className="mb-4">
               <p className="text-xs text-muted-foreground">Telegram 绑定详情</p>
             </div>
 
-            {telegramStatus?.bound ? (
-              <div className="flex items-center gap-4 p-4 rounded-xl border border-green-500/30 bg-green-500/10">
-                <CheckCircle2 className="w-8 h-8 text-green-400 shrink-0" />
-                <div>
-                  <p className="font-medium text-green-300">Telegram 已绑定</p>
-                  <p className="text-sm text-muted-foreground">
-                    @{telegramStatus.telegramUsername ?? telegramStatus.telegramId} と接続中
-                  </p>
-                  {telegramStatus.boundAt && (
-                    <p className="text-xs text-muted-foreground">
-                      連携日時: {new Date(telegramStatus.boundAt).toLocaleDateString("ja-JP")}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 {/* QR Code */}
                 <div className="shrink-0">
@@ -797,6 +783,7 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
+              </>
             )}
           </div>
 
