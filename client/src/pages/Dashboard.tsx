@@ -295,6 +295,13 @@ export default function Dashboard() {
   const selectedCard = boardCards.find((c: any) => c.job.id === selectedJobId) ?? null;
   const isCalendarPage = pathOnly === "/dashboard/calendar";
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (selectedJobId != null) return;
+    if (boardCards.length === 0) return;
+    setSelectedJobId(boardCards[0].job.id);
+  }, [isAuthenticated, selectedJobId, boardCards]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -1012,24 +1019,34 @@ export default function Dashboard() {
                           </select>
                         </div>
 
-                        <div className="mt-4 space-y-3 text-[14px]">
-                          <div className="rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3">
-                            <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-1 flex items-center gap-1">
-                              <ShieldCheck className="w-3.5 h-3.5" /> 企业深报
-                            </p>
-                            <p className="line-clamp-4">{selectedCard.recon?.content?.slice(0, 180) ?? "未生成"}</p>
-                          </div>
-                          <div className="rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3">
-                            <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-1 flex items-center gap-1">
-                              <FileText className="w-3.5 h-3.5" /> ES 草稿
-                            </p>
-                            <p className="line-clamp-4">{selectedCard.es?.content?.slice(0, 180) ?? "未生成"}</p>
-                          </div>
-                          <div className="rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3">
-                            <p className="text-[12px] text-[var(--color-warm-gray-500)] mb-1 flex items-center gap-1">
-                              <Mic className="w-3.5 h-3.5" /> 面试日志
-                            </p>
-                            <p className="line-clamp-4">{selectedCard.interview?.content?.slice(0, 180) ?? "未生成"}</p>
+                        <div className="mt-4 rounded-lg border border-black/10 bg-[var(--color-warm-white)] p-3 text-[14px]">
+                          <div className="grid grid-cols-[96px_1fr] gap-x-3 gap-y-2">
+                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">公司名称</div>
+                            <div className="min-w-0">
+                              <div className="truncate">{selectedCard.job.companyNameJa}</div>
+                              {selectedCard.job.companyNameEn ? (
+                                <div className="text-[12px] text-[var(--color-warm-gray-500)] truncate">
+                                  {selectedCard.job.companyNameEn}
+                                </div>
+                              ) : null}
+                            </div>
+
+                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">申请状态</div>
+                            <div className="truncate">{statusLabel(selectedCard.job.status)}</div>
+
+                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">职位名称</div>
+                            <div className="truncate">{selectedCard.job.position ?? "—"}</div>
+
+                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">締切</div>
+                            <div className="truncate">
+                              {selectedCard.job.nextActionAt ? new Date(selectedCard.job.nextActionAt).toLocaleDateString() : "—"}
+                            </div>
+
+                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">联系方式</div>
+                            <div className="truncate">—</div>
+
+                            <div className="text-[12px] text-[var(--color-warm-gray-500)]">优先级</div>
+                            <div className="truncate">—</div>
                           </div>
                         </div>
 
@@ -1062,11 +1079,7 @@ export default function Dashboard() {
                           )}
                         </div>
                       </div>
-                    ) : (
-                      <div className="rounded-xl border border-black/10 bg-[var(--color-warm-white)] p-4 text-[14px] text-[var(--color-warm-gray-500)]">
-                        左のカードを選ぶと詳細が表示されます
-                      </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>

@@ -1131,9 +1131,30 @@ async function processGmailMessageIds(params: {
         : `${date}T10:00:00`;
 
       const colorId = calendarColorForEventType(eventType, calendarColorPrefs);
+      const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
+      const todoText = emailEvent.todoItems.length > 0
+        ? emailEvent.todoItems.map(t => `- ${t}`).join("\n")
+        : "- なし";
       const calEvent: CalendarEvent & { colorId?: string } = {
         summary: `${typeLabels[eventType]}${companyName ?? ""} - ${detail.subject.slice(0, 40)}`,
-        description: `CareerPass自動登録\n\n場所/リンク: ${emailEvent.location ?? "未記入"}\n\nやるべきこと:\n${emailEvent.todoItems.map(t => `- ${t}`).join("\n")}\n\n送信元: ${detail.from}\n\n${detail.body.slice(0, 300)}`,
+        description: [
+          "CareerPass 自動登録",
+          "",
+          `種別: ${typeLabels[eventType]}`,
+          `会社: ${companyName ?? "未特定"}`,
+          `日時: ${date}${time ? ` ${time}` : ""} (JST)`,
+          `場所/リンク: ${emailEvent.location ?? "未記入"}`,
+          "",
+          "やるべきこと:",
+          todoText,
+          "",
+          `メール件名: ${detail.subject.slice(0, 160)}`,
+          `送信元: ${detail.from.slice(0, 160)}`,
+          `Gmail: ${mailLink}`,
+          `MessageId: ${messageId}`,
+          "",
+          "本文はプライバシー保護のためカレンダーには記載しません。必要なら Gmail を開いて確認してください。",
+        ].join("\n"),
         start: { dateTime: `${startDateTime}+09:00`, timeZone: "Asia/Tokyo" },
         end: { dateTime: `${endDateTime}+09:00`, timeZone: "Asia/Tokyo" },
         colorId,
