@@ -178,6 +178,33 @@ export async function getOauthToken(userId: number, provider: "google" | "outloo
   return result[0] ?? undefined;
 }
 
+export async function patchOauthTokenScope(params: {
+  userId: number;
+  provider: "google" | "outlook" | "notion";
+  patch: Record<string, unknown>;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const current = await getOauthToken(params.userId, params.provider);
+  const base: Record<string, unknown> =
+    current?.scope
+      ? (() => {
+          try {
+            const parsed = JSON.parse(current.scope) as unknown;
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+            return {};
+          } catch {
+            return {};
+          }
+        })()
+      : {};
+  const next = { ...base, ...params.patch };
+  await db
+    .update(oauthTokens)
+    .set({ scope: JSON.stringify(next), updatedAt: new Date() })
+    .where(and(eq(oauthTokens.userId, params.userId), eq(oauthTokens.provider, params.provider)));
+}
+
 export async function deleteOauthToken(userId: number, provider: "google" | "outlook" | "notion") {
   const db = await getDb();
   if (!db) return;

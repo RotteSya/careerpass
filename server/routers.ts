@@ -10,6 +10,7 @@ import {
   upsertOauthToken,
   getOauthToken,
   deleteOauthToken,
+  patchOauthTokenScope,
   getTelegramBinding,
   getJobApplications,
   createJobApplication,
@@ -23,7 +24,7 @@ import { invokeLLM } from "./_core/llm";
 import crypto from "crypto";
 import { reconCompany as runRecon, searchMemories } from "./recon";
 import { monitorGmailAndSync, sendTelegramMessage } from "./gmail";
-import { syncJobToNotionBoard } from "./notion";
+import { createNotionJobBoardFromTemplate, syncJobToNotionBoard } from "./notion";
 import {
   handleAgentChat,
   generateResume,
@@ -294,12 +295,20 @@ export const appRouter = router({
     }),
     getStatus: protectedProcedure.query(async ({ ctx }) => {
       const notion = await getOauthToken(ctx.user.id, "notion");
-      const dbId = (process.env.NOTION_JOB_BOARD_DATABASE_ID ?? "").trim();
+      let dbId: string | null = null;
+      const fallbackDbId = (process.env.NOTION_JOB_BOARD_DATABASE_ID ?? "").trim();
       let workspaceName: string | null = null;
+      let databaseUrl: string | null = null;
       if (notion?.scope) {
         try {
-          const meta = JSON.parse(notion.scope) as { workspaceName?: string };
+          const meta = JSON.parse(notion.scope) as {
+            workspaceName?: string;
+            notionDatabaseId?: string;
+            notionDatabaseUrl?: string;
+          };
           workspaceName = meta.workspaceName ?? null;
+          dbId = (meta.notionDatabaseId ?? "").trim() || null;
+          databaseUrl = (meta.notionDatabaseUrl ?? "").trim() || null;
         } catch {
           workspaceName = null;
         }
@@ -307,9 +316,59 @@ export const appRouter = router({
       return {
         connected: !!notion,
         workspaceName,
-        databaseConfigured: !!dbId,
+        databaseConfigured: !!(dbId || fallbackDbId),
+        databaseId: dbId || fallbackDbId || null,
+        databaseUrl,
       };
     }),
+    createBoardFromTemplate: protectedProcedure.mutation(async ({ ctx }) => {
+      const created = await createNotionJobBoardFromTemplate(ctx.user.id);
+      await patchOauthTokenScope({
+        userId: ctx.user.id,
+        provider: "notion",
+        patch: { notionDatabaseId: created.databaseId, notionDatabaseUrl: created.url },
+      });
+      return { success: true, databaseId: created.databaseId, url: created.url };
+    }),
+    setBoardDatabase: protectedProcedure
+      .input(z.object({ databaseIdOrUrl: z.string().min(1).max(500) }))
+      .mutation(async ({ ctx, input }) => {
+        const notion = await getOauthToken(ctx.user.id, "notion");
+        if (!notion?.accessToken) throw new Error("Notion 未连接");
+
+        const raw = input.databaseIdOrUrl.trim();
+        const last = raw
+          .replace(/^https?:\/\/(www\.)?notion\.so\//, "")
+          .split("?")[0]
+          ?.split("#")[0]
+          ?.split("/")
+          .filter(Boolean)
+          .pop();
+        const candidate = (last ?? raw).replace(/-/g, "");
+        if (!/^[0-9a-fA-F]{32}$/.test(candidate)) {
+          throw new Error("请输入 Notion Database 链接或 32 位 database_id");
+        }
+
+        const NOTION_VERSION = "2022-06-28";
+        const res = await fetch(`https://api.notion.com/v1/databases/${candidate}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${notion.accessToken}`,
+            "Notion-Version": NOTION_VERSION,
+          },
+        });
+        if (!res.ok) {
+          throw new Error("无法访问该 Notion Database：请在 Notion 中将该 Database 分享给此集成（Integration）");
+        }
+        const meta = (await res.json().catch(() => null)) as { url?: string } | null;
+
+        await patchOauthTokenScope({
+          userId: ctx.user.id,
+          provider: "notion",
+          patch: { notionDatabaseId: candidate, notionDatabaseUrl: meta?.url ?? null },
+        });
+        return { success: true };
+      }),
     disconnect: protectedProcedure.mutation(async ({ ctx }) => {
       await deleteOauthToken(ctx.user.id, "notion");
       return { success: true };
@@ -504,7 +563,9 @@ export const appRouter = router({
             await syncJobToNotionBoard({
               userId: ctx.user.id,
               companyName: target.companyNameJa,
+              position: target.position ?? null,
               status: input.status,
+              nextActionAt: target.nextActionAt ?? null,
               source: "manual",
             });
           } catch (e) {

@@ -59,6 +59,8 @@ export default function Dashboard() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
+  const [notionDatabaseIdOrUrl, setNotionDatabaseIdOrUrl] = useState("");
+  const [showManualNotionBind, setShowManualNotionBind] = useState(false);
   const utils = trpc.useUtils();
 
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = trpc.user.getProfile.useQuery(undefined, {
@@ -99,6 +101,27 @@ export default function Dashboard() {
     onSuccess: () => {
       toast.success("Notion 連携を解除しました");
       refetchNotionStatus();
+    },
+  });
+  const setNotionBoardDatabase = trpc.notion.setBoardDatabase.useMutation({
+    onSuccess: () => {
+      toast.success("Notion 看板已绑定");
+      setNotionDatabaseIdOrUrl("");
+      refetchNotionStatus();
+    },
+    onError: (err: any) => {
+      toast.error(err.message);
+    },
+  });
+  const createNotionBoardFromTemplate = trpc.notion.createBoardFromTemplate.useMutation({
+    onSuccess: (res: any) => {
+      toast.success("Notion 看板已创建并绑定");
+      setShowManualNotionBind(false);
+      refetchNotionStatus();
+      if (res?.url) window.open(res.url, "_blank", "noopener,noreferrer");
+    },
+    onError: (err: any) => {
+      toast.error(err.message);
     },
   });
 
@@ -259,13 +282,14 @@ export default function Dashboard() {
   }, [jobs, reconMemories, esMemories, interviewMemories, companyQuery]);
 
   const columns = useMemo(() => {
-    const inResearch = boardCards.filter((c: any) => ["researching", "applied"].includes(c.job.status));
-    const inES = boardCards.filter((c: any) => ["es_preparing", "es_submitted"].includes(c.job.status));
-    const inInterview = boardCards.filter((c: any) =>
-      ["interview_1", "interview_2", "interview_final"].includes(c.job.status)
+    const todo = boardCards.filter((c: any) => ["researching"].includes(c.job.status));
+    const inProgress = boardCards.filter((c: any) =>
+      ["applied", "es_preparing", "es_submitted", "interview_1", "interview_2", "interview_final"].includes(
+        c.job.status
+      )
     );
-    const closed = boardCards.filter((c: any) => ["offer", "rejected", "withdrawn"].includes(c.job.status));
-    return { inResearch, inES, inInterview, closed };
+    const complete = boardCards.filter((c: any) => ["offer", "rejected", "withdrawn"].includes(c.job.status));
+    return { todo, inProgress, complete };
   }, [boardCards]);
 
   const selectedCard = boardCards.find((c: any) => c.job.id === selectedJobId) ?? null;
@@ -674,14 +698,14 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   <BriefcaseBusiness className="w-5 h-5 text-primary" />
-                  求職進捗ダッシュボード
+                  日本求职进度追踪
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  企業調査・ES・面接準備の進み具合を1画面で確認できます
+                  与 Notion 模板保持一致的动态看板（状态/字段按模板同步）
                 </p>
               </div>
               <div className="text-xs text-muted-foreground">
-                企業数: {jobs.length} / 進行中: {columns.inResearch.length + columns.inES.length + columns.inInterview.length}
+                企業数: {jobs.length} / 進行中: {columns.todo.length + columns.inProgress.length}
               </div>
             </div>
 
@@ -695,7 +719,7 @@ export default function Dashboard() {
                   </p>
                   {!notionStatus?.databaseConfigured && (
                     <p className="text-xs text-amber-400 mt-1">
-                      未配置 `NOTION_JOB_BOARD_DATABASE_ID`，当前仅保存连接，不会实际写入看板。
+                      尚未创建/绑定你的 Notion 看板：点击“一键创建”将按模板自动创建并绑定。
                     </p>
                   )}
                 </div>
@@ -705,6 +729,19 @@ export default function Dashboard() {
                       <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/30">
                         已连接
                       </span>
+                      {!notionStatus?.databaseConfigured ? null : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-transparent"
+                          onClick={() => {
+                            if (notionStatus?.databaseUrl) window.open(notionStatus.databaseUrl, "_blank", "noopener,noreferrer");
+                          }}
+                          disabled={!notionStatus?.databaseUrl}
+                        >
+                          打开看板
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -732,27 +769,65 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
+              {notionStatus?.connected && !notionStatus?.databaseConfigured ? (
+                <div className="mt-3 flex flex-col gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => createNotionBoardFromTemplate.mutate()}
+                      disabled={createNotionBoardFromTemplate.isPending}
+                      className="bg-[var(--color-notion-blue)] hover:bg-[var(--color-notion-blue-active)] text-white"
+                    >
+                      {createNotionBoardFromTemplate.isPending ? "创建中..." : "一键创建 Notion 看板"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-transparent"
+                      onClick={() => setShowManualNotionBind((v) => !v)}
+                    >
+                      {showManualNotionBind ? "收起手动绑定" : "已有看板？手动绑定"}
+                    </Button>
+                  </div>
+                  {showManualNotionBind ? (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                        value={notionDatabaseIdOrUrl}
+                        onChange={(e) => setNotionDatabaseIdOrUrl(e.target.value)}
+                        placeholder="粘贴 Notion Database 链接或 database_id"
+                        className="bg-background"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => setNotionBoardDatabase.mutate({ databaseIdOrUrl: notionDatabaseIdOrUrl })}
+                        disabled={setNotionBoardDatabase.isPending || !notionDatabaseIdOrUrl.trim()}
+                      >
+                        {setNotionBoardDatabase.isPending ? "绑定中..." : "绑定"}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : notionStatus?.connected && notionStatus?.databaseId ? (
+                <div className="mt-3 text-xs text-muted-foreground">已绑定 Database: {notionStatus.databaseId}</div>
+              ) : null}
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex flex-wrap gap-2 text-xs">
                 <span className="px-2 py-1 rounded-full border border-border bg-secondary/20 text-muted-foreground">
-                  Research {columns.inResearch.length}
+                  To-do {columns.todo.length}
                 </span>
                 <span className="px-2 py-1 rounded-full border border-border bg-secondary/20 text-muted-foreground">
-                  ES {columns.inES.length}
+                  In progress {columns.inProgress.length}
                 </span>
                 <span className="px-2 py-1 rounded-full border border-border bg-secondary/20 text-muted-foreground">
-                  Interview {columns.inInterview.length}
-                </span>
-                <span className="px-2 py-1 rounded-full border border-border bg-secondary/20 text-muted-foreground">
-                  Archive {columns.closed.length}
+                  Complete {columns.complete.length}
                 </span>
               </div>
               <Button
                 onClick={() => setBoardDialogOpen(true)}
                 className="bg-[var(--color-notion-blue)] hover:bg-[var(--color-notion-blue-active)] text-white"
               >
-                动态看板を開く
+                打开动态看板
               </Button>
             </div>
           </div>
@@ -861,17 +936,17 @@ export default function Dashboard() {
           <div className="px-6 pt-6 pb-4 border-b border-black/10">
             <div className="flex flex-col gap-1">
               <DialogTitle className="text-[22px] font-bold tracking-[-0.25px]">
-                动态看板（求職進捗）
+                日本求职进度追踪（动态看板）
               </DialogTitle>
               <DialogDescription className="text-[14px] text-[var(--color-warm-gray-500)]">
-                Notion 風のレイアウトで、企業ごとの進捗と生成物（企業深報 / ES / 面試ログ）をまとめて確認できます
+                视图与 Notion 模板一致，按 To-do / In progress / Complete 分组展示
               </DialogDescription>
               <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
                 <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
                   企業数 {jobs.length}
                 </span>
                 <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
-                  進行中 {columns.inResearch.length + columns.inES.length + columns.inInterview.length}
+                  進行中 {columns.todo.length + columns.inProgress.length}
                 </span>
               </div>
             </div>
@@ -904,34 +979,26 @@ export default function Dashboard() {
                 ) : (
                   <div className="flex gap-3 overflow-x-auto pb-2">
                     <BoardColumn
-                      title="企業情报"
-                      subtitle="Research"
-                      count={columns.inResearch.length}
-                      cards={columns.inResearch}
+                      title="待办"
+                      subtitle="To-do"
+                      count={columns.todo.length}
+                      cards={columns.todo}
                       selectedJobId={selectedJobId}
                       onSelect={setSelectedJobId}
                     />
                     <BoardColumn
-                      title="ES定制"
-                      subtitle="Entry Sheet"
-                      count={columns.inES.length}
-                      cards={columns.inES}
+                      title="进行中"
+                      subtitle="In progress"
+                      count={columns.inProgress.length}
+                      cards={columns.inProgress}
                       selectedJobId={selectedJobId}
                       onSelect={setSelectedJobId}
                     />
                     <BoardColumn
-                      title="面试战备"
-                      subtitle="Interview"
-                      count={columns.inInterview.length}
-                      cards={columns.inInterview}
-                      selectedJobId={selectedJobId}
-                      onSelect={setSelectedJobId}
-                    />
-                    <BoardColumn
-                      title="结果归档"
-                      subtitle="Archive"
-                      count={columns.closed.length}
-                      cards={columns.closed}
+                      title="已完成"
+                      subtitle="Complete"
+                      count={columns.complete.length}
+                      cards={columns.complete}
                       selectedJobId={selectedJobId}
                       onSelect={setSelectedJobId}
                     />
@@ -1063,7 +1130,9 @@ type BoardCard = {
     id: number;
     companyNameJa: string;
     companyNameEn?: string | null;
+    position?: string | null;
     status: string;
+    nextActionAt?: string | Date | null;
     updatedAt: string | Date;
   };
   recon?: { content: string } | undefined;
@@ -1126,7 +1195,12 @@ function BoardColumn(props: {
                   <div className="min-w-0">
                     <p className="text-[14px] font-semibold truncate">{c.job.companyNameJa}</p>
                     <p className="text-[12px] text-[var(--color-warm-gray-500)] mt-0.5">
-                      {c.job.updatedAt ? new Date(c.job.updatedAt).toLocaleDateString() : ""}
+                      {[
+                        c.job.position,
+                        c.job.updatedAt ? new Date(c.job.updatedAt).toLocaleDateString() : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                   </div>
                   <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-1 text-[12px] font-semibold tracking-[0.125px] status-${c.job.status}`}>

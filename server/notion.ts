@@ -5,12 +5,16 @@ const NOTION_VERSION = "2022-06-28";
 
 type NotionProperty = {
   type: string;
+  status?: { options?: Array<{ name: string }> };
+  select?: { options?: Array<{ name: string }> };
 };
 
 type SyncNotionJobInput = {
   userId: number;
   companyName: string;
+  position?: string | null;
   status?: string | null;
+  nextActionAt?: string | Date | null;
   eventType?: string | null;
   eventDate?: string | null;
   eventTime?: string | null;
@@ -47,9 +51,10 @@ function findTitlePropertyName(properties: Record<string, NotionProperty>): stri
   return null;
 }
 
-function mapStatusName(status?: string | null): string | null {
+function mapStatusNameEnglish(status?: string | null): string | null {
   const m: Record<string, string> = {
     researching: "Researching",
+    applied: "Applied",
     es_preparing: "ES Preparing",
     es_submitted: "ES Submitted",
     interview_1: "Interview 1",
@@ -61,6 +66,42 @@ function mapStatusName(status?: string | null): string | null {
   };
   if (!status) return null;
   return m[status] ?? status;
+}
+
+function getStatusOrSelectOptionNames(p?: NotionProperty | null): string[] {
+  if (!p) return [];
+  if (p.type === "status") return (p.status?.options ?? []).map(o => o.name).filter(Boolean);
+  if (p.type === "select") return (p.select?.options ?? []).map(o => o.name).filter(Boolean);
+  return [];
+}
+
+function pickBestStatusName(status: string | null | undefined, p?: NotionProperty | null): string | null {
+  if (!status) return null;
+  const options = getStatusOrSelectOptionNames(p);
+
+  const english = mapStatusNameEnglish(status);
+  if (options.length === 0) return english ?? status;
+  if (english && options.includes(english)) return english;
+
+  const candidates: Record<string, string[]> = {
+    researching: ["未投递", "调研中", "Researching"],
+    applied: ["已投递", "Applied"],
+    es_preparing: ["简历筛选中", "ES准备中", "ES Preparing"],
+    es_submitted: ["简历筛选中", "ES已提交", "ES Submitted"],
+    interview_1: ["一面", "Interview 1"],
+    interview_2: ["二面", "Interview 2"],
+    interview_final: ["终面", "三面", "Final Interview", "Interview Final"],
+    offer: ["offer获得", "已拿offer", "Offer"],
+    rejected: ["已拒绝", "未通过", "Rejected"],
+    withdrawn: ["已放弃", "已撤回", "Withdrawn"],
+  };
+
+  const list = candidates[status] ?? [status];
+  for (const name of list) {
+    if (options.includes(name)) return name;
+  }
+  if (options.includes(status)) return status;
+  return english ?? status;
 }
 
 async function notionFetchJson<T>(
@@ -102,12 +143,154 @@ async function notionFetchJson<T>(
   throw new Error("Notion API failed after retries");
 }
 
-export async function syncJobToNotionBoard(input: SyncNotionJobInput): Promise<void> {
-  const dbId = (process.env.NOTION_JOB_BOARD_DATABASE_ID ?? "").trim();
-  if (!dbId) return;
+export async function createNotionJobBoardFromTemplate(userId: number): Promise<{ databaseId: string; url: string }> {
+  const token = await getOauthToken(userId, "notion");
+  if (!token?.accessToken) throw new Error("Notion 未连接");
 
+  const searchRes = await notionFetchJson<{
+    results: Array<{ object: string; id: string }>;
+  }>(`/search`, token.accessToken, {
+    method: "POST",
+    body: JSON.stringify({
+      page_size: 10,
+      filter: { property: "object", value: "page" },
+      sort: { direction: "descending", timestamp: "last_edited_time" },
+    }),
+  });
+
+  const parentPageId = searchRes.results?.find(r => r.object === "page")?.id;
+  if (!parentPageId) {
+    throw new Error("未找到可用于创建 Database 的 Notion 页面：请先在 Notion 里创建任意页面并分享给该集成");
+  }
+
+  const created = await notionFetchJson<{
+    id: string;
+    url: string;
+  }>(`/databases`, token.accessToken, {
+    method: "POST",
+    body: JSON.stringify({
+      parent: { type: "page_id", page_id: parentPageId },
+      title: [{ type: "text", text: { content: "日本求职进度追踪" } }],
+      properties: {
+        公司名称: { title: {} },
+        申请状态: {
+          status: {
+            options: [
+              { name: "未投递", color: "gray" },
+              { name: "已投递", color: "blue" },
+              { name: "简历筛选中", color: "blue" },
+              { name: "笔试", color: "yellow" },
+              { name: "一面", color: "orange" },
+              { name: "二面", color: "orange" },
+              { name: "三面", color: "orange" },
+              { name: "终面", color: "purple" },
+              { name: "offer获得", color: "green" },
+              { name: "已拒绝", color: "red" },
+              { name: "已放弃", color: "brown" },
+            ],
+          },
+        },
+        职位名称: { rich_text: {} },
+        投递日期: { date: {} },
+        下次跟进日期: { date: {} },
+        优先级: {
+          select: {
+            options: [
+              { name: "高", color: "red" },
+              { name: "中", color: "yellow" },
+              { name: "低", color: "gray" },
+            ],
+          },
+        },
+        联系方式: { email: {} },
+        ExternalKey: { rich_text: {} },
+        UserId: { number: { format: "number" } },
+        EventType: {
+          select: {
+            options: [
+              { name: "applied", color: "blue" },
+              { name: "screening", color: "blue" },
+              { name: "assessment", color: "yellow" },
+              { name: "interview", color: "orange" },
+              { name: "offer", color: "green" },
+              { name: "rejection", color: "red" },
+            ],
+          },
+        },
+        EventAt: { date: {} },
+        LastMailSubject: { rich_text: {} },
+        Source: {
+          select: {
+            options: [
+              { name: "gmail", color: "blue" },
+              { name: "manual", color: "gray" },
+              { name: "agent", color: "purple" },
+            ],
+          },
+        },
+      },
+    }),
+  });
+
+  const database = await notionFetchJson<{
+    properties: Record<string, any>;
+  }>(`/databases/${created.id}`, token.accessToken, { method: "GET" });
+
+  const statusProp = database.properties?.["申请状态"];
+  const options: Array<{ id: string; name: string; color?: string }> = statusProp?.status?.options ?? [];
+  const idByName = new Map(options.map(o => [o.name, o.id]));
+  const groups = [
+    { name: "To-do", color: "default", option_ids: ["未投递"].map(n => idByName.get(n)).filter(Boolean) },
+    {
+      name: "In progress",
+      color: "default",
+      option_ids: ["已投递", "简历筛选中", "笔试", "一面", "二面", "三面", "终面"]
+        .map(n => idByName.get(n))
+        .filter(Boolean),
+    },
+    { name: "Complete", color: "default", option_ids: ["offer获得", "已拒绝", "已放弃"].map(n => idByName.get(n)).filter(Boolean) },
+  ];
+
+  if (options.length > 0 && groups.every(g => g.option_ids.length > 0)) {
+    await notionFetchJson(`/databases/${created.id}`, token.accessToken, {
+      method: "PATCH",
+      body: JSON.stringify({
+        properties: {
+          申请状态: {
+            status: {
+              options,
+              groups,
+            },
+          },
+        },
+      }),
+    });
+  }
+
+  return { databaseId: created.id.replace(/-/g, ""), url: created.url };
+}
+
+export async function syncJobToNotionBoard(input: SyncNotionJobInput): Promise<void> {
   const token = await getOauthToken(input.userId, "notion");
   if (!token?.accessToken) return;
+
+  const scopeMeta: Record<string, unknown> =
+    token.scope
+      ? (() => {
+          try {
+            const parsed = JSON.parse(token.scope) as unknown;
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+            return {};
+          } catch {
+            return {};
+          }
+        })()
+      : {};
+
+  const perUserDbId = typeof scopeMeta.notionDatabaseId === "string" ? scopeMeta.notionDatabaseId.trim() : "";
+  const fallbackDbId = (process.env.NOTION_JOB_BOARD_DATABASE_ID ?? "").trim();
+  const dbId = perUserDbId || fallbackDbId;
+  if (!dbId) return;
 
   const database = await notionFetchJson<{
     properties: Record<string, NotionProperty>;
@@ -129,8 +312,18 @@ export async function syncJobToNotionBoard(input: SyncNotionJobInput): Promise<v
   );
   const statusProp = findFirstPropertyName(
     propsMeta,
-    ["Status", "状态", "進捗", "ステータス"],
+    ["Status", "状态", "進捗", "ステータス", "申请状态"],
     ["status", "select"]
+  );
+  const positionProp = findFirstPropertyName(
+    propsMeta,
+    ["Position", "职位名称", "ポジション"],
+    ["rich_text"]
+  );
+  const nextActionProp = findFirstPropertyName(
+    propsMeta,
+    ["NextActionAt", "下次跟进日期", "次のフォロー日"],
+    ["date"]
   );
   const eventProp = findFirstPropertyName(
     propsMeta,
@@ -155,7 +348,8 @@ export async function syncJobToNotionBoard(input: SyncNotionJobInput): Promise<v
 
   const externalKey = `careerpass:${input.userId}:${input.companyName}`;
   const titleValue = input.companyName;
-  const statusName = mapStatusName(input.status);
+  const statusName = pickBestStatusName(input.status ?? null, statusProp ? propsMeta[statusProp] : null);
+  const nextActionDate = input.nextActionAt ? new Date(input.nextActionAt) : null;
   const eventAtText = input.eventDate
     ? `${input.eventDate}${input.eventTime ? ` ${input.eventTime}` : ""} JST`
     : null;
@@ -174,6 +368,12 @@ export async function syncJobToNotionBoard(input: SyncNotionJobInput): Promise<v
   if (statusProp && statusName) {
     const t = propsMeta[statusProp]?.type;
     properties[statusProp] = t === "status" ? { status: { name: statusName } } : { select: { name: statusName } };
+  }
+  if (positionProp && input.position) {
+    properties[positionProp] = { rich_text: [{ text: { content: input.position.slice(0, 180) } }] };
+  }
+  if (nextActionProp && nextActionDate && !Number.isNaN(+nextActionDate)) {
+    properties[nextActionProp] = { date: { start: nextActionDate.toISOString() } };
   }
   if (eventProp && input.eventType) {
     const t = propsMeta[eventProp]?.type;

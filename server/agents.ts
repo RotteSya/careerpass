@@ -375,7 +375,9 @@ ${profileContextJa}`;
             await syncJobToNotionBoard({
               userId,
               companyName: args.companyName,
+              position: app.position ?? null,
               status: args.status,
+              nextActionAt: app.nextActionAt ?? null,
               source: "agent",
             });
           } catch (e) {
