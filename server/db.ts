@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -538,17 +538,22 @@ export async function getTelegramBindingByTelegramId(telegramId: string) {
 export async function createTelegramBinding(binding: InsertTelegramBinding) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // Rebind strategy: clear any row that conflicts on either unique key
+  // (userId or telegramId), then insert a single canonical binding row.
   await db
-    .insert(telegramBindings)
-    .values(binding)
-    .onDuplicateKeyUpdate({
-      set: {
-        telegramId: binding.telegramId,
-        telegramUsername: binding.telegramUsername,
-        isActive: true,
-        boundAt: new Date(),
-      },
-    });
+    .delete(telegramBindings)
+    .where(
+      or(
+        eq(telegramBindings.userId, binding.userId),
+        eq(telegramBindings.telegramId, binding.telegramId)
+      )
+    );
+
+  await db.insert(telegramBindings).values({
+    ...binding,
+    isActive: true,
+    boundAt: new Date(),
+  });
 }
 
 // ─── Job Applications ──────────────────────────────────────────────────────
