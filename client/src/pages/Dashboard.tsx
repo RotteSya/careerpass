@@ -1238,7 +1238,6 @@ type BoardCard = {
 };
 
 const JOB_STATUS_OPTIONS = [
-  { value: "researching", label: "调研中" },
   { value: "applied", label: "エントリー済み" },
   { value: "briefing", label: "说明会" },
   { value: "es_preparing", label: "ES准备中" },
@@ -1250,7 +1249,6 @@ const JOB_STATUS_OPTIONS = [
   { value: "written_test", label: "筆記試験" },
   { value: "interview_final", label: "终面" },
   { value: "offer", label: "内定" },
-  { value: "rejected", label: "未通过" },
   { value: "withdrawn", label: "辞退" },
 ] as const;
 
