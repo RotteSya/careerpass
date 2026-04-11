@@ -284,7 +284,7 @@ function parseConversationMemoryTurns(rawContent: string, metadata: unknown): Ar
       ? (metadata as Record<string, unknown>).dialogue
       : null;
   if (fromMetadata) {
-    const turns = fromMetadata
+    const turns = (fromMetadata as unknown[])
       .filter((t): t is { role: "user" | "assistant"; content: string } => {
         return (
           !!t &&

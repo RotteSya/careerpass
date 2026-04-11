@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -18,6 +18,9 @@ import {
   users,
   emailAuth,
   messagingBindings,
+  billingAccounts,
+  billingCompanyLedger,
+  billingNotifications,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -144,6 +147,9 @@ export async function deleteUserAccountData(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  await db.delete(billingCompanyLedger).where(eq(billingCompanyLedger.userId, userId));
+  await db.delete(billingNotifications).where(eq(billingNotifications.userId, userId));
+  await db.delete(billingAccounts).where(eq(billingAccounts.userId, userId));
   await db.delete(jobStatusEvents).where(eq(jobStatusEvents.userId, userId));
   await db.delete(jobApplications).where(eq(jobApplications.userId, userId));
   await db.delete(agentMemory).where(eq(agentMemory.userId, userId));
@@ -154,6 +160,180 @@ export async function deleteUserAccountData(userId: number): Promise<void> {
   await db.delete(oauthTokens).where(eq(oauthTokens.userId, userId));
   await db.delete(emailAuth).where(eq(emailAuth.userId, userId));
   await db.delete(users).where(eq(users.id, userId));
+}
+
+function addDays(base: Date, days: number): Date {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+const TRIAL_DAYS = 14;
+const TRIAL_GRACE_DAYS = 1;
+
+export async function getOrCreateBillingAccount(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const existing = await db
+    .select()
+    .from(billingAccounts)
+    .where(eq(billingAccounts.userId, userId))
+    .limit(1);
+  if (existing[0]) return existing[0];
+
+  const now = new Date();
+  const trialEndsAt = addDays(now, TRIAL_DAYS);
+  const graceEndsAt = addDays(trialEndsAt, TRIAL_GRACE_DAYS);
+  await db.insert(billingAccounts).values({
+    userId,
+    billingMode: "company",
+    companyPlanLimit: 10,
+    cycleStartedAt: now,
+    cycleEndsAt: null,
+    trialStartedAt: now,
+    trialEndsAt,
+    graceEndsAt,
+  });
+  const created = await db
+    .select()
+    .from(billingAccounts)
+    .where(eq(billingAccounts.userId, userId))
+    .limit(1);
+  return created[0]!;
+}
+
+export interface BillingFeatureAccess {
+  phase: "trial" | "grace" | "paid" | "suspended";
+  autoMonitoringEnabled: boolean;
+  autoBoardWriteEnabled: boolean;
+  autoWorkflowEnabled: boolean;
+  dayFromTrialStart: number;
+  trackedCompanyCount: number;
+  trialEndsAt: Date;
+  graceEndsAt: Date;
+}
+
+export async function countTrackedCompaniesInCurrentCycle(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const account = await getOrCreateBillingAccount(userId);
+  const baseConditions = [
+    eq(billingCompanyLedger.userId, userId),
+    eq(billingCompanyLedger.countable, true),
+    gte(billingCompanyLedger.firstSeenAt, account.cycleStartedAt),
+  ];
+  if (account.cycleEndsAt) {
+    baseConditions.push(lte(billingCompanyLedger.firstSeenAt, account.cycleEndsAt));
+  }
+  const rows = await db
+    .select({ id: billingCompanyLedger.id })
+    .from(billingCompanyLedger)
+    .where(and(...baseConditions));
+  return rows.length;
+}
+
+export async function getBillingFeatureAccess(userId: number): Promise<BillingFeatureAccess> {
+  const account = await getOrCreateBillingAccount(userId);
+  const now = new Date();
+  const trialStartMs = account.trialStartedAt.getTime();
+  const dayFromTrialStart = Math.max(1, Math.floor((now.getTime() - trialStartMs) / (24 * 60 * 60 * 1000)) + 1);
+  const trackedCompanyCount = await countTrackedCompaniesInCurrentCycle(userId);
+
+  let phase: BillingFeatureAccess["phase"] = "suspended";
+  if (now <= account.trialEndsAt) {
+    phase = "trial";
+  } else if (now <= account.graceEndsAt) {
+    phase = "grace";
+  } else if (account.cycleEndsAt && now <= account.cycleEndsAt) {
+    phase = "paid";
+  }
+
+  const autoEnabled = phase === "trial" || phase === "grace" || phase === "paid";
+  return {
+    phase,
+    autoMonitoringEnabled: autoEnabled,
+    autoBoardWriteEnabled: autoEnabled,
+    autoWorkflowEnabled: autoEnabled,
+    dayFromTrialStart,
+    trackedCompanyCount,
+    trialEndsAt: account.trialEndsAt,
+    graceEndsAt: account.graceEndsAt,
+  };
+}
+
+function normalizeCompanyKeyForBilling(companyName: string): string {
+  return companyName.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+export async function trackCompanyForBilling(params: {
+  userId: number;
+  companyName: string;
+  firstStatus?: string | null;
+  occurredAt?: Date | null;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const account = await getOrCreateBillingAccount(params.userId);
+  const companyName = params.companyName.trim();
+  if (!companyName) return;
+  const companyKey = normalizeCompanyKeyForBilling(companyName);
+
+  const existing = await db
+    .select({ id: billingCompanyLedger.id })
+    .from(billingCompanyLedger)
+    .where(and(eq(billingCompanyLedger.userId, params.userId), eq(billingCompanyLedger.companyKey, companyKey)))
+    .limit(1);
+  if (existing[0]) return;
+
+  const occurredAt = params.occurredAt ?? new Date();
+  const status = (params.firstStatus ?? "").toLowerCase();
+  const terminal = status === "offer" || status === "rejected" || status === "withdrawn";
+  const countable = !(terminal && occurredAt < account.cycleStartedAt);
+  await db.insert(billingCompanyLedger).values({
+    userId: params.userId,
+    companyKey,
+    companyName,
+    firstStatus: params.firstStatus ?? null,
+    firstSeenAt: occurredAt,
+    countable,
+  });
+}
+
+export async function getBillingNotificationState(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(billingNotifications)
+    .where(eq(billingNotifications.userId, userId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function markBillingNotificationSent(
+  userId: number,
+  kind: "day10" | "day13" | "suspension"
+) {
+  const db = await getDb();
+  if (!db) return;
+  const now = new Date();
+  const patch =
+    kind === "day10"
+      ? { day10SentAt: now }
+      : kind === "day13"
+      ? { day13SentAt: now }
+      : { suspensionSentAt: now };
+  await db
+    .insert(billingNotifications)
+    .values({
+      userId,
+      day10SentAt: kind === "day10" ? now : null,
+      day13SentAt: kind === "day13" ? now : null,
+      suspensionSentAt: kind === "suspension" ? now : null,
+    })
+    .onDuplicateKeyUpdate({
+      set: patch,
+    });
 }
 
 // ─── OAuth Tokens ──────────────────────────────────────────────────────────
