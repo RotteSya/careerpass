@@ -33,6 +33,7 @@ import {
 } from "./agents";
 import { syncJobToNotionBoard } from "./notion";
 import { createCompanyBatchDeduper, sortMailItemsByTsDesc } from "./gmail_dedup";
+import { sendTelegramBubbles, sendTelegramMessage } from "./telegramMessaging";
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
@@ -769,49 +770,7 @@ async function writeToGoogleCalendar(
   }
 }
 
-// ─── Telegram Notification ────────────────────────────────────────────────────
-
-export async function sendTelegramMessage(chatId: string, text: string): Promise<boolean> {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token || !chatId) return false;
-
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
-    });
-    if (res.ok) return true;
-    const fallbackRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text }),
-    });
-    return fallbackRes.ok;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Send a notification as multiple Telegram bubbles, splitting on blank lines so
- * the user gets readable, not-cramped messages.
- */
-async function sendTelegramBubbles(chatId: string, text: string): Promise<boolean> {
-  const trimmed = (text ?? "").trim();
-  if (!trimmed) return false;
-  const chunks = trimmed.split(/\n\s*\n+/).map(s => s.trim()).filter(Boolean);
-  if (chunks.length <= 1 || trimmed.length < 140) {
-    return sendTelegramMessage(chatId, trimmed);
-  }
-  let allOk = true;
-  for (let i = 0; i < chunks.length; i++) {
-    const ok = await sendTelegramMessage(chatId, chunks[i]);
-    if (!ok) allOk = false;
-    if (i < chunks.length - 1) await new Promise(r => setTimeout(r, 350));
-  }
-  return allOk;
-}
+export { sendTelegramMessage };
 
 // ─── Main Monitor Function ────────────────────────────────────────────────────
 

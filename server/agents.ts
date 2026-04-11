@@ -273,64 +273,50 @@ async function startMockInterview(
   return { firstQuestion };
 }
 
-function educationLabel(lang: "ja" | "zh" | "en", edu?: string | null): string {
-  const mapJa: Record<string, string> = {
-    high_school: "高校卒",
-    associate: "短大・専門卒",
-    bachelor: "大学卒（学士）",
-    master: "大学院修士課程",
-    doctor: "大学院博士課程",
-    other: "その他",
-  };
-  const mapZh: Record<string, string> = {
-    high_school: "高中毕业",
-    associate: "专科/短大",
-    bachelor: "本科",
-    master: "硕士研究生",
-    doctor: "博士研究生",
-    other: "其他",
-  };
-  const mapEn: Record<string, string> = {
-    high_school: "High School",
-    associate: "Associate",
-    bachelor: "Bachelor's",
-    master: "Master's",
-    doctor: "Doctorate",
-    other: "Other",
-  };
-  if (!edu) {
-    return lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入";
-  }
-  if (lang === "zh") return mapZh[edu] ?? edu;
-  if (lang === "en") return mapEn[edu] ?? edu;
-  return mapJa[edu] ?? edu;
-}
-
-function buildFixedOpening(
+export function buildFixedOpening(
   user: Awaited<ReturnType<typeof getUserById>>,
-  sessionId: string
+  _sessionId: string
 ) {
   const lang = (user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
   const name =
     user?.name ?? (lang === "zh" ? "同学" : lang === "en" ? "there" : "ユーザーさん");
-  const birthDate =
-    user?.birthDate ??
-    (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
-  const education = educationLabel(lang, user?.education);
-  const university =
-    user?.universityName ??
-    (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
-  const profileId = `user_${sessionId}`;
 
   if (lang === "zh") {
-    return `您好，${name}。我是就活パス。我知道您正处于一个开始迈入社会的特殊阶段，请让我和您一起努力。\n\n您的档案ID是：*${profileId}*、您是*${birthDate}*出生的*${name}*，*${education}*，来自*${university}*，没错吧？\n\n您是新卒，还是有过工作经验呢？`;
+    return (
+      `您好 ${name}，我是就活パス的员工。说实话，我老板放话了——不帮你找到工作，今晚就别想下班，所以接下来这段时间咱俩算是绑一起了。\n` +
+      `我能帮你做这些事：\n` +
+      `- 自动盯着你的邮箱，把说明会 / 笔试 / 面试 / 截止全部抓出来，第一时间提醒你\n` +
+      `- 维护一份动态求职看板，每家公司走到哪一步我都帮你记着\n` +
+      `- 帮你做企业调研、ES 草稿、面试要点整理\n` +
+      `- 把面试 / 截止自动写进你的 Google 日历\n` +
+      `等老板以后给我加工资，可能我还可以打电话帮你模拟面试，帮你投投简历什么的。\n` +
+      `对了——为了让我能下班，先问一句：我应该怎么称呼你比较顺口？`
+    );
   }
 
   if (lang === "en") {
-    return `Hello, ${name}. I am CareerPass. I understand you are at a special stage of stepping into society, and I would like to work hard together with you.\n\nYour profile ID is: *${profileId}*. You were born on *${birthDate}*, your name is *${name}*, your education is *${education}*, and you are from *${university}*, correct?\n\nAre you a new graduate, or do you already have work experience?`;
+    return (
+      `Hi ${name}, I’m an employee at CareerPass. Real talk: my boss said I’m not allowed to clock out until I’ve helped you land a job, so you and I are kind of stuck together for a while.\n` +
+      `Here’s what I can do for you:\n` +
+      `- Watch your inbox and surface every briefing / test / interview / deadline the moment it lands\n` +
+      `- Keep a live job board so we always know where each company stands\n` +
+      `- Run company research, draft ES, and prep interview talking points\n` +
+      `- Auto-write interviews and deadlines into your Google Calendar\n` +
+      `If my boss ever gives me a raise, I might even start calling you up for mock interviews, or sending out applications on your behalf, that kind of thing.\n` +
+      `Quick one so I can eventually go home — what should I call you?`
+    );
   }
 
-  return `こんにちは、${name}さん。私は就活パスです。社会に踏み出す大切な時期だと理解しています。ぜひ一緒に頑張りましょう。\n\nあなたのプロフィールIDは *${profileId}* です。*${birthDate}* 生まれの *${name}* さんで、*${education}*、*${university}* ご出身でお間違いないですか？\n\nあなたは新卒ですか？それとも就業経験がありますか？`;
+  return (
+    `${name}さん、はじめまして。私は就活パスの社員です。正直に言うと、上司から「この子を内定までもっていくまで帰るな」と言われていまして、しばらくの間、私はあなたと運命共同体です。\n` +
+    `私ができること：\n` +
+    `- メールを監視して、説明会・Webテスト・面接・締切を検知したらすぐ通知\n` +
+    `- 動的な就活ボードを更新し、各社の進捗を常に最新に保つ\n` +
+    `- 企業調査・ES下書き・面接対策の論点整理\n` +
+    `- 面接や締切を Google カレンダーへ自動登録\n` +
+    `上司がいつか給料を上げてくれたら、電話で模擬面接の相手をしたり、エントリーを代わりに出したり、そんなこともできるかもしれません。\n` +
+    `さて、私が帰宅できる日のために最初に一つだけ——あなたのことは何とお呼びすればよいですか？`
+  );
 }
 
 export async function handleAgentChat(
@@ -353,7 +339,13 @@ export async function handleAgentChat(
       memoryType: "conversation",
       title: `Chat ${new Date().toISOString()}`,
       content: `User: ${message}\nAssistant: ${opening}`,
-      metadata: { sessionId: sid },
+      metadata: {
+        sessionId: sid,
+        dialogue: [
+          { role: "user", content: message },
+          { role: "assistant", content: opening },
+        ],
+      },
     });
     return { reply: opening, sessionId: sid };
   }
@@ -511,7 +503,7 @@ ${profileContextJa}`;
             `Workflow completed for ${companyName} (${position}).\n` +
               `Report: ${wf.report.slice(0, 240)}...\n` +
               `ES: ${wf.es.slice(0, 240)}...\n` +
-              `Next: Ask user for consent before starting mock interview.`
+              `Next: Keep supporting with recon/ES refinement/interview talking points. Mock interview is currently disabled.`
           );
         }
       } else if (toolCall.function.name === "startMockInterview") {
@@ -546,7 +538,13 @@ ${profileContextJa}`;
       memoryType: "conversation",
       title: `Chat ${new Date().toISOString()}`,
       content: `User: ${message}\nAssistant: ${reply}`,
-      metadata: { sessionId: sid },
+      metadata: {
+        sessionId: sid,
+        dialogue: [
+          { role: "user", content: message },
+          { role: "assistant", content: reply },
+        ],
+      },
     });
     return { reply, sessionId: sid };
   }
@@ -559,7 +557,13 @@ ${profileContextJa}`;
     memoryType: "conversation",
     title: `Chat ${new Date().toISOString()}`,
     content: `User: ${message}\nAssistant: ${reply}`,
-    metadata: { sessionId: sid },
+    metadata: {
+      sessionId: sid,
+      dialogue: [
+        { role: "user", content: message },
+        { role: "assistant", content: reply },
+      ],
+    },
   });
 
   return { reply, sessionId: sid };
