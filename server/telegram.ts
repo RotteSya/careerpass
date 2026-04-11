@@ -449,10 +449,16 @@ async function shouldEnterDeepDiveByLLM(params: {
 function formatJobStatusLabel(lang: "ja" | "zh" | "en", status: string): string {
   const zh: Record<string, string> = {
     researching: "调研中",
+    applied: "エントリー済み",
+    briefing: "说明会",
     es_preparing: "ES准备中",
     es_submitted: "ES已投递",
+    document_screening: "書類選考中",
+    written_test: "筆記試験",
     interview_1: "一面",
     interview_2: "二面",
+    interview_3: "三次面接",
+    interview_4: "四次面接",
     interview_final: "终面",
     offer: "Offer",
     rejected: "拒信",
@@ -460,10 +466,16 @@ function formatJobStatusLabel(lang: "ja" | "zh" | "en", status: string): string 
   };
   const ja: Record<string, string> = {
     researching: "調査中",
+    applied: "エントリー済み",
+    briefing: "説明会",
     es_preparing: "ES作成中",
     es_submitted: "ES提出済み",
+    document_screening: "書類選考中",
+    written_test: "筆記試験",
     interview_1: "一次面接",
     interview_2: "二次面接",
+    interview_3: "三次面接",
+    interview_4: "四次面接",
     interview_final: "最終面接",
     offer: "内定",
     rejected: "不合格",
@@ -471,10 +483,16 @@ function formatJobStatusLabel(lang: "ja" | "zh" | "en", status: string): string 
   };
   const en: Record<string, string> = {
     researching: "Researching",
+    applied: "Entry Submitted",
+    briefing: "Briefing",
     es_preparing: "ES Preparing",
     es_submitted: "ES Submitted",
+    document_screening: "Document Screening",
+    written_test: "Written Test",
     interview_1: "Interview 1",
     interview_2: "Interview 2",
+    interview_3: "Interview 3",
+    interview_4: "Interview 4",
     interview_final: "Final Interview",
     offer: "Offer",
     rejected: "Rejected",
@@ -516,10 +534,10 @@ function computePriorityLabel(params: {
   if (terminal) return params.lang === "en" ? "-" : "—";
 
   const high =
-    ["interview_1", "interview_2", "interview_final"].includes(params.status) ||
+    ["written_test", "interview_1", "interview_2", "interview_3", "interview_4", "interview_final"].includes(params.status) ||
     (daysToNext !== null && daysToNext <= 3);
   const mid =
-    ["es_preparing", "es_submitted"].includes(params.status) ||
+    ["applied", "briefing", "es_preparing", "es_submitted", "document_screening"].includes(params.status) ||
     (daysToNext !== null && daysToNext <= 7);
 
   if (params.lang === "en") return high ? "High" : mid ? "Med" : "Low";

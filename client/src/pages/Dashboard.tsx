@@ -310,7 +310,19 @@ export default function Dashboard() {
   const columns = useMemo(() => {
     const todo = boardCards.filter((c: any) => ["researching"].includes(c.job.status));
     const inProgress = boardCards.filter((c: any) =>
-      ["applied", "es_preparing", "es_submitted", "interview_1", "interview_2", "interview_final"].includes(
+      [
+        "applied",
+        "briefing",
+        "es_preparing",
+        "es_submitted",
+        "document_screening",
+        "written_test",
+        "interview_1",
+        "interview_2",
+        "interview_3",
+        "interview_4",
+        "interview_final",
+      ].includes(
         c.job.status
       )
     );
@@ -1227,15 +1239,19 @@ type BoardCard = {
 
 const JOB_STATUS_OPTIONS = [
   { value: "researching", label: "调研中" },
-  { value: "applied", label: "已投递" },
+  { value: "applied", label: "エントリー済み" },
+  { value: "briefing", label: "说明会" },
   { value: "es_preparing", label: "ES准备中" },
-  { value: "es_submitted", label: "ES已提交" },
+  { value: "document_screening", label: "書類選考中" },
   { value: "interview_1", label: "一面" },
   { value: "interview_2", label: "二面" },
+  { value: "interview_3", label: "三次面接" },
+  { value: "interview_4", label: "四次面接" },
+  { value: "written_test", label: "筆記試験" },
   { value: "interview_final", label: "终面" },
-  { value: "offer", label: "已拿offer" },
+  { value: "offer", label: "内定" },
   { value: "rejected", label: "未通过" },
-  { value: "withdrawn", label: "已撤回" },
+  { value: "withdrawn", label: "辞退" },
 ] as const;
 
 type JobStatusValue = (typeof JOB_STATUS_OPTIONS)[number]["value"];
@@ -1304,15 +1320,20 @@ function BoardColumn(props: {
 function statusLabel(status: string): string {
   const map: Record<string, string> = {
     researching: "调研中",
-    applied: "已投递",
+    applied: "エントリー済み",
+    briefing: "说明会",
     es_preparing: "ES准备中",
     es_submitted: "ES已提交",
+    document_screening: "書類選考中",
+    written_test: "筆記試験",
     interview_1: "一面",
     interview_2: "二面",
+    interview_3: "三次面接",
+    interview_4: "四次面接",
     interview_final: "终面",
-    offer: "已拿到offer",
+    offer: "内定",
     rejected: "未通过",
-    withdrawn: "已撤回",
+    withdrawn: "辞退",
   };
   return map[status] ?? status;
 }

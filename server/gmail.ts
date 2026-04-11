@@ -363,10 +363,16 @@ const typeLabels: Record<EmailEvent["eventType"], string> = {
 
 type JobStatus =
   | "researching"
+  | "applied"
+  | "briefing"
   | "es_preparing"
   | "es_submitted"
+  | "document_screening"
+  | "written_test"
   | "interview_1"
   | "interview_2"
+  | "interview_3"
+  | "interview_4"
   | "interview_final"
   | "offer"
   | "rejected"
@@ -375,23 +381,29 @@ type JobStatus =
 function jobStatusRank(status: JobStatus): number {
   const ranks: Record<JobStatus, number> = {
     researching: 10,
-    es_preparing: 20,
-    es_submitted: 30,
-    interview_1: 40,
-    interview_2: 50,
-    interview_final: 60,
-    offer: 70,
-    rejected: 70,
-    withdrawn: 70,
+    applied: 20,
+    briefing: 30,
+    es_preparing: 40,
+    es_submitted: 45,
+    document_screening: 50,
+    written_test: 55,
+    interview_1: 60,
+    interview_2: 70,
+    interview_3: 75,
+    interview_4: 80,
+    interview_final: 85,
+    offer: 90,
+    rejected: 90,
+    withdrawn: 90,
   };
   return ranks[status] ?? 0;
 }
 
 function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobStatus | null {
   if (eventType === "interview") return "interview_1";
-  if (eventType === "test") return "interview_1";
+  if (eventType === "test") return "written_test";
   if (eventType === "deadline") return "es_preparing";
-  if (eventType === "briefing") return "researching";
+  if (eventType === "briefing") return "briefing";
   return null;
 }
 
@@ -415,18 +427,25 @@ function inferHardOutcomeStatusFromText(text: string): JobStatus | null {
 function inferInterviewStatusFromText(text: string): JobStatus | null {
   const t = text.toLowerCase();
   if (/最終|最終面接|final\s*interview|final\b|last\s*interview/.test(t)) return "interview_final";
+  if (/四次|4次|４次|fourth\s*interview|4th\s*interview|fourth\b|4th\b/.test(t)) return "interview_4";
+  if (/三次|3次|３次|third\s*interview|3rd\s*interview|third\b|3rd\b/.test(t)) return "interview_3";
   if (/二次|2次|２次|second\s*interview|2nd\s*interview|second\b|2nd\b/.test(t)) return "interview_2";
-  if (/三次|3次|３次|third\s*interview|3rd\s*interview|third\b|3rd\b/.test(t)) return "interview_final";
   if (/一次|1次|１次|first\s*interview|1st\s*interview|first\b|1st\b/.test(t)) return "interview_1";
   return null;
 }
 
 function jobStatusLabelZh(status: JobStatus): string {
   if (status === "researching") return "调研/准备";
+  if (status === "applied") return "エントリー済み";
+  if (status === "briefing") return "说明会";
   if (status === "es_preparing") return "ES 准备";
   if (status === "es_submitted") return "已提交 ES";
+  if (status === "document_screening") return "書類選考中";
+  if (status === "written_test") return "筆記試験";
   if (status === "interview_1") return "一面";
   if (status === "interview_2") return "二面";
+  if (status === "interview_3") return "三次面接";
+  if (status === "interview_4") return "四次面接";
   if (status === "interview_final") return "终面";
   if (status === "offer") return "已拿到 offer";
   if (status === "rejected") return "未通过";
@@ -446,10 +465,16 @@ function normalizeCompanyName(name: string | null | undefined): string | null {
 
 function nextStepsZh(status: JobStatus): string[] {
   if (status === "researching") return ["确认投递岗位与截止时间", "准备 ES 的两段核心素材（志望动机/自己PR）"];
+  if (status === "applied") return ["确认网申是否完成并保存凭证", "补齐后续材料清单与截止日期"];
+  if (status === "briefing") return ["确认说明会时间与参加方式", "准备 2 个聚焦岗位的问题"];
   if (status === "es_preparing") return ["把志望动机写成 5 句（公司痛点→你的能力→为什么现在）", "整理 1 个可量化 STAR 案例用于自己PR"];
   if (status === "es_submitted") return ["准备面试用的 30 秒自我介绍", "准备 3 个高价值逆質問"];
+  if (status === "document_screening") return ["确认筛选周期与反馈时间", "先准备常见面试题与案例证据"];
+  if (status === "written_test") return ["确认笔试范围与平台", "做一套时限模拟题并复盘错题"];
   if (status === "interview_1") return ["整理面试题库：动机/强项/失败经历", "把 ES 的每一句都准备可追问的证据"];
   if (status === "interview_2") return ["补齐职业规划与岗位匹配的逻辑链", "准备 1 个“你如何推进项目”的深挖案例"];
+  if (status === "interview_3") return ["补充跨团队协作与抗压案例", "准备对业务理解和价值贡献的回答"];
+  if (status === "interview_4") return ["准备高层关注点：入社动机与长期发展", "确认最后一轮的提问清单和条件确认项"];
   if (status === "interview_final") return ["准备入社动机与价值观对齐", "准备薪资/条件/入社时间的确认问题"];
   if (status === "offer") return ["确认条件（入社时间/勤務地/待遇）", "准备对比与决策标准"];
   if (status === "rejected") return ["复盘 1 个关键失分点并改写答案", "把经验迁移到下一家公司投递"];

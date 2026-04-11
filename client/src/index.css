@@ -141,10 +141,15 @@
 
   .status-researching { background: rgba(0, 0, 0, 0.04); color: #615d59; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-applied { background: rgba(0, 0, 0, 0.06); color: rgba(0, 0, 0, 0.75); border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-briefing { background: rgba(9, 127, 232, 0.1); color: #097fe8; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-es_preparing { background: #f2f9ff; color: #097fe8; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-es_submitted { background: rgba(9, 127, 232, 0.1); color: #0075de; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-document_screening { background: rgba(9, 127, 232, 0.16); color: #097fe8; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-written_test { background: rgba(221, 91, 0, 0.1); color: #b64900; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-interview_1 { background: rgba(221, 91, 0, 0.12); color: #dd5b00; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-interview_2 { background: rgba(221, 91, 0, 0.18); color: #dd5b00; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-interview_3 { background: rgba(221, 91, 0, 0.22); color: #dd5b00; border: 1px solid rgba(0, 0, 0, 0.1); }
+  .status-interview_4 { background: rgba(221, 91, 0, 0.26); color: #dd5b00; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-interview_final { background: rgba(221, 91, 0, 0.25); color: #dd5b00; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-offer { background: rgba(26, 174, 57, 0.15); color: #1aae39; border: 1px solid rgba(0, 0, 0, 0.1); }
   .status-rejected { background: rgba(0, 0, 0, 0.04); color: #a39e98; border: 1px solid rgba(0, 0, 0, 0.1); }
