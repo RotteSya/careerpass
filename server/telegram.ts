@@ -105,7 +105,7 @@ function languageOrDefault(user?: User | null): "ja" | "zh" | "en" {
  */
 function buildMailMonitoringKickoffText(nickname: string, lang: "ja" | "zh" | "en"): string {
   if (lang === "zh") {
-    return `好的 ${nickname}，我已经开始工作了，正在帮你检查邮箱，待会儿要是看到说明会、笔试、面试、截止之类的，会第一时间戳你。`;
+    return `好的 ${nickname}，我开始工作了，正在帮你检查邮箱，待会儿要是看到说明会、笔试、面试、截止之类的，我会第一时间通知你。`;
   }
   if (lang === "en") {
     return `Got it, ${nickname}. I’m already on the clock — going through your inbox right now. The second I spot a briefing, test, interview, or deadline, I’ll ping you.`;
@@ -130,6 +130,28 @@ function extractNicknameFromReply(text: string): string {
   if (!t) return "你";
   if (t.length > 24) t = t.slice(0, 24);
   return t;
+}
+
+const NICKNAME_PROMPT_ZH = "对了——为了让我能下班，先问一句：我应该怎么称呼你比较顺口？";
+
+function splitOpeningForNicknamePrompt(
+  opening: string,
+  lang: "ja" | "zh" | "en"
+): { intro: string; nicknamePrompt: string | null } {
+  if (lang !== "zh") {
+    return { intro: opening.trim(), nicknamePrompt: null };
+  }
+
+  let intro = opening.replace(NICKNAME_PROMPT_ZH, "").trim();
+  if (intro === opening.trim()) {
+    intro = intro
+      .split("\n")
+      .filter((line) => !/怎么称呼你|称呼你比较顺口/.test(line))
+      .join("\n")
+      .trim();
+  }
+  if (!intro) intro = opening.trim();
+  return { intro, nicknamePrompt: NICKNAME_PROMPT_ZH };
 }
 
 function formatEventTypeLabel(lang: "ja" | "zh" | "en", eventType: string): string {
@@ -166,43 +188,90 @@ function formatEventTypeLabel(lang: "ja" | "zh" | "en", eventType: string): stri
 
 function buildScheduleDigestText(
   lang: "ja" | "zh" | "en",
-  events: Array<{ eventType: string; companyName: string | null; eventDate: string | null; eventTime: string | null; location: string | null; todoItems: string[] }>
+  events: Array<{
+    eventType: string;
+    companyName: string | null;
+    eventDate: string | null;
+    eventTime: string | null;
+    location: string | null;
+    todoItems: string[];
+    date?: string | null;
+    mailLink?: string;
+  }>,
+  options?: {
+    onlyRecentDays?: number;
+    maxItems?: number;
+  }
 ): string | null {
+  const now = Date.now();
+  const recentCutoffMs =
+    options?.onlyRecentDays && options.onlyRecentDays > 0
+      ? now - options.onlyRecentDays * 24 * 60 * 60 * 1000
+      : null;
   const schedulable = events
-    .filter((e) => e.eventDate && e.eventType !== "other")
+    .filter((e) => {
+      if (!e.eventDate || e.eventType === "other") return false;
+      if (!recentCutoffMs) return true;
+      const mailTs = e.date ? Date.parse(e.date) : NaN;
+      return Number.isFinite(mailTs) && mailTs >= recentCutoffMs;
+    })
     .slice()
     .sort((a, b) => `${a.eventDate ?? ""} ${a.eventTime ?? ""}`.localeCompare(`${b.eventDate ?? ""} ${b.eventTime ?? ""}`))
-    .slice(0, 6);
+    .slice(0, options?.maxItems ?? 4);
 
   if (schedulable.length === 0) return null;
+  if (lang === "zh") {
+    const lines = schedulable.map((e, idx) => {
+      const dt = `${e.eventDate}${e.eventTime ? ` ${e.eventTime}` : ""} JST`;
+      const company = e.companyName ?? "公司未知";
+      const type = formatEventTypeLabel(lang, e.eventType);
+      const action =
+        e.todoItems?.[0] ??
+        `${dt} 前后把 ${company} 这条 ${type} 相关安排确认并落实`;
+      const link = e.mailLink ? ` [原邮件链接](${e.mailLink})` : "";
+      return `${idx + 1}. ${dt}｜${company}｜${action}${link}`;
+    });
+    return `我把你接下来 14 天要做的事按顺序列好了（JST）：\n${lines.join("\n")}`;
+  }
 
   const header =
-    lang === "zh"
-      ? "我帮你把近期关键安排整理好了（JST）："
-      : lang === "en"
-      ? "Here are your upcoming key items (JST):"
-      : "直近の重要予定を整理しました（JST）：";
-
-  const lines = schedulable.map((e) => {
+    lang === "en"
+      ? "Here are your upcoming action items (JST):"
+      : "直近の対応事項を整理しました（JST）：";
+  const lines = schedulable.map((e, idx) => {
     const dt = `${e.eventDate}${e.eventTime ? ` ${e.eventTime}` : ""} JST`;
-    const company = e.companyName ?? (lang === "zh" ? "公司未知" : lang === "en" ? "Unknown company" : "企業不明");
+    const company = e.companyName ?? (lang === "en" ? "Unknown company" : "企業不明");
     const type = formatEventTypeLabel(lang, e.eventType);
-    const loc = e.location ? ` @ ${e.location}` : "";
-    const todo = e.todoItems?.length ? `；你先做：${e.todoItems.slice(0, 2).join(" / ")}` : "";
-    return `- ${dt} | ${company} | ${type}${loc}${todo}`;
+    const action =
+      e.todoItems?.[0] ??
+      (lang === "en"
+        ? `Confirm and prepare for this ${type.toLowerCase()} step`
+        : `この${type}対応を確認して準備`);
+    const linkLabel = lang === "en" ? "Open mail" : "原メール";
+    const link = e.mailLink ? ` [${linkLabel}](${e.mailLink})` : "";
+    return `${idx + 1}. ${dt} | ${company} | ${action}${link}`;
   });
-
   return `${header}\n${lines.join("\n")}`;
 }
 
 function buildDeepDiveOfferText(lang: "ja" | "zh" | "en"): string {
   if (lang === "zh") {
-    return "这波日程我先帮你兜住了。接下来要不要进入“经历深挖模式”？我会用 STAR 法把你的打工/实习/项目经历扒清楚，生成结构化履历（用于 ES/面试）。回复“开始”或“先不”。";
+    return "从今天开始邮件和日程我帮你看，既然开启了我们的合作，让我先了解一下你的基础情况：\n\n1. 你的目标方向是什么？\n\n• 哪个业界？什么岗位？\n• 也不确定，想先聊聊\n\n2. 你有过什么经历？\n\n• 简单提提就可以\n• 我会看到你的闪光点\n\n简单回复即可，我会根据你的情况调整策略。";
   }
   if (lang === "en") {
-    return "Schedules are under control. Next, do you want to deep-dive your experiences? I’ll use STAR to structure your work/intern/project stories into a resume-ready format. Reply “start” or “not yet”.";
+    return "From today on, I’ll watch your inbox and schedule for you. Now that we’ve started working together, let me quickly understand your basics:\n\n1. What direction are you aiming for?\n\n• Which industry? What role?\n• Not sure yet, want to talk first\n\n2. What experience do you have?\n\n• A simple overview is enough\n• I’ll find your strengths\n\nA short reply is enough. I’ll adjust the strategy based on your situation.";
   }
-  return "日程は一旦こちらで押さえました。次に、経験の深掘り（STAR）に進みますか？アルバイト/インターン/プロジェクト経験をSTARで整理して、ES/面接用の構造化履歴書にします。「開始」か「今はしない」で返信してください。";
+  return "今日からメールと日程は私が見ます。せっかく一緒に進めるので、まずはあなたの基本情報を軽く教えてください。\n\n1. 志望の方向性は？\n\n• どの業界？どの職種？\n• まだ決まっていないので、まず相談したい\n\n2. これまでの経験は？\n\n• ざっくりで大丈夫\n• あなたの強みは私が見つけます\n\n短く返信してくれればOKです。内容に合わせて戦略を調整します。";
+}
+
+function buildNoUpcomingScheduleText(lang: "ja" | "zh" | "en"): string {
+  if (lang === "zh") {
+    return "我看过这一轮了，接下来 14 天暂时没有需要你立刻处理的硬日程。我继续盯着，一有新安排就马上叫你。";
+  }
+  if (lang === "en") {
+    return "I checked this round and don’t see urgent hard deadlines in the next 14 days. I’ll keep watching and ping you right away if anything lands.";
+  }
+  return "このラウンドでは、直近14日で至急対応が必要な予定は見当たりませんでした。引き続き監視し、新着があればすぐ知らせます。";
 }
 
 function buildInterviewDisabledText(lang: "ja" | "zh" | "en"): string {
@@ -277,12 +346,13 @@ function buildCheckmailFailedText(lang: "ja" | "zh" | "en"): string {
 }
 
 function parseConversationMemoryTurns(rawContent: string, metadata: unknown): Array<{ role: "user" | "assistant"; content: string }> {
-  const fromMetadata =
-    metadata &&
-    typeof metadata === "object" &&
-    Array.isArray((metadata as Record<string, unknown>).dialogue)
-      ? (metadata as Record<string, unknown>).dialogue
-      : null;
+  let fromMetadata: unknown[] | null = null;
+  if (metadata && typeof metadata === "object") {
+    const dialogue = (metadata as Record<string, unknown>).dialogue;
+    if (Array.isArray(dialogue)) {
+      fromMetadata = dialogue as unknown[];
+    }
+  }
   if (fromMetadata) {
     const turns = (fromMetadata as unknown[])
       .filter((t): t is { role: "user" | "assistant"; content: string } => {
@@ -684,79 +754,12 @@ telegramRouter.post("/webhook", async (req, res) => {
               },
             });
 
-            // Fire mail monitoring in parallel with the greeting — the user sees
-            // the intro and the scan starts at the same instant.
-            const backgroundScan = (async () => {
-              try {
-                const { needsOAuth, watchOk, result, blockedByBilling } = await startMailMonitoringAndCheckmail({
-                  userId: userId!,
-                  telegramChatId: String(chatId),
-                  mode: "auto",
-                });
-
-                // Re-read session from DB to avoid overwriting fields set while
-                // the background scan was in flight (e.g. awaitingNickname,
-                // preferredNickname set by the nickname-capture handler).
-                const freshSession = await getOrCreateAgentSession(userId!, String(chatId));
-                const freshState = (freshSession?.sessionState as Record<string, unknown> | null) ?? {};
-                await updateAgentSession(userId!, {
-                  sessionState: {
-                    ...freshState,
-                    mailMonitoring: {
-                      enabled: true,
-                      watchOk,
-                      lastCheckAt: new Date().toISOString(),
-                      scanned: result?.scanned ?? 0,
-                      detected: result?.detected ?? 0,
-                      calendarEvents: result?.calendarEvents ?? 0,
-                    },
-                    onboarding: {
-                      stage: needsOAuth ? "needs_oauth" : "experience_offer",
-                      updatedAt: new Date().toISOString(),
-                    },
-                  },
-                });
-
-                if (blockedByBilling) {
-                  await sendTelegramMessage(
-                    chatId,
-                    buildBillingBlockedText(lang)
-                  );
-                  return;
-                }
-
-                if (needsOAuth) {
-                  await sendTelegramMessage(
-                    chatId,
-                    buildOAuthWarningText(lang, false)
-                  );
-                  return;
-                }
-
-                if (result) {
-                  await sendTelegramMessage(chatId, buildScanSummaryText(lang, result));
-                  const digest = buildScheduleDigestText(lang, result.events);
-                  if (digest) await sendTelegramMessage(chatId, digest);
-
-                  await sendTelegramMessage(chatId, buildDeepDiveOfferText(lang));
-
-                  await autoStartWorkflowsIfNeeded({
-                    userId: userId!,
-                    sessionId,
-                    chatId,
-                    lang,
-                    events: result.events,
-                  });
-                }
-              } catch (err) {
-                console.error("[Telegram] /start background mail monitoring failed:", err);
-              }
-            })();
-            void backgroundScan;
-
-            // Now send only the greeting. The kickoff line will be sent after
-            // the user replies with what they want to be called.
-            await sendTelegramBubbles(chatId, greeting);
+            // Keep silent on scanning until user confirms how to be addressed.
+            const opening = splitOpeningForNicknamePrompt(greeting, lang);
+            await sendTelegramMessage(chatId, opening.intro);
+            if (opening.nicknamePrompt) {
+              await sendTelegramMessage(chatId, opening.nicknamePrompt);
+            }
             await saveAgentMemory({
               userId,
               memoryType: "conversation",
@@ -791,7 +794,6 @@ telegramRouter.post("/webhook", async (req, res) => {
       const session = await getOrCreateAgentSession(userId, String(chatId));
       const sessionId = String(session.id);
       const uid = userId;
-      await maybeSendTrialLifecycleNudges(uid, chatId);
 
       // First reply after the opening greeting: capture the nickname the user
       // wants to be called by, save it, then send the kickoff line.
@@ -813,6 +815,61 @@ telegramRouter.post("/webhook", async (req, res) => {
           },
         });
         await sendTelegramBubbles(chatId, buildMailMonitoringKickoffText(nickname, lang));
+
+        // Start the first mailbox scan only after nickname is confirmed.
+        // Suppress per-mail pushes here and send one 14-day action digest instead.
+        void (async () => {
+          try {
+            const { needsOAuth, watchOk, result, blockedByBilling } = await startMailMonitoringAndCheckmail({
+              userId: uid,
+              mode: "auto",
+            });
+
+            const freshSession = await getOrCreateAgentSession(uid, String(chatId));
+            const freshState = (freshSession?.sessionState as Record<string, unknown> | null) ?? {};
+            await updateAgentSession(uid, {
+              sessionState: {
+                ...freshState,
+                mailMonitoring: {
+                  enabled: true,
+                  watchOk,
+                  lastCheckAt: new Date().toISOString(),
+                  scanned: result?.scanned ?? 0,
+                  detected: result?.detected ?? 0,
+                  calendarEvents: result?.calendarEvents ?? 0,
+                },
+                onboarding: {
+                  stage: needsOAuth ? "needs_oauth" : "experience_offer",
+                  updatedAt: new Date().toISOString(),
+                },
+              },
+            });
+
+            if (blockedByBilling) {
+              await sendTelegramMessage(chatId, buildBillingBlockedText(lang));
+              return;
+            }
+            if (needsOAuth) {
+              await sendTelegramMessage(chatId, buildOAuthWarningText(lang, false));
+              return;
+            }
+            if (!result) {
+              await sendTelegramMessage(chatId, buildCheckmailFailedText(lang));
+              return;
+            }
+
+            const digest = buildScheduleDigestText(lang, result.events, {
+              onlyRecentDays: 14,
+              maxItems: 4,
+            });
+            await sendTelegramMessage(chatId, digest ?? buildNoUpcomingScheduleText(lang));
+            await sendTelegramMessage(chatId, buildDeepDiveOfferText(lang));
+          } catch (err) {
+            console.error("[Telegram] nickname-confirmed initial mail scan failed:", err);
+            await sendTelegramMessage(chatId, buildCheckmailFailedText(lang));
+          }
+        })();
+
         await saveAgentMemory({
           userId: uid,
           memoryType: "conversation",
@@ -829,6 +886,8 @@ telegramRouter.post("/webhook", async (req, res) => {
         });
         return res.json({ ok: true });
       }
+
+      await maybeSendTrialLifecycleNudges(uid, chatId);
 
       // Simple routing based on session state or commands
       if (text.startsWith("/board") || text.startsWith("/kanban") || /看板|进度|求职.*板|board|kanban/i.test(text)) {
@@ -898,7 +957,6 @@ telegramRouter.post("/webhook", async (req, res) => {
           try {
             const { needsOAuth, result, access } = await startMailMonitoringAndCheckmail({
               userId: userId!,
-              telegramChatId: String(chatId),
               mode: "manual",
             });
             const upsell = access.autoMonitoringEnabled ? "" : `\n\n${manualScanUpsellLine()}`;
@@ -925,18 +983,9 @@ telegramRouter.post("/webhook", async (req, res) => {
                 onboarding: { stage: "experience_offer", updatedAt: new Date().toISOString() },
               },
             });
-            await sendTelegramMessage(chatId, `${buildScanSummaryText(lang, result)}${upsell}`);
-            const digest = buildScheduleDigestText(lang, result.events);
-            if (digest) await sendTelegramMessage(chatId, digest);
+            const digest = buildScheduleDigestText(lang, result.events, { maxItems: 4 });
+            await sendTelegramMessage(chatId, `${digest ?? buildNoUpcomingScheduleText(lang)}${upsell}`);
             await sendTelegramMessage(chatId, buildDeepDiveOfferText(lang));
-
-            await autoStartWorkflowsIfNeeded({
-              userId: userId!,
-              sessionId,
-              chatId,
-              lang,
-              events: result.events,
-            });
           } catch (err) {
             console.error("[Telegram] /checkmail async monitor failed:", err);
             await sendTelegramMessage(chatId, buildCheckmailFailedText(lang));

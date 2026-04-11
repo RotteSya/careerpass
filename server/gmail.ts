@@ -50,6 +50,7 @@ export interface EmailEvent {
   eventTime: string | null;
   location: string | null;
   todoItems: string[];
+  mailLink?: string;
 }
 
 export interface CalendarEvent {
@@ -1006,6 +1007,7 @@ async function processGmailMessageIds(params: {
       eventTime: time,
       location: decision.location ?? null,
       todoItems: decision.todoItems ?? [],
+      mailLink: `https://mail.google.com/mail/u/0/#inbox/${messageId}`,
     };
 
     detectedEvents.push(emailEvent);

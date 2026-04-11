@@ -3,7 +3,7 @@ import { monitorGmailAndSync, registerGmailPushWatch } from "./gmail";
 
 export async function startMailMonitoringAndCheckmail(params: {
   userId: number;
-  telegramChatId: string;
+  telegramChatId?: string;
   mode?: "auto" | "manual";
 }) {
   const access = await getBillingFeatureAccess(params.userId);
