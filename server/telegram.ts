@@ -19,6 +19,7 @@ import {
   startInterview as runAgentInterview,
   startCompanyWorkflow,
 } from "./agents";
+import { invokeLLM } from "./_core/llm";
 import { startMailMonitoringAndCheckmail } from "./mailMonitoring";
 import { sendTelegramMessage, sendTelegramBubbles } from "./telegramMessaging";
 import {
@@ -389,6 +390,60 @@ function parseConversationMemoryTurns(rawContent: string, metadata: unknown): Ar
 function isDeepDiveOptIn(text: string): boolean {
   const t = text.trim();
   return /^(开始|開始|好|可以|行|要|来|やる|お願いします|はい|ok|okay|yes|yep|sure)\b/i.test(t);
+}
+
+function looksLikeExperienceNarrative(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+
+  // Heuristic 1: long, content-rich message (common when users dump experience details).
+  const longEnough = t.length >= 80;
+  const multiline = t.split(/\n+/).filter(Boolean).length >= 2;
+
+  // Heuristic 2: experience-related vocabulary in zh/ja/en.
+  const expKeywords =
+    /(实习|项目|经历|负责|成果|结果|参加|组织|志愿|兼职|社团|比赛|开发|intern|internship|project|experience|led|built|implemented|impact|成果|経験|プロジェクト|インターン|担当|実績|開発)/i;
+
+  // Heuristic 3: action/result pattern-like clues.
+  const actionHint =
+    /(我负责|我做了|我参与了|最后|结果是|学到了|担当しました|取り組みました|結果|I was responsible|I led|I built|as a result)/i;
+
+  return (longEnough || multiline) && (expKeywords.test(t) || actionHint.test(t));
+}
+
+async function shouldEnterDeepDiveByLLM(params: {
+  text: string;
+  lang: "ja" | "zh" | "en";
+}): Promise<boolean | null> {
+  const content = params.text.trim();
+  if (!content) return null;
+  try {
+    const systemPrompt =
+      "你是对话状态分类器。任务：判断用户这条消息是否表达了“愿意/正在提供经历内容，应该切到经历深挖模式（STAR）”。" +
+      "只输出JSON，不要输出其他内容：{\"enterDeepDive\": boolean, \"confidence\": number, \"reason\": string}";
+    const userPrompt =
+      `语言偏好: ${params.lang}\n` +
+      `用户消息:\n${content}\n\n` +
+      "判定标准：\n" +
+      "- 若用户明确说开始，或已经在描述实习/项目/志愿/工作经历细节，enterDeepDive=true\n" +
+      "- 若用户主要在问日程、提醒、看板、公司进度，enterDeepDive=false";
+
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+    });
+    const raw = response.choices?.[0]?.message?.content;
+    if (typeof raw !== "string") return null;
+    const parsed = JSON.parse(raw) as { enterDeepDive?: unknown; confidence?: unknown };
+    if (typeof parsed.enterDeepDive !== "boolean") return null;
+    if (typeof parsed.confidence === "number" && parsed.confidence < 0.45) return null;
+    return parsed.enterDeepDive;
+  } catch {
+    return null;
+  }
 }
 
 function formatJobStatusLabel(lang: "ja" | "zh" | "en", status: string): string {
@@ -1026,7 +1081,15 @@ telegramRouter.post("/webhook", async (req, res) => {
 
             extraSystemInstruction = base;
 
-            if (onboardingStage === "experience_offer" && isDeepDiveOptIn(text)) {
+            if (onboardingStage === "experience_offer") {
+              const llmDecision = await shouldEnterDeepDiveByLLM({ text, lang: languageOrDefault(await getUserById(userId)) });
+              const shouldDeepDive =
+                llmDecision === true ||
+                isDeepDiveOptIn(text) ||
+                looksLikeExperienceNarrative(text);
+              if (!shouldDeepDive) {
+                // keep schedule-first mode
+              } else {
               await updateAgentSession(userId, {
                 sessionState: {
                   ...sessionState,
@@ -1036,6 +1099,7 @@ telegramRouter.post("/webhook", async (req, res) => {
               extraSystemInstruction =
                 `用户已同意开始经历深挖。请用STAR开始对其经历进行结构化追问：` +
                 `一次只问一个问题，优先从最近/最强的一段经历开始，最多连续追问3轮后收束为结构化要点。`;
+              }
             }
           }
 
