@@ -64,13 +64,6 @@
       "when": 1775742732742,
       "tag": "0008_mute_katie_power",
       "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "5",
-      "when": 1775900000000,
-      "tag": "0009_billing_dual_pricing",
-      "breakpoints": true
     }
   ]
 }

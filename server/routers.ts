@@ -19,7 +19,6 @@ import {
   listJobStatusEvents,
   getAgentMemory,
   deleteUserAccountData,
-  getBillingFeatureAccess,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import crypto from "crypto";
@@ -721,12 +720,9 @@ export const appRouter = router({
       // Get user's Telegram chat ID for notifications
       const binding = await getTelegramBinding(ctx.user.id);
       const telegramChatId = binding?.telegramId ?? undefined;
-      const access = await getBillingFeatureAccess(ctx.user.id);
-      const result = await monitorGmailAndSync(ctx.user.id, telegramChatId, {
-        enableAutoBoardWrite: access.autoBoardWriteEnabled,
-        enableAutoWorkflow: access.autoWorkflowEnabled,
-      });
-      return { ...result, billing: access };
+
+      const result = await monitorGmailAndSync(ctx.user.id, telegramChatId);
+      return result;
     }),
 
     searchMemory: protectedProcedure
