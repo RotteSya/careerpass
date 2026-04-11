@@ -9,15 +9,23 @@ import {
   getTelegramBindingByTelegramId,
   getJobApplications,
   listJobStatusEvents,
+  getBillingFeatureAccess,
 } from "./db";
 import {
   handleAgentChat,
+  buildFixedOpening,
   reconCompany as runAgentRecon,
   generateES as runAgentES,
   startInterview as runAgentInterview,
   startCompanyWorkflow,
 } from "./agents";
 import { startMailMonitoringAndCheckmail } from "./mailMonitoring";
+import { sendTelegramMessage, sendTelegramBubbles } from "./telegramMessaging";
+import {
+  collectTrialNudges,
+  manualScanUpsellLine,
+  markTrialNudgeDelivered,
+} from "./billing";
 import type { User } from "../drizzle/schema";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? "";
@@ -87,84 +95,8 @@ function generateProfileResume(user: User, sessionId: string): string {
 `;
 }
 
-function educationLabelJa(edu?: string | null): string {
-  const map: Record<string, string> = {
-    high_school: "高校卒", associate: "短大・専門卒", bachelor: "大学卒",
-    master: "修士課程", doctor: "博士課程", other: "その他",
-  };
-  return edu ? (map[edu] ?? edu) : "学歴未記入";
-}
-function educationLabelZh(edu?: string | null): string {
-  const map: Record<string, string> = {
-    high_school: "高中毕业", associate: "专科/短大", bachelor: "本科",
-    master: "硕士", doctor: "博士", other: "其他",
-  };
-  return edu ? (map[edu] ?? edu) : "学历未填写";
-}
-function educationLabelEn(edu?: string | null): string {
-  const map: Record<string, string> = {
-    high_school: "High School", associate: "Associate", bachelor: "Bachelor's",
-    master: "Master's", doctor: "Doctorate", other: "Other",
-  };
-  return edu ? (map[edu] ?? edu) : "Education not specified";
-}
-
-function buildTelegramFixedOpening(user: User, sessionId: string): string {
-  const lang = (user.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
-  const profileId = `user_${sessionId}`;
-  const name =
-    user.name ?? (lang === "zh" ? "同学" : lang === "en" ? "there" : "ユーザーさん");
-  const birthDate =
-    user.birthDate ??
-    (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
-  const education =
-    lang === "zh"
-      ? educationLabelZh(user.education)
-      : lang === "en"
-      ? educationLabelEn(user.education)
-      : educationLabelJa(user.education);
-  const university =
-    user.universityName ??
-    (lang === "zh" ? "未填写" : lang === "en" ? "not provided" : "未記入");
-
-  // Note: opening is intentionally a single bubble — no blank lines, so the
-  // bubble splitter keeps it together.
-  if (lang === "zh") {
-    return (
-      `您好 ${name}，我是就活パス的员工。说实话，我老板放话了——不帮你找到工作，今晚就别想下班，所以接下来这段时间咱俩算是绑一起了。\n` +
-      `我能帮你做这些事：\n` +
-      `- 自动盯着你的邮箱，把说明会 / 笔试 / 面试 / 截止全部抓出来，第一时间提醒你\n` +
-      `- 维护一份动态求职看板，每家公司走到哪一步我都帮你记着\n` +
-      `- 帮你做企业调研、ES 草稿、面试要点整理\n` +
-      `- 把面试 / 截止自动写进你的 Google 日历\n` +
-      `等老板以后给我加工资，可能我还可以打电话帮你模拟面试，帮你投投简历什么的。\n` +
-      `对了——为了让我能下班，先问一句：我应该怎么称呼你比较顺口？`
-    );
-  }
-
-  if (lang === "en") {
-    return (
-      `Hi ${name}, I’m an employee at CareerPass. Real talk: my boss said I’m not allowed to clock out until I’ve helped you land a job, so you and I are kind of stuck together for a while.\n` +
-      `Here’s what I can do for you:\n` +
-      `- Watch your inbox and surface every briefing / test / interview / deadline the moment it lands\n` +
-      `- Keep a live job board so we always know where each company stands\n` +
-      `- Run company research, draft ES, and prep interview talking points\n` +
-      `- Auto-write interviews and deadlines into your Google Calendar\n` +
-      `If my boss ever gives me a raise, I might even start calling you up for mock interviews, or sending out applications on your behalf, that kind of thing.\n` +
-      `Quick one so I can eventually go home — what should I call you?`
-    );
-  }
-
-  return (
-    `${name}さん、はじめまして。私は就活パスの社員です。正直に言うと、上司から「この子を内定までもっていくまで帰るな」と言われていまして、しばらくの間、私はあなたと運命共同体です。\n` +
-    `私ができること：\n` +
-    `- メールを監視して、説明会・Webテスト・面接・締切を検知したらすぐ通知\n` +
-    `- 動的な就活ボードを更新し、各社の進捗を常に最新に保つ\n` +
-    `- 企業調査・ES下書き・面接対策の論点整理\n` +
-    `- 面接や締切を Google カレンダーへ自動登録\n` +
-    `上司がいつか給料を上げてくれたら、電話で模擬面接の相手をしたり、エントリーを代わりに出したり、そんなこともできるかもしれません。\n` +
-    `さて、私が帰宅できる日のために最初に一つだけ——あなたのことは何とお呼びすればよいですか？`
-  );
+function languageOrDefault(user?: User | null): "ja" | "zh" | "en" {
+  return (user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
 }
 
 /**
@@ -271,6 +203,117 @@ function buildDeepDiveOfferText(lang: "ja" | "zh" | "en"): string {
     return "Schedules are under control. Next, do you want to deep-dive your experiences? I’ll use STAR to structure your work/intern/project stories into a resume-ready format. Reply “start” or “not yet”.";
   }
   return "日程は一旦こちらで押さえました。次に、経験の深掘り（STAR）に進みますか？アルバイト/インターン/プロジェクト経験をSTARで整理して、ES/面接用の構造化履歴書にします。「開始」か「今はしない」で返信してください。";
+}
+
+function buildInterviewDisabledText(lang: "ja" | "zh" | "en"): string {
+  if (lang === "zh") {
+    return "模拟面试功能暂时停用中，过段时间再开放。\n\n这段时间我可以帮你做企业调研、ES、看板更新或者整理面试要点。";
+  }
+  if (lang === "en") {
+    return "Mock interview is temporarily unavailable.\n\nFor now, I can help with company recon, ES drafting, board updates, or interview talking-point prep.";
+  }
+  return "模擬面接機能は一時停止中です。\n\nその間は、企業調査・ES作成・ボード更新・面接論点整理を手伝えます。";
+}
+
+function buildCheckmailStartedText(lang: "ja" | "zh" | "en"): string {
+  if (lang === "zh") return "正在检查您的邮箱并同步关键事件，请稍候...";
+  if (lang === "en") return "Checking your inbox and syncing key events now. Please wait a moment...";
+  return "メールを確認し、重要イベントを同期しています。少々お待ちください。";
+}
+
+function buildBillingBlockedText(lang: "ja" | "zh" | "en"): string {
+  if (lang === "zh") {
+    return "免费期已结束：自动邮箱监控和自动写入看板已暂停。你仍可手动发送 /checkmail 触发一次扫描。";
+  }
+  if (lang === "en") {
+    return "Your free trial has ended: auto inbox monitoring and auto board write are paused. You can still run /checkmail manually anytime.";
+  }
+  return "無料期間が終了したため、自動メール監視と自動ボード更新は停止中です。/checkmail で手動スキャンは引き続き実行できます。";
+}
+
+function buildOAuthWarningText(lang: "ja" | "zh" | "en", isManual: boolean): string {
+  if (lang === "zh") {
+    return isManual
+      ? `⚠️ 还没连接 Google 邮箱/日历。\n请先在网页 Dashboard 完成 Google 授权后再试。\n\n${APP_DOMAIN}`
+      : `⚠️ 还没连接 Google 邮箱/日历。\n请先在网页 Dashboard 完成 Google 授权后，我才能自动监控新邮件。\n\n${APP_DOMAIN}`;
+  }
+  if (lang === "en") {
+    return isManual
+      ? `⚠️ Google Gmail/Calendar is not connected yet.\nPlease complete Google OAuth in the web Dashboard, then try again.\n\n${APP_DOMAIN}`
+      : `⚠️ Google Gmail/Calendar is not connected yet.\nPlease complete Google OAuth in the web Dashboard so I can auto-monitor new emails.\n\n${APP_DOMAIN}`;
+  }
+  return isManual
+    ? `⚠️ Google メール/カレンダーが未連携です。\n先に Web Dashboard で Google 認証を完了してから再実行してください。\n\n${APP_DOMAIN}`
+    : `⚠️ Google メール/カレンダーが未連携です。\nWeb Dashboard で Google 認証を完了すると、新着メールの自動監視が有効になります。\n\n${APP_DOMAIN}`;
+}
+
+function buildScanSummaryText(
+  lang: "ja" | "zh" | "en",
+  result: { scanned: number; detected: number; calendarEvents: number }
+): string {
+  if (result.detected > 0) {
+    if (lang === "zh") {
+      return `我把邮箱过了一遍：看了 ${result.scanned} 封邮件，抓到 ${result.detected} 条求职相关信息，已写入 ${result.calendarEvents} 条日历。`;
+    }
+    if (lang === "en") {
+      return `Inbox scan complete: checked ${result.scanned} emails, detected ${result.detected} job-related items, and wrote ${result.calendarEvents} calendar events.`;
+    }
+    return `メールを確認しました：${result.scanned}件を確認し、${result.detected}件の就活関連情報を検知、${result.calendarEvents}件をカレンダーへ登録しました。`;
+  }
+
+  if (lang === "zh") {
+    return `我看了 ${result.scanned} 封邮件，这一轮没有发现需要你马上处理的求职事件。`;
+  }
+  if (lang === "en") {
+    return `I checked ${result.scanned} emails and found no urgent job-related events in this pass.`;
+  }
+  return `${result.scanned}件のメールを確認しましたが、今回すぐ対応が必要な就活イベントは見つかりませんでした。`;
+}
+
+function buildCheckmailFailedText(lang: "ja" | "zh" | "en"): string {
+  if (lang === "zh") return "⚠️ 邮箱检查失败，请稍后重试。";
+  if (lang === "en") return "⚠️ Inbox check failed. Please try again shortly.";
+  return "⚠️ メール確認に失敗しました。しばらくしてから再試行してください。";
+}
+
+function parseConversationMemoryTurns(rawContent: string, metadata: unknown): Array<{ role: "user" | "assistant"; content: string }> {
+  const fromMetadata =
+    metadata &&
+    typeof metadata === "object" &&
+    Array.isArray((metadata as Record<string, unknown>).dialogue)
+      ? (metadata as Record<string, unknown>).dialogue
+      : null;
+  if (fromMetadata) {
+    const turns = fromMetadata
+      .filter((t): t is { role: "user" | "assistant"; content: string } => {
+        return (
+          !!t &&
+          typeof t === "object" &&
+          ((t as any).role === "user" || (t as any).role === "assistant") &&
+          typeof (t as any).content === "string"
+        );
+      });
+    if (turns.length > 0) return turns;
+  }
+
+  const trimmed = (rawContent ?? "").trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed) as { dialogue?: Array<{ role: "user" | "assistant"; content: string }> };
+      if (Array.isArray(parsed.dialogue)) {
+        return parsed.dialogue.filter((t) => (t.role === "user" || t.role === "assistant") && typeof t.content === "string");
+      }
+    } catch {
+      // ignore JSON parsing errors and fallback to legacy parser
+    }
+  }
+
+  const match = trimmed.match(/^User:\s*([\s\S]*?)\nAssistant:\s*([\s\S]*)$/);
+  if (!match) return [];
+  return [
+    { role: "user", content: match[1] ?? "" },
+    { role: "assistant", content: match[2] ?? "" },
+  ];
 }
 
 function isDeepDiveOptIn(text: string): boolean {
@@ -431,10 +474,14 @@ function normalizeCompanyKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
-function uniqueCompanyNamesFromEvents(events: Array<{ companyName: string | null }>): string[] {
+function uniqueCompanyNamesFromEvents(
+  events: Array<{ companyName: string | null; eventType?: string | null }>
+): string[] {
   const seen = new Set<string>();
   const names: string[] = [];
   for (const e of events) {
+    // Rejected/withdrawn companies should not trigger recon/ES auto workflow.
+    if (e.eventType === "rejection") continue;
     const raw = e.companyName?.trim();
     if (!raw) continue;
     const key = normalizeCompanyKey(raw);
@@ -461,7 +508,7 @@ async function autoStartWorkflowsIfNeeded(params: {
   sessionId: string;
   chatId: string | number;
   lang: "ja" | "zh" | "en";
-  events: Array<{ companyName: string | null }>;
+  events: Array<{ companyName: string | null; eventType?: string | null }>;
 }) {
   const companyNames = uniqueCompanyNamesFromEvents(params.events).slice(0, 3);
   if (companyNames.length === 0) return;
@@ -509,101 +556,14 @@ async function autoStartWorkflowsIfNeeded(params: {
   }
 }
 
-// Send a message via Telegram Bot API
-export async function sendTelegramMessage(chatId: string | number, text: string, parseMode = "Markdown") {
-  if (!TELEGRAM_API) {
-    console.error("[Telegram] sendMessage skipped: TELEGRAM_BOT_TOKEN is not configured.");
-    return false;
-  }
-
-  try {
-    const payload = {
-      chat_id: chatId,
-      text: text.length > 4096 ? text.slice(0, 4096) : text,
-      parse_mode: parseMode,
-    };
-
-    const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) return true;
-
-    const errText = await res.text();
-    console.error("[Telegram] sendMessage failed:", {
-      status: res.status,
-      body: errText,
-      parseMode,
-    });
-
-    // Fallback: retry without parse_mode so markdown parse errors do not block all replies.
-    if (parseMode) {
-      const fallbackRes = await fetch(`${TELEGRAM_API}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: payload.text,
-        }),
-      });
-      if (fallbackRes.ok) return true;
-      const fallbackErrText = await fallbackRes.text();
-      console.error("[Telegram] sendMessage fallback failed:", {
-        status: fallbackRes.status,
-        body: fallbackErrText,
-      });
-    }
-
-    return false;
-  } catch (err) {
-    console.error("[Telegram] Failed to send message:", err);
-    return false;
-  }
-}
-
-/**
- * Send a long reply as multiple Telegram messages ("bubbles") instead of one
- * dense block. Splits on blank lines so each paragraph becomes its own bubble.
- * Falls back to a single message if the text has no blank-line separators.
- */
-export async function sendTelegramBubbles(
-  chatId: string | number,
-  text: string,
-  parseMode = "Markdown"
-): Promise<boolean> {
-  const trimmed = (text ?? "").trim();
-  if (!trimmed) return false;
-
-  // Split on one or more blank lines.
-  const rawChunks = trimmed.split(/\n\s*\n+/).map(s => s.trim()).filter(Boolean);
-
-  // If the message is short, keep it as one bubble.
-  if (rawChunks.length <= 1 || trimmed.length < 140) {
-    return sendTelegramMessage(chatId, trimmed, parseMode);
-  }
-
-  // Telegram has a 4096 char limit per message; further split any oversized chunk.
-  const chunks: string[] = [];
-  for (const chunk of rawChunks) {
-    if (chunk.length <= 3500) {
-      chunks.push(chunk);
-    } else {
-      for (let i = 0; i < chunk.length; i += 3500) {
-        chunks.push(chunk.slice(i, i + 3500));
-      }
+async function maybeSendTrialLifecycleNudges(userId: number, chatId: string | number) {
+  const nudges = await collectTrialNudges(userId);
+  for (const n of nudges) {
+    const ok = await sendTelegramMessage(chatId, n.text);
+    if (ok) {
+      await markTrialNudgeDelivered(userId, n.kind);
     }
   }
-
-  let allOk = true;
-  for (let i = 0; i < chunks.length; i++) {
-    const ok = await sendTelegramMessage(chatId, chunks[i], parseMode);
-    if (!ok) allOk = false;
-    // Small gap so Telegram preserves order and the user perceives separate bubbles.
-    if (i < chunks.length - 1) await new Promise(r => setTimeout(r, 350));
-  }
-  return allOk;
 }
 
 // Webhook endpoint: POST /api/telegram/webhook
@@ -660,13 +620,21 @@ telegramRouter.post("/webhook", async (req, res) => {
           // Don't re-run the full welcome flow — just acknowledge and stop.
           if (user && binding?.userId === userId && binding?.isActive) {
             const lang = (user.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
+            const access = await getBillingFeatureAccess(userId);
             const welcomeBack =
               lang === "zh"
-                ? `欢迎回来，${user.name ?? "你"}。我还在岗，邮箱也一直帮你盯着。直接告诉我下一步要干什么就行。`
+                ? access.autoMonitoringEnabled
+                  ? `欢迎回来，${user.name ?? "你"}。我还在岗，邮箱也一直帮你盯着。直接告诉我下一步要干什么就行。`
+                  : `欢迎回来，${user.name ?? "你"}。历史数据都在；自动盯邮箱已暂停，你仍可随时手动发 /checkmail。`
                 : lang === "en"
-                ? `Welcome back, ${user.name ?? "you"}. Still on the clock, still watching your inbox. Just tell me what you want to tackle next.`
-                : `おかえりなさい、${user.name ?? "あなた"}さん。まだ勤務中で、メールもずっと見ています。次にやりたいことを教えてください。`;
+                ? access.autoMonitoringEnabled
+                  ? `Welcome back, ${user.name ?? "you"}. Still on the clock, still watching your inbox. Just tell me what you want to tackle next.`
+                  : `Welcome back, ${user.name ?? "you"}. Your history is safe; auto inbox watch is paused, and you can still run /checkmail manually.`
+                : access.autoMonitoringEnabled
+                ? `おかえりなさい、${user.name ?? "あなた"}さん。まだ勤務中で、メールもずっと見ています。次にやりたいことを教えてください。`
+                : `おかえりなさい、${user.name ?? "あなた"}さん。履歴データはそのままです。自動メール監視は停止中ですが、/checkmail で手動確認できます。`;
             await sendTelegramBubbles(chatId, welcomeBack);
+            await maybeSendTrialLifecycleNudges(userId, chatId);
             res.json({ ok: true });
             return;
           }
@@ -698,7 +666,8 @@ telegramRouter.post("/webhook", async (req, res) => {
               console.log(`[Telegram] Auto-generated USER.md for user ${userId}`);
             }
 
-            const greeting = buildTelegramFixedOpening(user, sessionId);
+            const greeting = buildFixedOpening(user, sessionId);
+            const lang = languageOrDefault(user);
             const initialSessionState = (session?.sessionState as Record<string, unknown> | null) ?? {};
             await updateAgentSession(userId!, {
               sessionState: {
@@ -719,9 +688,10 @@ telegramRouter.post("/webhook", async (req, res) => {
             // the intro and the scan starts at the same instant.
             const backgroundScan = (async () => {
               try {
-                const { needsOAuth, watchOk, result } = await startMailMonitoringAndCheckmail({
+                const { needsOAuth, watchOk, result, blockedByBilling } = await startMailMonitoringAndCheckmail({
                   userId: userId!,
                   telegramChatId: String(chatId),
+                  mode: "auto",
                 });
 
                 // Re-read session from DB to avoid overwriting fields set while
@@ -747,28 +717,24 @@ telegramRouter.post("/webhook", async (req, res) => {
                   },
                 });
 
+                if (blockedByBilling) {
+                  await sendTelegramMessage(
+                    chatId,
+                    buildBillingBlockedText(lang)
+                  );
+                  return;
+                }
+
                 if (needsOAuth) {
                   await sendTelegramMessage(
                     chatId,
-                    `⚠️ 还没连接 Google 邮箱/日历。\n请先在网页 Dashboard 完成 Google 授权后，我才能自动监控新邮件。\n\n${APP_DOMAIN}`
+                    buildOAuthWarningText(lang, false)
                   );
                   return;
                 }
 
                 if (result) {
-                  if (result.detected > 0) {
-                    await sendTelegramMessage(
-                      chatId,
-                      `我把邮箱过了一遍：看了 ${result.scanned} 封邮件，抓到 ${result.detected} 条求职相关信息，已写入 ${result.calendarEvents} 条日历。`
-                    );
-                  } else {
-                    await sendTelegramMessage(
-                      chatId,
-                      `我看了 ${result.scanned} 封邮件，这一轮没有发现需要你马上处理的求职事件。`
-                    );
-                  }
-
-                  const lang = (user.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
+                  await sendTelegramMessage(chatId, buildScanSummaryText(lang, result));
                   const digest = buildScheduleDigestText(lang, result.events);
                   if (digest) await sendTelegramMessage(chatId, digest);
 
@@ -796,7 +762,13 @@ telegramRouter.post("/webhook", async (req, res) => {
               memoryType: "conversation",
               title: `Chat ${new Date().toISOString()}`,
               content: `User: /start user_${userId}\nAssistant: ${greeting}`,
-              metadata: { sessionId },
+              metadata: {
+                sessionId,
+                dialogue: [
+                  { role: "user", content: `/start user_${userId}` },
+                  { role: "assistant", content: greeting },
+                ],
+              },
             });
           } else {
             await sendTelegramMessage(
@@ -819,6 +791,7 @@ telegramRouter.post("/webhook", async (req, res) => {
       const session = await getOrCreateAgentSession(userId, String(chatId));
       const sessionId = String(session.id);
       const uid = userId;
+      await maybeSendTrialLifecycleNudges(uid, chatId);
 
       // First reply after the opening greeting: capture the nickname the user
       // wants to be called by, save it, then send the kickoff line.
@@ -845,7 +818,14 @@ telegramRouter.post("/webhook", async (req, res) => {
           memoryType: "conversation",
           title: `Chat ${new Date().toISOString()}`,
           content: `User: ${text}\nAssistant: ${buildMailMonitoringKickoffText(nickname, lang)}`,
-          metadata: { sessionId, source: "nickname_capture" },
+          metadata: {
+            sessionId,
+            source: "nickname_capture",
+            dialogue: [
+              { role: "user", content: text },
+              { role: "assistant", content: buildMailMonitoringKickoffText(nickname, lang) },
+            ],
+          },
         });
         return res.json({ ok: true });
       }
@@ -897,9 +877,11 @@ telegramRouter.post("/webhook", async (req, res) => {
         }
       } else if (text.startsWith("/interview")) {
         // 模擬面接モジュールは一時的に停止中。
+        const user = await getUserById(uid);
+        const lang = languageOrDefault(user);
         await sendTelegramMessage(
           chatId,
-          "模拟面试功能暂时停用中，过段时间再开放。\n\n这段时间我可以帮你做企业调研、ES、看板更新或者整理面试要点。"
+          buildInterviewDisabledText(lang)
         );
       } else if (text === "/stop") {
         await updateAgentSession(uid, { interviewMode: false, currentAgent: "careerpass" });
@@ -908,18 +890,22 @@ telegramRouter.post("/webhook", async (req, res) => {
         text.startsWith("/checkmail") ||
         /检查.*邮箱|查看.*邮箱|check.*mail|check.*inbox/i.test(text)
       ) {
-        await sendTelegramMessage(chatId, "正在检查您的邮箱并同步关键事件，请稍候...");
+        const user = await getUserById(uid);
+        const lang = languageOrDefault(user);
+        await sendTelegramMessage(chatId, buildCheckmailStartedText(lang));
         // Run asynchronously and return webhook response quickly.
         void (async () => {
           try {
-            const { needsOAuth, result } = await startMailMonitoringAndCheckmail({
+            const { needsOAuth, result, access } = await startMailMonitoringAndCheckmail({
               userId: userId!,
               telegramChatId: String(chatId),
+              mode: "manual",
             });
+            const upsell = access.autoMonitoringEnabled ? "" : `\n\n${manualScanUpsellLine()}`;
             if (needsOAuth) {
               await sendTelegramMessage(
                 chatId,
-                `⚠️ 还没连接 Google 邮箱/日历。\n请先在网页 Dashboard 完成 Google 授权后再试。\n\n${APP_DOMAIN}`
+                `${buildOAuthWarningText(lang, true)}${upsell}`
               );
               await updateAgentSession(userId!, {
                 sessionState: {
@@ -930,7 +916,7 @@ telegramRouter.post("/webhook", async (req, res) => {
               return;
             }
             if (!result) {
-              await sendTelegramMessage(chatId, "⚠️ 邮箱检查失败，请稍后重试。");
+              await sendTelegramMessage(chatId, `${buildCheckmailFailedText(lang)}${upsell}`);
               return;
             }
             await updateAgentSession(userId!, {
@@ -939,20 +925,7 @@ telegramRouter.post("/webhook", async (req, res) => {
                 onboarding: { stage: "experience_offer", updatedAt: new Date().toISOString() },
               },
             });
-            if (result.detected > 0) {
-              await sendTelegramMessage(
-                chatId,
-                `我刚帮你查完邮箱：看了 ${result.scanned} 封，识别到 ${result.detected} 条有效事件，已同步 ${result.calendarEvents} 条到日历。`
-              );
-            } else {
-              await sendTelegramMessage(
-                chatId,
-                `这次我查了 ${result.scanned} 封邮件，暂时没有发现需要你立即处理的求职事件。`
-              );
-            }
-
-            const user = await getUserById(userId!);
-            const lang = ((user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en");
+            await sendTelegramMessage(chatId, `${buildScanSummaryText(lang, result)}${upsell}`);
             const digest = buildScheduleDigestText(lang, result.events);
             if (digest) await sendTelegramMessage(chatId, digest);
             await sendTelegramMessage(chatId, buildDeepDiveOfferText(lang));
@@ -966,23 +939,30 @@ telegramRouter.post("/webhook", async (req, res) => {
             });
           } catch (err) {
             console.error("[Telegram] /checkmail async monitor failed:", err);
-            await sendTelegramMessage(chatId, "⚠️ 邮箱检查失败，请稍后重试。");
+            await sendTelegramMessage(chatId, buildCheckmailFailedText(lang));
           }
         })();
       } else {
         // Natural Language Processing via Orchestrator
         const memories = await getAgentMemory(userId, "conversation");
-        const history = memories.slice(0, 5).reverse().map(m => {
-          const parts = m.content.split("\nAssistant: ");
-          return [
-            { role: "user", content: parts[0].replace("User: ", "") },
-            { role: "assistant", content: parts[1] ?? "" }
-          ];
-        }).flat();
+        const history = memories
+          .slice(0, 5)
+          .reverse()
+          .flatMap((m) => parseConversationMemoryTurns(m.content, m.metadata));
 
         if (session.interviewMode) {
           // Continue interview
-          const question = await runAgentInterview(userId, "企業名不明", "総合職", history, text);
+          const sessionState = (session.sessionState as Record<string, unknown> | null) ?? {};
+          const workflow = (sessionState.workflow as Record<string, unknown> | null) ?? {};
+          const companyName =
+            typeof workflow.companyName === "string" && workflow.companyName.trim()
+              ? workflow.companyName
+              : "企業名不明";
+          const position =
+            typeof workflow.position === "string" && workflow.position.trim()
+              ? workflow.position
+              : "総合職";
+          const question = await runAgentInterview(userId, companyName, position, history, text);
           await sendTelegramMessage(chatId, question);
         } else {
           // Regular Chat
