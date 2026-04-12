@@ -199,20 +199,49 @@ export async function ensureGoogleProviderAccountMapping(
   return true;
 }
 
-async function fetchRecentEmails(
-  accessToken: string,
-  maxResults = 20
-): Promise<Array<{ id: string; snippet: string }>> {
+async function fetchInboxMessageIds(params: {
+  accessToken: string;
+  fullMailbox: boolean;
+  maxResults: number | null;
+}): Promise<string[]> {
+  const { accessToken, fullMailbox, maxResults } = params;
   try {
+    const messageIds: string[] = [];
+    let pageToken: string | undefined;
+    const recentCap = maxResults ?? 50;
+    const pageSize = fullMailbox ? 500 : Math.min(Math.max(recentCap, 1), 100);
+
     // Broad pull (without hard keyword gate). Actual job-related decision is delegated to monitor agent.
-    const query = encodeURIComponent("newer_than:5d -category:social -category:promotions");
-    const res = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${query}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    if (!res.ok) return [];
-    const data = (await res.json()) as { messages?: Array<{ id: string; snippet: string }> };
-    return data.messages ?? [];
+    // First full scan removes time window so we can reconstruct the board from the entire inbox.
+    const q = fullMailbox
+      ? "-category:social -category:promotions"
+      : "newer_than:5d -category:social -category:promotions";
+
+    while (maxResults === null || messageIds.length < maxResults) {
+      const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+      url.searchParams.set("maxResults", String(pageSize));
+      url.searchParams.set("q", q);
+      if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) return messageIds;
+
+      const data = (await res.json()) as {
+        messages?: Array<{ id: string }>;
+        nextPageToken?: string;
+      };
+      for (const m of data.messages ?? []) {
+        if (!m.id) continue;
+        messageIds.push(m.id);
+        if (maxResults !== null && messageIds.length >= maxResults) break;
+      }
+      if (!data.nextPageToken || !fullMailbox) break;
+      pageToken = data.nextPageToken;
+    }
+
+    return messageIds;
   } catch {
     return [];
   }
@@ -1244,6 +1273,7 @@ export async function monitorGmailAndSync(
     notifyWindowDays?: number;
     enableAutoBoardWrite?: boolean;
     enableAutoWorkflow?: boolean;
+    fullMailboxScan?: boolean;
   }
 ): Promise<MonitorResult> {
   const accessToken = await getValidAccessToken(userId);
@@ -1251,9 +1281,15 @@ export async function monitorGmailAndSync(
     return { scanned: 0, detected: 0, calendarEvents: 0, events: [] };
   }
 
-  const messages = await fetchRecentEmails(accessToken, 20);
-  const ids = messages.slice(0, 10).map((m) => m.id);
-  return processGmailMessageIds({
+  const state = await getGoogleAccountSyncState(userId);
+  const fullMailboxScan = options?.fullMailboxScan ?? !state?.lastHistoryId;
+  const ids = await fetchInboxMessageIds({
+    accessToken,
+    fullMailbox: fullMailboxScan,
+    maxResults: fullMailboxScan ? null : 50,
+  });
+
+  const result = await processGmailMessageIds({
     userId,
     telegramChatId,
     accessToken,
@@ -1262,6 +1298,17 @@ export async function monitorGmailAndSync(
     enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
     enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
   });
+
+  // When first initialized via /checkmail or fallback scan, persist the current
+  // history checkpoint so later push events can switch to incremental mode.
+  if (fullMailboxScan && !state?.lastHistoryId) {
+    const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
+    if (profileHistoryId) {
+      await updateGoogleLastHistoryIdIfNewer(userId, profileHistoryId);
+    }
+  }
+
+  return result;
 }
 
 export async function syncGmailIncremental(
@@ -1288,6 +1335,7 @@ export async function syncGmailIncremental(
       notifyWindowDays: 14,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
       enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
+      fullMailboxScan: true,
     });
     const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
     if (profileHistoryId) {
@@ -1306,6 +1354,7 @@ export async function syncGmailIncremental(
       notifyWindowDays: 14,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
       enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
+      fullMailboxScan: true,
     });
     const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
     if (profileHistoryId) {
