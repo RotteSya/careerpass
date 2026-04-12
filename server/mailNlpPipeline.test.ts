@@ -59,4 +59,45 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.eventDate).toBe("2026-04-20");
     expect(d.eventTime).toBe("13:00");
   });
+
+  it("extracts company from hiring display name and normalizes it", () => {
+    const d = runRecruitingNlpPipeline(
+      {
+        subject: "面接日程のご案内",
+        body: "日程調整フォームをご確認ください。",
+        from: "株式会社サンプル 採用担当 <recruit@sample.co.jp>",
+        domainSignal: 0.95,
+        fallbackDate: null,
+        fallbackTime: null,
+      },
+      {
+        isJobRelated: true,
+        confidence: 0.8,
+        reason: "llm",
+        eventType: "interview",
+        companyName: null,
+      }
+    );
+    expect(d.companyName).toBe("株式会社サンプル");
+  });
+
+  it("uses stronger test rule for online assessment mails", () => {
+    const d = runRecruitingNlpPipeline(
+      {
+        subject: "Online Assessmentのご案内",
+        body: "受検期限までに coding test を完了してください。",
+        from: "noreply@careers.example.co.jp",
+        domainSignal: 0.9,
+        fallbackDate: null,
+        fallbackTime: null,
+      },
+      {
+        isJobRelated: true,
+        confidence: 0.6,
+        reason: "llm",
+        eventType: "other",
+      }
+    );
+    expect(d.eventType).toBe("test");
+  });
 });

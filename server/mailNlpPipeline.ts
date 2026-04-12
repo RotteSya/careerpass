@@ -41,6 +41,56 @@ export interface RecruitingNlpDecision extends MailDecisionLike {
 
 const JOB_PLATFORM_HINTS = /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind)/i;
 const PROCESS_HINTS = /(選考|面接|面談|説明会|webテスト|spi|適性検査|筆記試験|締切|提出期限|エントリー|応募|内定|不採用|お見送り|合否)/i;
+const NON_COMPANY_NAME_HINTS =
+  /(noreply|no-reply|support|info|notification|採用担当|人事部|運営事務局|マイページ|事務局|team|system)/i;
+
+const EVENT_RULES: Array<{ eventType: MailEventType; confidence: number; reason: string; pattern: RegExp }> = [
+  {
+    eventType: "rejection",
+    confidence: 0.97,
+    reason: "rule:rejection",
+    pattern:
+      /(不採用|見送り|お見送り|不合格|不通過|残念ながら|ご期待に添え|rejected|not selected|we regret|selection result.*unsuccessful)/i,
+  },
+  {
+    eventType: "offer",
+    confidence: 0.97,
+    reason: "rule:offer",
+    pattern: /(内定|内々定|offer|採用決定|採用通知|内定通知|job offer)/i,
+  },
+  {
+    eventType: "interview",
+    confidence: 0.92,
+    reason: "rule:interview",
+    pattern: /(面接|面談|interview|一次面接|二次面接|三次面接|最終面接|グループ面接|個別面接|面接日程)/i,
+  },
+  {
+    eventType: "test",
+    confidence: 0.9,
+    reason: "rule:test",
+    pattern: /(webテスト|spi|適性検査|筆記試験|テスト受検|受検案内|coding test|online assessment|assessment)/i,
+  },
+  {
+    eventType: "deadline",
+    confidence: 0.9,
+    reason: "rule:deadline",
+    pattern:
+      /(締切|提出期限|deadline|提出期日|エントリーシート提出|es提出|回答期限|期限までに|応募締切|予約締切)/i,
+  },
+  {
+    eventType: "briefing",
+    confidence: 0.86,
+    reason: "rule:briefing",
+    pattern: /(説明会|セミナー|会社説明|briefing|会社紹介|オープンカンパニー|web説明会|オンライン説明会)/i,
+  },
+  {
+    eventType: "entry",
+    confidence: 0.82,
+    reason: "rule:entry",
+    pattern:
+      /(エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます)/i,
+  },
+];
 
 function normalizeEventType(v: string | null | undefined): MailEventType {
   if (v === "interview" || v === "briefing" || v === "test" || v === "deadline" || v === "entry" || v === "offer" || v === "rejection" || v === "other") {
@@ -54,19 +104,32 @@ function normalizeCompanyName(name: string | null | undefined): string | null {
   if (!raw) return null;
   const cleaned = raw
     .replace(/^(【|「|\[|\()(.+?)(】|」|\]|\))$/, "$2")
-    .replace(/(採用|採用担当|人事部|HR|Recruiting)$/i, "")
+    .replace(/^[\s\-:：|｜]+|[\s\-:：|｜]+$/g, "")
+    .replace(/(株式会社|（株）|\(株\))/g, "株式会社")
+    .replace(/(採用|採用担当|採用事務局|人事部|人事|HR|Recruiting|recruit)$/i, "")
     .trim();
   if (cleaned.length < 2) return null;
   if (JOB_PLATFORM_HINTS.test(cleaned)) return null;
+  if (NON_COMPANY_NAME_HINTS.test(cleaned)) return null;
   return cleaned;
 }
 
 function extractCompanyCandidate(input: RecruitingNlpInput): string | null {
   const subject = input.subject;
   const from = input.from;
+  const displayName = from.split("<")[0]?.trim() ?? "";
 
   const legalName = subject.match(/((?:株式会社|合同会社)\s*[^\s【】\[\]<>]{1,40})/);
   if (legalName?.[1]) return normalizeCompanyName(legalName[1]);
+
+  const fromLegalName = `${displayName}\n${subject}`.match(/((?:株式会社|合同会社)\s*[^\n【】\[\]<>]{1,40})/);
+  if (fromLegalName?.[1]) return normalizeCompanyName(fromLegalName[1]);
+
+  const fromBrackets = displayName.match(/(?:【|\[|「)?([^】\]」]{2,30})(?:】|\]|」)?\s*(?:採用|採用担当|人事|HR)/i);
+  if (fromBrackets?.[1]) return normalizeCompanyName(fromBrackets[1]);
+
+  const subjectCompanyLead = subject.match(/^(?:\[|【)?([^】\]\s]{2,24})(?:\]|】)?\s*(?:採用|選考|面接|説明会|エントリー)/);
+  if (subjectCompanyLead?.[1]) return normalizeCompanyName(subjectCompanyLead[1]);
 
   const bracket = subject.match(/【([^】]{2,30})】/);
   if (bracket?.[1]) return normalizeCompanyName(bracket[1]);
@@ -82,26 +145,10 @@ function extractCompanyCandidate(input: RecruitingNlpInput): string | null {
 }
 
 function inferRuleEventType(text: string): { eventType: MailEventType; confidence: number; reason: string } {
-  if (/(不採用|見送り|お見送り|不合格|不通過|rejected|not selected|we regret|残念ながら)/i.test(text)) {
-    return { eventType: "rejection", confidence: 0.95, reason: "rule:rejection" };
-  }
-  if (/(内定|offer|採用決定|内々定)/i.test(text)) {
-    return { eventType: "offer", confidence: 0.95, reason: "rule:offer" };
-  }
-  if (/(面接|面談|interview|一次面接|二次面接|最終面接)/i.test(text)) {
-    return { eventType: "interview", confidence: 0.9, reason: "rule:interview" };
-  }
-  if (/(説明会|セミナー|会社説明|briefing)/i.test(text)) {
-    return { eventType: "briefing", confidence: 0.85, reason: "rule:briefing" };
-  }
-  if (/(webテスト|spi|適性検査|筆記試験|test)/i.test(text)) {
-    return { eventType: "test", confidence: 0.9, reason: "rule:test" };
-  }
-  if (/(締切|提出期限|deadline|es提出|エントリーシート提出)/i.test(text)) {
-    return { eventType: "deadline", confidence: 0.85, reason: "rule:deadline" };
-  }
-  if (/(エントリー完了|応募完了|受付完了|application received|entry)/i.test(text)) {
-    return { eventType: "entry", confidence: 0.8, reason: "rule:entry" };
+  for (const rule of EVENT_RULES) {
+    if (rule.pattern.test(text)) {
+      return { eventType: rule.eventType, confidence: rule.confidence, reason: rule.reason };
+    }
   }
   return { eventType: "other", confidence: 0.35, reason: "rule:other" };
 }
