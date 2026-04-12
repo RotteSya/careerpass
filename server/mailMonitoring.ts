@@ -1,5 +1,6 @@
 import { getBillingFeatureAccess, getOauthToken } from "./db";
 import { monitorGmailAndSync, registerGmailPushWatch } from "./gmail";
+import type { MonitorResult } from "./gmail";
 
 export async function startMailMonitoringAndCheckmail(params: {
   userId: number;
@@ -44,4 +45,76 @@ export async function startMailMonitoringAndCheckmail(params: {
     access,
     blockedByBilling: false as const,
   };
+}
+
+// ─── Background Scan Cache ──────────────────────────────────────────────────
+// Allows the OAuth callback to kick off a full mailbox scan immediately after
+// binding, so that by the time the Telegram /start flow reaches the greeting
+// the result is (likely) already available — dramatically reducing wait time.
+
+interface BackgroundScanEntry {
+  promise: Promise<MonitorResult | null>;
+  startedAt: number;
+}
+
+const backgroundScans = new Map<number, BackgroundScanEntry>();
+const BACKGROUND_SCAN_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+/**
+ * Start a background mailbox scan for the given user.  Fire-and-forget —
+ * the result is cached in-memory and can be consumed later via
+ * `consumeBackgroundScanResult()`.
+ */
+export function startBackgroundMailScan(userId: number): void {
+  // Evict stale entries
+  backgroundScans.forEach((entry, uid) => {
+    if (Date.now() - entry.startedAt > BACKGROUND_SCAN_TTL_MS) {
+      backgroundScans.delete(uid);
+    }
+  });
+
+  // Don't start a duplicate scan
+  if (backgroundScans.has(userId)) return;
+
+  const promise = (async (): Promise<MonitorResult | null> => {
+    try {
+      const access = await getBillingFeatureAccess(userId);
+      if (!access.autoMonitoringEnabled) return null;
+
+      const token = await getOauthToken(userId, "google");
+      if (!token) return null;
+
+      // Run without telegramChatId — we only want classification + board/calendar
+      // writes.  Telegram notifications will be sent separately after the greeting.
+      return await monitorGmailAndSync(userId, undefined, {
+        enableAutoBoardWrite: access.autoBoardWriteEnabled,
+        enableAutoWorkflow: false, // heavy workflows deferred to Telegram flow
+      });
+    } catch (err) {
+      console.error("[BackgroundScan] Failed for user", userId, err);
+      return null;
+    }
+  })();
+
+  backgroundScans.set(userId, { promise, startedAt: Date.now() });
+  console.log(`[BackgroundScan] Started for user ${userId}`);
+}
+
+/**
+ * Retrieve (and remove) a previously started background scan result.
+ * Returns `null` if no scan was started, the result expired, or the scan
+ * itself returned null.  The caller should fall back to a fresh scan when
+ * this returns null.
+ */
+export async function consumeBackgroundScanResult(
+  userId: number,
+): Promise<MonitorResult | null> {
+  const entry = backgroundScans.get(userId);
+  if (!entry) return null;
+
+  backgroundScans.delete(userId);
+
+  if (Date.now() - entry.startedAt > BACKGROUND_SCAN_TTL_MS) return null;
+
+  return entry.promise;
 }

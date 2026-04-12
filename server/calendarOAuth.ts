@@ -7,6 +7,7 @@ import type { Express, Request, Response } from "express";
 import crypto from "crypto";
 import { upsertOauthProviderAccount, upsertOauthToken } from "./db";
 import { registerGmailPushWatch } from "./gmail";
+import { startBackgroundMailScan } from "./mailMonitoring";
 
 function getStateSecret(): string {
   return process.env.JWT_SECRET ?? "careerpass-oauth-state-secret";
@@ -117,6 +118,9 @@ export function registerCalendarOAuthRoute(app: Express) {
         });
       }
       await registerGmailPushWatch(stateData.userId);
+      // Kick off a background mailbox scan immediately so results are ready
+      // by the time the user finishes Telegram binding and reaches the greeting.
+      startBackgroundMailScan(stateData.userId);
       console.log(`[CalendarOAuth] Google calendar linked for user ${stateData.userId}`);
       return res.redirect(`${appDomain}/dashboard?calendar=success`);
     } catch (e) {

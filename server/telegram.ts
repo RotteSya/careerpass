@@ -20,7 +20,8 @@ import {
   startCompanyWorkflow,
 } from "./agents";
 import { invokeLLM } from "./_core/llm";
-import { startMailMonitoringAndCheckmail } from "./mailMonitoring";
+import { startMailMonitoringAndCheckmail, consumeBackgroundScanResult } from "./mailMonitoring";
+import { registerGmailPushWatch } from "./gmail";
 import { sendTelegramMessage, sendTelegramBubbles } from "./telegramMessaging";
 import {
   collectTrialNudges,
@@ -907,14 +908,34 @@ telegramRouter.post("/webhook", async (req, res) => {
         });
         await sendTelegramBubbles(chatId, buildMailMonitoringKickoffText(nickname, lang));
 
-        // Start the first mailbox scan only after nickname is confirmed.
-        // Suppress per-mail pushes here and send one 14-day action digest instead.
+        // Try to use the background scan started at Gmail OAuth bind time.
+        // If available, await it (likely already complete → near-instant).
+        // Otherwise fall back to a fresh scan.
         void (async () => {
           try {
-            const { needsOAuth, watchOk, result, blockedByBilling } = await startMailMonitoringAndCheckmail({
-              userId: uid,
-              mode: "auto",
-            });
+            let result = await consumeBackgroundScanResult(uid);
+            let needsOAuth = false;
+            let watchOk = false;
+            let blockedByBilling = false;
+
+            if (result !== null) {
+              // Background scan result available — just ensure push watch is active.
+              console.log(`[Telegram] Using background scan result for user ${uid}`);
+              watchOk = await registerGmailPushWatch(uid);
+            } else {
+              // No cached result (expired / server restart / never started).
+              // Fall back to a regular scan (incremental if background scan
+              // already saved lastHistoryId, so still faster than before).
+              console.log(`[Telegram] No background scan result for user ${uid}, running fresh scan`);
+              const scanResult = await startMailMonitoringAndCheckmail({
+                userId: uid,
+                mode: "auto",
+              });
+              needsOAuth = scanResult.needsOAuth;
+              watchOk = scanResult.watchOk;
+              result = scanResult.result;
+              blockedByBilling = scanResult.blockedByBilling;
+            }
 
             const freshSession = await getOrCreateAgentSession(uid, String(chatId));
             const freshState = (freshSession?.sessionState as Record<string, unknown> | null) ?? {};
