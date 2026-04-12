@@ -424,6 +424,14 @@ function inferHardOutcomeStatusFromText(text: string): JobStatus | null {
   return null;
 }
 
+// Subjects that unambiguously mark a post-hoc result/notification email.
+// These should never be treated as schedulable events, even if the body
+// contains a date reference (e.g., the date of the already-completed interview
+// or a reply deadline) or the LLM misclassifies them.
+function isResultNotificationSubject(subject: string): boolean {
+  return /(結果通知|選考結果|合否通知|合否のご連絡|お祈り|お見送り|不採用通知|不合格通知)/.test(subject);
+}
+
 function inferInterviewStatusFromText(text: string): JobStatus | null {
   const t = text.toLowerCase();
   if (/最終|最終面接|final\s*interview|final\b|last\s*interview/.test(t)) return "interview_final";
@@ -1004,16 +1012,25 @@ async function processGmailMessageIds(params: {
     const mailText = `${detail.subject}\n${detail.body}`;
     const hardOutcome = inferHardOutcomeStatusFromText(mailText);
     const rawEventType = decision.eventType ?? "other";
-    const eventType =
-      rawEventType === "offer"
-        ? hardOutcome === "offer"
-          ? "offer"
-          : "other"
-        : rawEventType === "rejection"
-        ? hardOutcome === "rejected"
-          ? "rejection"
-          : "other"
-        : rawEventType;
+    // Result-notification subjects (結果通知 / 選考結果 / 合否通知 …) are never
+    // schedulable events. Force them down to offer / rejection / other so they
+    // bypass CALENDAR_WRITABLE_TYPES regardless of how the LLM classified them.
+    const resultNotificationSubject = isResultNotificationSubject(detail.subject);
+    const eventType = resultNotificationSubject
+      ? hardOutcome === "offer"
+        ? "offer"
+        : hardOutcome === "rejected"
+        ? "rejection"
+        : "other"
+      : rawEventType === "offer"
+      ? hardOutcome === "offer"
+        ? "offer"
+        : "other"
+      : rawEventType === "rejection"
+      ? hardOutcome === "rejected"
+        ? "rejection"
+        : "other"
+      : rawEventType;
     const date = decision.eventDate ?? null;
     const time = decision.eventTime ?? null;
     const companyName =
