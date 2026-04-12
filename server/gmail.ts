@@ -60,6 +60,29 @@ export interface CalendarEvent {
   end: { dateTime: string; timeZone: string };
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  if (items.length === 0) return [];
+  const limit = Math.max(1, Math.floor(concurrency));
+  const results: R[] = new Array(items.length);
+  let cursor = 0;
+
+  const run = async () => {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= items.length) return;
+      results[idx] = await worker(items[idx], idx);
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => run());
+  await Promise.all(workers);
+  return results;
+}
+
 // ─── Token Refresh ────────────────────────────────────────────────────────────
 
 async function refreshGoogleToken(refreshToken: string): Promise<string | null> {
@@ -1023,20 +1046,23 @@ async function processGmailMessageIds(params: {
     detail: { subject: string; from: string; date: string; body: string };
     mailTs: number;
   }> = [];
-  for (const messageId of messageIds) {
+  const fetchedResults = await mapWithConcurrency(messageIds, 12, async (messageId) => {
     const detail = await fetchEmailDetail(accessToken, messageId);
-    if (!detail) continue;
-    fetched.push({ messageId, detail, mailTs: Date.parse(detail.date) });
+    if (!detail) return null;
+    return { messageId, detail, mailTs: Date.parse(detail.date) };
+  });
+  for (const row of fetchedResults) {
+    if (!row) continue;
+    fetched.push(row);
   }
 
   const sorted = sortMailItemsByTsDesc(
     fetched.map((x) => ({ messageId: x.messageId, mailTs: x.mailTs, value: x.detail }))
   );
 
+  const candidates: typeof sorted = [];
   for (const item of sorted) {
-    const messageId = item.messageId;
     const detail = item.value;
-
     // Hard exclude マイナビ/リクナビ-style "站内通知" mails — they carry no real content.
     const senderDomain = (getSenderDomain(detail.from) ?? "").toLowerCase();
     const isJobBoardSender =
@@ -1059,13 +1085,25 @@ async function processGmailMessageIds(params: {
     if (isReviewPlatformSender) {
       continue;
     }
+    candidates.push(item);
+  }
 
+  const analyzed = await mapWithConcurrency(candidates, 4, async (item) => {
     const decision = await runCareerpassmailAgent({
-      subject: detail.subject,
-      body: detail.body,
-      from: detail.from,
+      subject: item.value.subject,
+      body: item.value.body,
+      from: item.value.from,
     });
-    if (!decision.isJobRelated) continue;
+    if (!decision.isJobRelated) return null;
+    return { item, decision };
+  });
+
+  for (const entry of analyzed) {
+    if (!entry) continue;
+    const item = entry.item;
+    const decision = entry.decision;
+    const messageId = item.messageId;
+    const detail = item.value;
 
     const mailText = `${detail.subject}\n${detail.body}`;
     const hardOutcome = inferHardOutcomeStatusFromText(mailText);

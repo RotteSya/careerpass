@@ -205,19 +205,37 @@ function buildScheduleDigestText(
   }
 ): string | null {
   const now = Date.now();
-  const recentCutoffMs =
+  const upperBoundMs =
     options?.onlyRecentDays && options.onlyRecentDays > 0
-      ? now - options.onlyRecentDays * 24 * 60 * 60 * 1000
+      ? now + options.onlyRecentDays * 24 * 60 * 60 * 1000
       : null;
+  const toJstMs = (dateText: string | null, timeText: string | null): number => {
+    if (!dateText) return NaN;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateText.trim());
+    if (!m) return NaN;
+    const year = Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const tm = /^(\d{1,2}):(\d{2})$/.exec((timeText ?? "09:00").trim());
+    const hour = tm ? Number(tm[1]) : 9;
+    const minute = tm ? Number(tm[2]) : 0;
+    // Convert JST wall-clock to UTC timestamp.
+    return Date.UTC(year, month - 1, day, hour - 9, minute, 0, 0);
+  };
   const schedulable = events
     .filter((e) => {
       if (!e.eventDate || e.eventType === "other") return false;
-      if (!recentCutoffMs) return true;
-      const mailTs = e.date ? Date.parse(e.date) : NaN;
-      return Number.isFinite(mailTs) && mailTs >= recentCutoffMs;
+      const eventMs = toJstMs(e.eventDate, e.eventTime);
+      if (!Number.isFinite(eventMs)) return false;
+      if (eventMs < now) return false;
+      if (upperBoundMs !== null && eventMs > upperBoundMs) return false;
+      return true;
     })
     .slice()
-    .sort((a, b) => `${a.eventDate ?? ""} ${a.eventTime ?? ""}`.localeCompare(`${b.eventDate ?? ""} ${b.eventTime ?? ""}`))
+    .sort(
+      (a, b) =>
+        toJstMs(a.eventDate, a.eventTime) - toJstMs(b.eventDate, b.eventTime)
+    )
     .slice(0, options?.maxItems ?? 4);
 
   if (schedulable.length === 0) return null;
@@ -1056,7 +1074,7 @@ telegramRouter.post("/webhook", async (req, res) => {
                 onboarding: { stage: "experience_offer", updatedAt: new Date().toISOString() },
               },
             });
-            const digest = buildScheduleDigestText(lang, result.events, { maxItems: 4 });
+            const digest = buildScheduleDigestText(lang, result.events, { onlyRecentDays: 14, maxItems: 4 });
             await sendTelegramMessage(chatId, `${digest ?? buildNoUpcomingScheduleText(lang)}${upsell}`);
             await sendTelegramMessage(chatId, buildDeepDiveOfferText(lang));
           } catch (err) {
