@@ -34,6 +34,7 @@ import {
 import { syncJobToNotionBoard } from "./notion";
 import { createCompanyBatchDeduper, sortMailItemsByTsDesc } from "./gmail_dedup";
 import { sendTelegramBubbles, sendTelegramMessage } from "./telegramMessaging";
+import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
@@ -741,6 +742,27 @@ async function runCareerpassmailAgent(input: {
   const domainSignal = senderDomainScore(input.from);
   const localized = extractJapaneseTimeRange(`${input.subject}\n${input.body}`);
   const basic = extractDate(`${input.subject}\n${input.body}`);
+  const preflight = runRecruitingNlpPipeline({
+    subject: input.subject,
+    body: input.body,
+    from: input.from,
+    domainSignal,
+    fallbackDate: localized.date ?? basic.date ?? null,
+    fallbackTime: localized.time ?? basic.time ?? null,
+  });
+  if (preflight.shouldSkipLlm) {
+    return {
+      isJobRelated: preflight.isJobRelated,
+      confidence: preflight.confidence,
+      reason: preflight.reason,
+      eventType: preflight.eventType,
+      companyName: preflight.companyName,
+      eventDate: preflight.eventDate,
+      eventTime: preflight.eventTime,
+      location: preflight.location,
+      todoItems: preflight.todoItems,
+    };
+  }
 
   const systemPrompt = `你是 CareerPass 的”邮件监控 Agent”。
 任务：判断这封邮件是否与用户求职行为相关（面试邀请、说明会、测试、结果通知、offer、流程更新等），并抽取结构化字段。
@@ -796,18 +818,27 @@ async function runCareerpassmailAgent(input: {
     const content = response.choices?.[0]?.message?.content;
     if (typeof content === "string") {
       const parsed = JSON.parse(content) as CareerpassmailDecision;
-      const eventDate = parsed.eventDate ?? localized.date ?? basic.date ?? null;
-      const eventTime = parsed.eventTime ?? localized.time ?? basic.time ?? null;
+      const merged = runRecruitingNlpPipeline(
+        {
+          subject: input.subject,
+          body: input.body,
+          from: input.from,
+          domainSignal,
+          fallbackDate: localized.date ?? basic.date ?? null,
+          fallbackTime: localized.time ?? basic.time ?? null,
+        },
+        parsed
+      );
       return {
-        isJobRelated: !!parsed.isJobRelated,
-        confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0.5,
-        reason: parsed.reason ?? "LLM semantic decision",
-        eventType: parsed.eventType ?? "other",
-        companyName: parsed.companyName ?? null,
-        eventDate,
-        eventTime,
-        location: parsed.location ?? null,
-        todoItems: Array.isArray(parsed.todoItems) ? parsed.todoItems : [],
+        isJobRelated: merged.isJobRelated,
+        confidence: merged.confidence,
+        reason: merged.reason,
+        eventType: merged.eventType,
+        companyName: merged.companyName,
+        eventDate: merged.eventDate,
+        eventTime: merged.eventTime,
+        location: merged.location,
+        todoItems: merged.todoItems,
       };
     }
   } catch (err) {
@@ -815,16 +846,24 @@ async function runCareerpassmailAgent(input: {
   }
 
   // Fallback: conservative domain/time heuristic.
+  const fallback = runRecruitingNlpPipeline({
+    subject: input.subject,
+    body: input.body,
+    from: input.from,
+    domainSignal,
+    fallbackDate: localized.date ?? basic.date ?? null,
+    fallbackTime: localized.time ?? basic.time ?? null,
+  });
   return {
-    isJobRelated: domainSignal >= 0.8 && !!(localized.date ?? basic.date),
-    confidence: domainSignal,
-    reason: "fallback domain-localized-time heuristic",
-    eventType: "other",
-    companyName: extractCompanyName(input.from, input.subject),
-    eventDate: localized.date ?? basic.date ?? null,
-    eventTime: localized.time ?? basic.time ?? null,
-    location: null,
-    todoItems: [],
+    isJobRelated: fallback.isJobRelated,
+    confidence: fallback.confidence,
+    reason: `fallback-pipeline:${fallback.reason}`,
+    eventType: fallback.eventType,
+    companyName: fallback.companyName ?? extractCompanyName(input.from, input.subject),
+    eventDate: fallback.eventDate,
+    eventTime: fallback.eventTime,
+    location: fallback.location,
+    todoItems: fallback.todoItems,
   };
 }
 
