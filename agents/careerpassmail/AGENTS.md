@@ -9,7 +9,7 @@
   "isJobRelated": boolean,
   "confidence": number,
   "reason": string,
-  "eventType": "interview" | "briefing" | "test" | "deadline" | "offer" | "rejection" | "other",
+  "eventType": "interview" | "briefing" | "test" | "deadline" | "entry" | "offer" | "rejection" | "other",
   "companyName": string | null,
   "eventDate": "YYYY-MM-DD" | null,
   "eventTime": "HH:MM" | null,
@@ -25,7 +25,8 @@
 
 ## 必须排除（强制 isJobRelated=false）
 
-- マイナビ / mynavi / リクナビ / rikunabi 等求人媒体发出的“站内通知”类邮件，例如：“あなたに新着メッセージが届いています”“マイページに新しいお知らせがあります”“站内信/メッセージが届きました”——这类邮件本身不含有效内容，只是提示用户回站点查看，价值为低。
+- マイナビ / mynavi / リクナビ / rikunabi 等求人媒体发出的”站内通知”类邮件，例如：”あなたに新着メッセージが届いています””マイページに新しいお知らせがあります””站内信/メッセージが届きました”——这类邮件本身不含有效内容，只是提示用户回站点查看，价值为低。
+- 就活会議（syukatsu-kaigi）/ OpenWork / Vorkers / ONE CAREER / OfferBox / GoodFind 等求职**情报/口碑/レビュー平台**发出的任何邮件——这些平台本身不是用户的应聘企业，不得把平台名当作 companyName 输出。若邮件内容提到了真实企业名（如「○○株式会社の口コミ」），仍然标记 isJobRelated=false，因为口碑邮件不对应任何选考流程节点。
 - 同一公司若已经在更晚的邮件里有更新进度（如：先收到「一次面接案内」，后又收到「二次面接案内」），旧的那封要标记为 isJobRelated=false，reason 写「superseded by newer mail from same company」。系统会按时间倒序把同公司邮件批量喂给你，遇到旧的进度直接舍弃，只保留最新一封。
 
 ## 抽取规则（Extraction）

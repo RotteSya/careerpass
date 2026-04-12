@@ -44,7 +44,7 @@ export interface EmailEvent {
   from: string;
   date: string;
   body: string;
-  eventType: "interview" | "briefing" | "test" | "deadline" | "offer" | "rejection" | "other";
+  eventType: "interview" | "briefing" | "test" | "deadline" | "entry" | "offer" | "rejection" | "other";
   companyName: string | null;
   eventDate: string | null; // ISO 8601 if detected
   eventTime: string | null;
@@ -356,6 +356,7 @@ const typeLabels: Record<EmailEvent["eventType"], string> = {
   briefing: "【説明会】",
   test: "【試験】",
   deadline: "【締切】",
+  entry: "【エントリー】",
   offer: "【内定】",
   rejection: "【結果通知】",
   other: "【就活】",
@@ -404,6 +405,7 @@ function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobSta
   if (eventType === "test") return "written_test";
   if (eventType === "deadline") return "es_preparing";
   if (eventType === "briefing") return "briefing";
+  if (eventType === "entry") return "applied";
   return null;
 }
 
@@ -434,11 +436,13 @@ function isResultNotificationSubject(subject: string): boolean {
 
 function inferInterviewStatusFromText(text: string): JobStatus | null {
   const t = text.toLowerCase();
-  if (/最終|最終面接|final\s*interview|final\b|last\s*interview/.test(t)) return "interview_final";
-  if (/四次|4次|４次|fourth\s*interview|4th\s*interview|fourth\b|4th\b/.test(t)) return "interview_4";
-  if (/三次|3次|３次|third\s*interview|3rd\s*interview|third\b|3rd\b/.test(t)) return "interview_3";
-  if (/二次|2次|２次|second\s*interview|2nd\s*interview|second\b|2nd\b/.test(t)) return "interview_2";
-  if (/一次|1次|１次|first\s*interview|1st\s*interview|first\b|1st\b/.test(t)) return "interview_1";
+  if (/最終面接|最終選考|final\s*interview|last\s*interview/.test(t)) return "interview_final";
+  if (/四次面[接談]|4次面[接談]|４次面[接談]|fourth\s*interview|4th\s*interview/.test(t)) return "interview_4";
+  if (/三次面[接談]|3次面[接談]|３次面[接談]|third\s*interview|3rd\s*interview/.test(t)) return "interview_3";
+  if (/二次面[接談]|2次面[接談]|２次面[接談]|second\s*interview|2nd\s*interview/.test(t)) return "interview_2";
+  if (/一次面[接談]|1次面[接談]|１次面[接談]|first\s*interview|1st\s*interview/.test(t)) return "interview_1";
+  // Standalone round markers only when adjacent to 面接/選考 context
+  if (/最終/.test(t) && /面[接談]|選考/.test(t)) return "interview_final";
   return null;
 }
 
@@ -465,7 +469,12 @@ function normalizeCompanyName(name: string | null | undefined): string | null {
   const raw = (name ?? "").trim();
   if (!raw) return null;
   const lower = raw.toLowerCase();
-  const blocked = new Set(["info", "noreply", "no-reply", "support", "recruit", "saiyo", "hr", "jobs"]);
+  const blocked = new Set([
+    "info", "noreply", "no-reply", "support", "recruit", "saiyo", "hr", "jobs",
+    // Job-hunting review/info platforms — never treat as a company name
+    "syukatsu-kaigi", "syukatsukaigi", "就活会議", "openwork", "vorkers",
+    "onecareer", "one-career", "offerbox", "goodfind",
+  ]);
   if (blocked.has(lower)) return null;
   if (raw.length < 2) return null;
   return raw;
@@ -681,22 +690,30 @@ async function runCareerpassmailAgent(input: {
   const localized = extractJapaneseTimeRange(`${input.subject}\n${input.body}`);
   const basic = extractDate(`${input.subject}\n${input.body}`);
 
-  const systemPrompt = `你是 CareerPass 的“邮件监控 Agent”。
+  const systemPrompt = `你是 CareerPass 的”邮件监控 Agent”。
 任务：判断这封邮件是否与用户求职行为相关（面试邀请、说明会、测试、结果通知、offer、流程更新等），并抽取结构化字段。
 判断要求：
 - 以语义理解为主，不依赖固定关键词匹配。
 - 结合发件人域名可信度、邮件语气、流程信息、行动要求来判断。
-- 对日本求职邮件格式做本地化：例如“2026年4月10日(金) 14:00〜15:00”“【日時】”“■日時”。
+- 对日本求职邮件格式做本地化：例如”2026年4月10日(金) 14:00〜15:00””【日時】””■日時”。
+- companyName 必须是用户正在应聘的**实际企业名**。就活会議 / syukatsu-kaigi / OpenWork / ONE CAREER 等求职平台本身不是应聘企业，绝不可作为 companyName 输出。
+- eventType 区分要点：
+  - “entry”：エントリー完了/受付/申し込み確認（用户已向企业提交了报名或申请）
+  - “briefing”：説明会/セミナー/会社紹介（企业举办的说明会、尚未进入选考）
+  - “interview”：面接/面談の案内（选考流程中的面试）
+  - “test”：Webテスト/SPI/適性検査/筆記試験
+  - “deadline”：ES締切/提出期限
+  - 区分 entry vs briefing：「エントリー」は応募行為、「説明会」は情報提供行事。混同しないこと。
 输出必须是 JSON：{
-  "isJobRelated": boolean,
-  "confidence": number,
-  "reason": string,
-  "eventType": "interview" | "briefing" | "test" | "deadline" | "offer" | "rejection" | "other",
-  "companyName": string | null,
-  "eventDate": "YYYY-MM-DD" | null,
-  "eventTime": "HH:MM" | null,
-  "location": string | null,
-  "todoItems": string[]
+  “isJobRelated”: boolean,
+  “confidence”: number,
+  “reason”: string,
+  “eventType”: “interview” | “briefing” | “test” | “deadline” | “entry” | “offer” | “rejection” | “other”,
+  “companyName”: string | null,
+  “eventDate”: “YYYY-MM-DD” | null,
+  “eventTime”: “HH:MM” | null,
+  “location”: string | null,
+  “todoItems”: string[]
 }`;
   const soul = await loadAgentSoul("careerpassmail");
   const agents = await loadAgentAgents("careerpassmail");
@@ -830,7 +847,7 @@ async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<
   try {
     // Mail-driven workflow trigger:
     // careerpassmail identifies target company -> handoff to careerpass -> auto run recon -> ES -> interview.
-    if (["interview", "briefing", "test", "deadline", "offer"].includes(event.eventType)) {
+    if (["interview", "briefing", "test", "deadline", "entry", "offer"].includes(event.eventType)) {
       const sid = `mail-${Date.now()}`;
       await startCompanyWorkflow(userId, companyName, "総合職", sid);
       actions.push(`careerpass:workflow-started:${companyName}`);
@@ -999,6 +1016,18 @@ async function processGmailMessageIds(params: {
     const inboxNoticePattern =
       /(新着メッセージ|メッセージが届|マイページに新しい|新着のお知らせ|站内|站内信|新しいお知らせが届)/;
     if (isJobBoardSender && inboxNoticePattern.test(`${detail.subject}\n${detail.body}`)) {
+      continue;
+    }
+
+    // Hard exclude 就活会議 / OpenWork / Vorkers / ONE CAREER — these are review/info
+    // platforms, NOT companies the user is applying to. Emails from them should
+    // never create a job application entry.
+    const isReviewPlatformSender =
+      /syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career/.test(
+        `${detail.from}\n${detail.subject}`.toLowerCase()
+      ) ||
+      /syukatsu-kaigi|syukatsukaigi|openwork|vorkers|onecareer|one-career/.test(senderDomain);
+    if (isReviewPlatformSender) {
       continue;
     }
 
