@@ -511,6 +511,97 @@ export function __buildMeetingUrlSearchQueryForTests(params: {
   return buildMeetingUrlSearchQuery(params);
 }
 
+function formatYmdSlash(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}/${m}/${day}`;
+}
+
+function extractKeywordHintsFromHeaders(input: { subject: string; from: string }): string[] {
+  const out: string[] = [];
+  for (const m of input.subject.matchAll(/【([^】]{2,32})】/g)) {
+    const v = (m[1] ?? "").trim();
+    if (v) out.push(v);
+  }
+  const displayName = input.from.split("<")[0]?.trim() ?? "";
+  const cleaned = displayName
+    .replace(/新卒採用|中途採用|採用担当|採用チーム|人事|人事部|人事課|担当|事務局/gi, "")
+    .replace(/[()（）<>\[\]【】]/g, " ")
+    .trim();
+  if (cleaned && cleaned.length >= 2) out.push(cleaned);
+  return Array.from(new Set(out)).slice(0, 3);
+}
+
+function buildMeetingUrlSearchQueries(params: {
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+  mailDate: string | null;
+  subject: string;
+  from: string;
+}): string[] {
+  const queries: string[] = [];
+  const baseDomains = "(teams.microsoft.com OR meet.google.com OR zoom.us OR webex.com)";
+
+  // 1) Strict: use eventDate + companyName if present
+  queries.push(
+    buildMeetingUrlSearchQuery({
+      fromDomain: params.fromDomain,
+      companyName: params.companyName,
+      eventDate: params.eventDate,
+    })
+  );
+
+  // 2) Fallback: if eventDate missing, use a window around mail Date header
+  let afterBefore: string | null = null;
+  const mailTs = params.mailDate ? Date.parse(params.mailDate) : NaN;
+  if (Number.isFinite(mailTs)) {
+    const center = new Date(mailTs);
+    const after = new Date(center);
+    after.setDate(after.getDate() - 120);
+    const before = new Date(center);
+    before.setDate(before.getDate() + 120);
+    afterBefore = `after:${formatYmdSlash(after)} before:${formatYmdSlash(before)}`;
+  }
+
+  const hints = extractKeywordHintsFromHeaders({ subject: params.subject, from: params.from });
+  const hintQuery = hints.length > 0 ? `(${hints.map((h) => `"${h}"`).join(" OR ")})` : null;
+
+  const relaxedParts: string[] = [];
+  relaxedParts.push("-category:social -category:promotions");
+  relaxedParts.push(baseDomains);
+  if (params.fromDomain) relaxedParts.push(`from:${params.fromDomain}`);
+  if (hintQuery) relaxedParts.push(hintQuery);
+  if (afterBefore) relaxedParts.push(afterBefore);
+  relaxedParts.push("newer_than:365d");
+  queries.push(relaxedParts.join(" "));
+
+  // 3) Final fallback: if fromDomain is missing, still try with hints + date window
+  if (!params.fromDomain) {
+    const last: string[] = [];
+    last.push("-category:social -category:promotions");
+    last.push(baseDomains);
+    if (hintQuery) last.push(hintQuery);
+    if (afterBefore) last.push(afterBefore);
+    last.push("newer_than:60d");
+    queries.push(last.join(" "));
+  }
+
+  return Array.from(new Set(queries));
+}
+
+export function __buildMeetingUrlSearchQueriesForTests(params: {
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+  mailDate: string | null;
+  subject: string;
+  from: string;
+}): string[] {
+  return buildMeetingUrlSearchQueries(params);
+}
+
 async function searchGmailMessageIds(params: {
   accessToken: string;
   q: string;
@@ -546,20 +637,29 @@ async function fetchMeetingUrlBySearch(params: {
   fromDomain: string | null;
   companyName: string | null;
   eventDate: string | null;
+  mailDate: string | null;
+  subject: string;
+  from: string;
   excludeMessageId: string;
 }): Promise<string | null> {
-  const q = buildMeetingUrlSearchQuery({
+  const queries = buildMeetingUrlSearchQueries({
     fromDomain: params.fromDomain,
     companyName: params.companyName,
     eventDate: params.eventDate,
+    mailDate: params.mailDate,
+    subject: params.subject,
+    from: params.from,
   });
-  const ids = await searchGmailMessageIds({ accessToken: params.accessToken, q, maxResults: 12 });
-  for (const id of ids) {
-    if (!id || id === params.excludeMessageId) continue;
-    const detail = await fetchEmailDetail(params.accessToken, id);
-    if (!detail) continue;
-    const url = extractMeetingUrlFromText(detail.body);
-    if (url) return url;
+
+  for (const q of queries) {
+    const ids = await searchGmailMessageIds({ accessToken: params.accessToken, q, maxResults: 12 });
+    for (const id of ids) {
+      if (!id || id === params.excludeMessageId) continue;
+      const detail = await fetchEmailDetail(params.accessToken, id);
+      if (!detail) continue;
+      const url = extractMeetingUrlFromText(detail.body);
+      if (url) return url;
+    }
   }
   return null;
 }
@@ -1594,7 +1694,7 @@ async function processGmailMessageIds(params: {
           let finalUrl = url ?? null;
           if (!finalUrl) {
             const senderDomain = getSenderDomain(detail.from);
-            const cacheKey = `${senderDomain ?? "unknown"}|${companyName ?? "unknown"}|${date ?? "unknown"}`;
+            const cacheKey = `${senderDomain ?? "unknown"}|${companyName ?? "unknown"}|${date ?? ""}|${detail.date ?? ""}`;
             const cachedSearch = searchMeetingUrlCache.get(cacheKey);
             finalUrl =
               cachedSearch !== undefined
@@ -1604,6 +1704,9 @@ async function processGmailMessageIds(params: {
                     fromDomain: senderDomain,
                     companyName,
                     eventDate: date,
+                    mailDate: detail.date ?? null,
+                    subject: detail.subject,
+                    from: detail.from,
                     excludeMessageId: messageId,
                   }).then((u) => {
                     searchMeetingUrlCache.set(cacheKey, u);
