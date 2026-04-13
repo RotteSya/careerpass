@@ -465,7 +465,7 @@ function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobSta
 function inferHardOutcomeStatusFromText(text: string): JobStatus | null {
   const t = text.toLowerCase();
   if (
-    /(不採用|見送り|お見送り|選考結果.*残念|残念ながら|ご縁がなく|ご期待に添え|不合格|不通過)/.test(t) ||
+    /(不採用|見送り|お見送り|選考結果.*残念|残念ながら|ご縁がなく|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|不合格|不通過)/.test(t) ||
     /(rejected|unfortunately|we regret|not selected)/.test(t)
   ) {
     return "rejected";
@@ -1271,7 +1271,7 @@ async function processGmailMessageIds(params: {
         rawEventType === "interview" || rawEventType === "test" || /面接|interview/.test(mailText.toLowerCase())
           ? inferInterviewStatusFromText(mailText)
           : null;
-      const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(rawEventType);
+      const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(eventType);
       const inferredStatus = companyName ? desiredStatus : null;
       const progressUpdate =
         enableAutoBoardWrite && inferredStatus && companyName

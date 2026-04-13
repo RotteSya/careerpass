@@ -93,7 +93,7 @@ const EVENT_RULES: EventRule[] = [
     reason: "rule:rejection",
     specificity: 10,
     pattern:
-      /(不採用|見送り|お見送り|不合格|不通過|残念ながら|ご期待に添え|ご縁がなく|rejected|not selected|we regret|selection result.*unsuccessful)/i,
+      /(不採用|見送り|お見送り|不合格|不通過|残念ながら|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|ご縁がなく|rejected|not selected|we regret|selection result.*unsuccessful)/i,
   },
   {
     eventType: "offer",

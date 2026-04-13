@@ -118,6 +118,19 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.eventType).toBe("rejection");
   });
 
+  it("detects rejection for 希望に沿いかねる result phrasing", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "選考結果のご連絡",
+      body:
+        "この度はご応募ありがとうございました。厳正な選考の結果、今回はご希望に沿いかねる結果となりました。",
+      from: "saiyo@example.co.jp",
+      domainSignal: 0.9,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.eventType).toBe("rejection");
+  });
+
   it("picks offer over interview when body contains offer keywords", () => {
     const d = runRecruitingNlpPipeline({
       subject: "最終面接結果のご連絡",
