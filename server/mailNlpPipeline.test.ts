@@ -544,6 +544,28 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.companyName).toContain("メイテックフィルダーズ");
   });
 
+  it("extracts interview datetime + company from hito-link web interview confirmation (テクバン)", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "<最終確認> 2次選考ご予約 ※事前に履歴書をご提出ください【テクバン株式会社 新卒採用担当】",
+      body:
+        "テクバン株式会社 新卒採用担当です。\n" +
+        "開催日時\n2026/03/26　11:00 ～ 12:00\n" +
+        "■選考内容\nWeb面接（30～60分）\n" +
+        "Teamsアプリのダウンロードを事前に行っていただく必要があります。",
+      from: "テクバン(株)新卒採用担当 <techvan-saiyo@hito-link.jp>",
+      domainSignal: 0.85,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(true);
+    expect(d.eventType).toBe("interview");
+    expect(d.companyName).toContain("テクバン");
+    expect(d.eventDate).toBe("2026-03-26");
+    expect(d.eventTime).toBe("11:00");
+    expect(d.location).toContain("Web");
+  });
+
   it("keeps actionable mynavi process mail as job-related instead of noise", () => {
     const d = runRecruitingNlpPipeline({
       subject: "【サンプルホールディングス】エントリーシート提出の御礼",
