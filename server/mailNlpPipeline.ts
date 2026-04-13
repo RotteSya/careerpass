@@ -80,6 +80,10 @@ const PLATFORM_SURVEY_HINTS =
   /(アンケート|調査|ご協力のお願い|業界イメージ|意識調査|満足度調査|questant\.jp)/i;
 const PLATFORM_INCENTIVE_HINTS =
   /(抽選|当たります|プレゼント|ギフトカード|ギフトコード|amazon\s*ギフト|amazonギフト)/i;
+const PLATFORM_NEWSLETTER_HINTS =
+  /(マイナビメール|ピックアップ|おすすめ企業|新着求人|求人をお届け|特集|キャンペーン|ランキング)/i;
+const PLATFORM_ACTIONABLE_RELAY_HINTS =
+  /(応募者管理システム|miws\.mynavi\.jp|info-job@|提出の御礼|提出ありがとう|ご応募ありがとうございます|ご応募ありがとうございました)/i;
 
 // ─── Event rules (multi-signal — ALL evaluated) ─────────────────────────────
 
@@ -331,6 +335,25 @@ export function runRecruitingNlpPipeline(
       isJobRelated: false,
       confidence: 0.98,
       reason: "hard-negative:platform-survey",
+      eventType: "other",
+      companyName: null,
+      eventDate: input.fallbackDate,
+      eventTime: input.fallbackTime,
+      location: null,
+      todoItems: [],
+      shouldSkipLlm: true,
+      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+    };
+  }
+  const isPlatformNewsletter =
+    domainRep.tier === "recruiting_platform" &&
+    PLATFORM_NEWSLETTER_HINTS.test(lowerText) &&
+    !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${input.body}`);
+  if (isPlatformNewsletter) {
+    return {
+      isJobRelated: false,
+      confidence: 0.96,
+      reason: "hard-negative:platform-newsletter",
       eventType: "other",
       companyName: null,
       eventDate: input.fallbackDate,

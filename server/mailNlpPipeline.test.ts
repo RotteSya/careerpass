@@ -489,6 +489,26 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.eventType).toBe("other");
   });
 
+  it("blocks mynavi pickup newsletters that look like ads even if they mention briefing/selection words", () => {
+    const d = runRecruitingNlpPipeline({
+      subject:
+        "初任給30万円×年休126日へ待遇UP■60分WEB説明会のご案内！人を笑顔にするなら、自分も楽しく！【マイナビメール2027ピックアップ 4/11】",
+      body:
+        "━━━マイナビメール2027[ピックアップ]━\n" +
+        "初めまして！ダイナム採用担当です。\n" +
+        "WEB説明会のご案内です。\n" +
+        "選考フロー 1次選考→2次選考→最終選考→内々定\n" +
+        "配信の停止 https://job.mynavi.jp/27/pc/jump?key=xxx",
+      from: "マイナビ2027 <job-s27@mynavi.jp>",
+      domainSignal: 0.7,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(false);
+    expect(d.eventType).toBe("other");
+  });
+
   it("keeps actionable mynavi process mail as job-related instead of noise", () => {
     const d = runRecruitingNlpPipeline({
       subject: "【サンプルホールディングス】エントリーシート提出の御礼",
