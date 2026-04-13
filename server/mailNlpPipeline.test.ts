@@ -527,6 +527,23 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.companyName).toBe("株式会社オロ");
   });
 
+  it("detects rejection for 希望に添いかねる result phrasing (メイテックフィルダーズ)", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "【メイテックフィルダーズ】【重要】一次選考結果のご連絡",
+      body:
+        "この度は一次面接へのご参加、ありがとうございました。\n" +
+        "慎重かつ厳正に検討させていただきました結果、今回は誠に残念ながらご希望に添いかねる結果となりました。",
+      from: "メイテックフィルダーズ新卒採用 <meitecgr-recruit@snar.jp>",
+      domainSignal: 0.8,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(true);
+    expect(d.eventType).toBe("rejection");
+    expect(d.companyName).toContain("メイテックフィルダーズ");
+  });
+
   it("keeps actionable mynavi process mail as job-related instead of noise", () => {
     const d = runRecruitingNlpPipeline({
       subject: "【サンプルホールディングス】エントリーシート提出の御礼",
