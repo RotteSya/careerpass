@@ -52,7 +52,7 @@ function extractOrgCandidates(subject: string, from: string, body: string): OrgC
   const reSubjectLegal = new RegExp(
     `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」]{1,40})`, "g"
   );
-  for (const m of subject.matchAll(reSubjectLegal)) {
+  for (const m of Array.from(subject.matchAll(reSubjectLegal))) {
     candidates.push({ name: m[1], source: "legal_subject", confidence: 0.95 });
   }
 
@@ -60,7 +60,7 @@ function extractOrgCandidates(subject: string, from: string, body: string): OrgC
   const reInvertedSubject = new RegExp(
     `([^\\s【】\\[\\]<>「」]{2,20})\\s*(?:${LEGAL_ENTITY_PREFIX.source})`, "g"
   );
-  for (const m of subject.matchAll(reInvertedSubject)) {
+  for (const m of Array.from(subject.matchAll(reInvertedSubject))) {
     candidates.push({ name: m[0], source: "legal_subject_inv", confidence: 0.94 });
   }
 
@@ -81,7 +81,7 @@ function extractOrgCandidates(subject: string, from: string, body: string): OrgC
   }
 
   // Strategy 5: Bracket patterns in subject 【Company】
-  for (const m of subject.matchAll(/(?:【|「|\[)([^】」\]]{2,30})(?:】|」|\])/g)) {
+  for (const m of Array.from(subject.matchAll(/(?:【|「|\[)([^】」\]]{2,30})(?:】|」|\])/g))) {
     if (m[1] && !/(面接|説明会|選考|結果|内定|不採用|エントリー|日程|案内|お知らせ|通知|重要|緊急|締切|ご連絡|ご案内)/.test(m[1])) {
       candidates.push({ name: m[1], source: "bracket_subject", confidence: 0.80 });
     }
@@ -175,7 +175,7 @@ export function extractBestCompanyName(
   }
 
   let best = { name: "", confidence: 0 };
-  for (const g of groups.values()) {
+  for (const g of Array.from(groups.values())) {
     // Multi-source agreement bonus: +0.05 per extra source, max +0.15
     const sourceBonus = Math.min(g.sources.length - 1, 3) * 0.05;
     const score = Math.min(g.maxConfidence + sourceBonus, 1);
