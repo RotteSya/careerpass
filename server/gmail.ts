@@ -293,6 +293,87 @@ function collectTextPlainBodies(part: GmailPayloadPart | undefined, out: string[
   for (const child of part.parts ?? []) collectTextPlainBodies(child, out);
 }
 
+function collectTextHtmlBodies(part: GmailPayloadPart | undefined, out: string[]): void {
+  if (!part) return;
+  if (part.mimeType?.toLowerCase() === "text/html" && part.body?.data) {
+    out.push(decodeGmailBase64Url(part.body.data));
+  }
+  for (const child of part.parts ?? []) collectTextHtmlBodies(child, out);
+}
+
+function decodeHtmlEntities(input: string): string {
+  const named = input
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'");
+  return named
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m, h: string) => {
+      const code = parseInt(h, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&#(\d+);/g, (_m, d: string) => {
+      const code = parseInt(d, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    });
+}
+
+function htmlToText(html: string): string {
+  const stripped = html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|tr|td|th|h1|h2|h3|h4|h5|h6)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+  return decodeHtmlEntities(stripped)
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function cleanMailTextForAi(input: string): string {
+  const text = input.replace(/\r\n/g, "\n");
+  const lines = text.split("\n");
+  const out: string[] = [];
+  const stopPatterns = [
+    /^\s*-{2,}\s*original message\s*-{2,}\s*$/i,
+    /^\s*-{2,}\s*forwarded message\s*-{2,}\s*$/i,
+    /^\s*-{2,}\s*転送メッセージ\s*-{2,}\s*$/i,
+    /^\s*-{2,}\s*元のメッセージ\s*-{2,}\s*$/i,
+    /^\s*on .+ wrote:\s*$/i,
+  ];
+  const headerLike = [
+    /^(from|to|cc|bcc|subject|date)\s*:/i,
+    /^(差出人|送信者|宛先|件名|日時)\s*[:：]/,
+  ];
+  const dropLine = [
+    /^\s*>/,
+    /(配信停止|配信解除|unsubscribe|opt[\s-]?out)/i,
+    /(このメールは送信専用|送信専用アドレス|返信できません)/i,
+    /(privacy policy|プライバシー|個人情報|confidential)/i,
+    /(all rights reserved|copyright)/i,
+  ];
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i] ?? "";
+    const line = raw.trim();
+    if (!line) continue;
+    if (stopPatterns.some((re) => re.test(line))) break;
+    if (dropLine.some((re) => re.test(line))) continue;
+    if (headerLike.some((re) => re.test(line)) && i > 3) break;
+    out.push(line);
+    if (out.length >= 120) break;
+  }
+
+  const merged = out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return merged.slice(0, 8000);
+}
+
 function decodeGmailHeaderValue(value: string): string {
   // Minimal RFC 2047 support for common UTF-8/B payloads from Gmail headers.
   return value.replace(/=\?([^?]+)\?([bBqQ])\?([^?]+)\?=/g, (_m, _charset: string, enc: string, payload: string) => {
@@ -317,10 +398,20 @@ export function __extractGmailBodyFromPayloadForTests(payload: GmailPayloadPart,
   collectTextPlainBodies(payload, plainBodies);
   if (plainBodies.length > 0) {
     body = plainBodies.join("\n");
-  } else if (payload?.body?.data) {
-    body = decodeGmailBase64Url(payload.body.data);
+  } else {
+    const htmlBodies: string[] = [];
+    collectTextHtmlBodies(payload, htmlBodies);
+    if (htmlBodies.length > 0) {
+      body = htmlToText(htmlBodies.join("\n"));
+    } else if (payload?.body?.data) {
+      body = decodeGmailBase64Url(payload.body.data);
+    }
   }
   return body.slice(0, 8000);
+}
+
+export function __extractCleanMailTextFromGmailPayloadForTests(payload: GmailPayloadPart, snippet = ""): string {
+  return cleanMailTextForAi(__extractGmailBodyFromPayloadForTests(payload, snippet));
 }
 
 async function fetchEmailDetail(
@@ -348,7 +439,9 @@ async function fetchEmailDetail(
     const date = decodeGmailHeaderValue(dateRaw);
 
     // Extract body text
-    const body = data.payload ? __extractGmailBodyFromPayloadForTests(data.payload, data.snippet ?? "") : (data.snippet ?? "");
+    const body = data.payload
+      ? __extractCleanMailTextFromGmailPayloadForTests(data.payload, data.snippet ?? "")
+      : cleanMailTextForAi(data.snippet ?? "");
 
     return { subject, from, date, body };
   } catch {
