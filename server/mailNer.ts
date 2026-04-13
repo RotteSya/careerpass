@@ -11,6 +11,13 @@
  *   - ROUND: interview round (1st/2nd/3rd/final)
  */
 
+import {
+  normalizeCompanyDisplayName,
+  normalizeCompanyKey,
+  preferCompanyDisplayName,
+  resolveCanonicalCompanyName,
+} from "./companyName";
+
 // ─── ORG (Company Name) Extraction ───────────────────────────────────────────
 
 export interface OrgCandidate {
@@ -138,13 +145,8 @@ function extractOrgCandidates(subject: string, from: string, body: string, fromD
 }
 
 function normalizeOrgName(raw: string): string | null {
-  let c = raw.trim();
-  c = c.replace(/^(【|「|\[|\()(.+?)(】|」|\]|\))$/, "$2");
-  c = c.replace(/^[\s\-:：|｜·・"'`"']+|[\s\-:：|｜·・"'`"']+$/g, "");
-  c = c.replace(/(（株）|\(株\))/g, "株式会社");
-  c = c.replace(HR_SUFFIXES, "").trim();
-  c = c.replace(/[のよりからへ]$/, "").trim();
-  if (c.length < 2) return null;
+  const c = normalizeCompanyDisplayName(raw);
+  if (!c) return null;
   if (PLATFORM_NAME_HINTS.test(c)) return null;
   if (NON_COMPANY_PATTERNS.test(c)) return null;
   return c;
@@ -173,12 +175,12 @@ export function extractBestCompanyName(
     { name: string; maxConfidence: number; sources: string[] }
   >();
   for (const c of normalized) {
-    const key = c.name.toLowerCase().replace(/[\s　]+/g, "");
+    const key = normalizeCompanyKey(c.name) ?? c.name.toLowerCase().replace(/[\s　]+/g, "");
     const g = groups.get(key);
     if (g) {
       g.maxConfidence = Math.max(g.maxConfidence, c.confidence);
       g.sources.push(c.source);
-      if (c.name.length > g.name.length) g.name = c.name;
+      g.name = preferCompanyDisplayName(g.name, c.name);
     } else {
       groups.set(key, { name: c.name, maxConfidence: c.confidence, sources: [c.source] });
     }
@@ -190,7 +192,7 @@ export function extractBestCompanyName(
     const sourceBonus = Math.min(g.sources.length - 1, 3) * 0.05;
     const score = Math.min(g.maxConfidence + sourceBonus, 1);
     if (score > best.confidence) {
-      best = { name: g.name, confidence: score };
+      best = { name: resolveCanonicalCompanyName(g.name) ?? g.name, confidence: score };
     }
   }
 

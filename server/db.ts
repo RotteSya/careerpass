@@ -23,6 +23,7 @@ import {
   billingNotifications,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -262,7 +263,7 @@ export async function getBillingFeatureAccess(userId: number): Promise<BillingFe
 }
 
 function normalizeCompanyKeyForBilling(companyName: string): string {
-  return companyName.trim().toLowerCase().replace(/\s+/g, " ");
+  return normalizeCompanyKey(companyName) ?? companyName.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 export async function trackCompanyForBilling(params: {
@@ -274,7 +275,7 @@ export async function trackCompanyForBilling(params: {
   const db = await getDb();
   if (!db) return;
   const account = await getOrCreateBillingAccount(params.userId);
-  const companyName = params.companyName.trim();
+  const companyName = (resolveCanonicalCompanyName(params.companyName) ?? params.companyName).trim();
   if (!companyName) return;
   const companyKey = normalizeCompanyKeyForBilling(companyName);
 

@@ -156,6 +156,15 @@ describe("extractBestCompanyName", () => {
       expect(r.name).not.toMatch(/^"/);
     }
   });
+
+  it("merges legal/non-legal variants into one canonical company", () => {
+    const r = extractBestCompanyName(
+      "【ミライト・ワン】説明会にご参加いただきありがとうございました",
+      "ミライト・ワン <mirait@mail.axol.jp>",
+      "末尾署名: 株式会社ミライト・ワン",
+    );
+    expect(r.name).toBe("株式会社ミライト・ワン");
+  });
 });
 
 describe("extractTimeCandidates / extractBestDateTime", () => {

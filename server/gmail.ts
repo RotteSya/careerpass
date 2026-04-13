@@ -35,6 +35,7 @@ import { syncJobToNotionBoard } from "./notion";
 import { createCompanyBatchDeduper, sortMailItemsByTsDesc } from "./gmail_dedup";
 import { sendTelegramBubbles, sendTelegramMessage } from "./telegramMessaging";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
+import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
@@ -519,24 +520,7 @@ function jobStatusLabelZh(status: JobStatus): string {
 }
 
 function normalizeCompanyName(name: string | null | undefined): string | null {
-  let raw = (name ?? "").trim();
-  if (!raw) return null;
-  // Strip leading/trailing quotes and whitespace
-  raw = raw.replace(/^[\s"'`\u201c\u201d]+|[\s"'`\u201c\u201d]+$/g, "").trim();
-  if (!raw) return null;
-  const lower = raw.toLowerCase();
-  const blocked = new Set([
-    "info", "noreply", "no-reply", "support", "recruit", "saiyo", "hr", "jobs",
-    // Job-hunting review/info platforms — never treat as a company name
-    "syukatsu-kaigi", "syukatsukaigi", "就活会議", "openwork", "vorkers",
-    "onecareer", "one-career", "offerbox", "goodfind",
-    // Recruiting platforms
-    "mynavi", "マイナビ", "rikunabi", "リクナビ", "doda", "bizreach", "ビズリーチ",
-    "wantedly", "green",
-  ]);
-  if (blocked.has(lower)) return null;
-  if (raw.length < 2) return null;
-  return raw;
+  return resolveCanonicalCompanyName(name);
 }
 
 function nextStepsZh(status: JobStatus): string[] {
@@ -571,12 +555,23 @@ async function upsertJobProgressFromMail(params: {
   };
 }): Promise<{ changed: boolean; jobId: number | null; prevStatus: JobStatus | null; nextStatus: JobStatus }> {
   const { userId, companyName, nextStatus } = params;
+  const canonicalCompanyName = resolveCanonicalCompanyName(companyName) ?? companyName;
+  const targetKey = normalizeCompanyKey(canonicalCompanyName);
   const jobs = await getJobApplications(userId);
-  const existing = jobs.find((j) => j.companyNameJa === companyName || j.companyNameEn === companyName);
+  const existing = jobs.find((j) => {
+    const jaKey = normalizeCompanyKey(j.companyNameJa);
+    const enKey = normalizeCompanyKey(j.companyNameEn);
+    if (targetKey) return jaKey === targetKey || enKey === targetKey;
+    return j.companyNameJa === canonicalCompanyName || j.companyNameEn === canonicalCompanyName;
+  });
   if (!existing) {
-    await createJobApplication({ userId, companyNameJa: companyName });
+    await createJobApplication({ userId, companyNameJa: canonicalCompanyName });
     const fresh = await getJobApplications(userId);
-    const created = fresh.find((j) => j.companyNameJa === companyName) ?? null;
+    const created = fresh.find((j) => {
+      const jaKey = normalizeCompanyKey(j.companyNameJa);
+      if (targetKey && jaKey) return jaKey === targetKey;
+      return j.companyNameJa === canonicalCompanyName;
+    }) ?? null;
     if (created) {
       await updateJobApplicationStatus(created.id, userId, nextStatus);
       await createJobStatusEvent({

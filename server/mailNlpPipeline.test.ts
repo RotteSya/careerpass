@@ -492,4 +492,17 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.companyName).not.toMatch(/^"/);
     expect(d.companyName).toBe("メイテックフィルダーズ");
   });
+
+  it("normalizes ミライト・ワン variants to canonical company name", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "【ミライト・ワン】説明会にご参加いただきありがとうございました",
+      body:
+        "ミライト・ワン 採用担当です。マイページをご確認ください。\n\n株式会社ミライト・ワン",
+      from: "ミライト・ワン <mirait@mail.axol.jp>",
+      domainSignal: 0.8,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.companyName).toBe("株式会社ミライト・ワン");
+  });
 });
