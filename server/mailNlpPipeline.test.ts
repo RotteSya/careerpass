@@ -469,6 +469,26 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.isJobRelated).toBe(false);
   });
 
+  it("blocks mynavi survey + incentive mails even if they include a deadline", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "【4月18日〆切】抽選で500名にAmazonギフトカード500円分が当たります！ ◆◇2027年卒大学生業界イメージ調査◇◆ご協力のお願い",
+      body:
+        "こんにちは。こちらはマイナビアンケート事務局です。\n" +
+        "業界イメージに関するアンケートの、ご協力のお願いです。\n" +
+        "回答者の中から抽選でAmazonギフトコードをプレゼントいたします！\n" +
+        "【回答〆切】4月18日（土）23：59\n" +
+        "配信の停止 https://job.mynavi.jp/27/pc/jump?key=xxx\n" +
+        "回答フォームはこちら https://questant.jp/q/HDK0QA4K",
+      from: "マイナビ2027 <job-s27@mynavi.jp>",
+      domainSignal: 0.7,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(false);
+    expect(d.eventType).toBe("other");
+  });
+
   it("keeps actionable mynavi process mail as job-related instead of noise", () => {
     const d = runRecruitingNlpPipeline({
       subject: "【サンプルホールディングス】エントリーシート提出の御礼",

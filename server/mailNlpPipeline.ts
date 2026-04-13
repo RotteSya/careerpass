@@ -76,6 +76,10 @@ const PROCESS_HINTS =
 // Stronger signals for actionable process emails relayed by recruiting platforms.
 const ACTIONABLE_PROCESS_HINTS =
   /(提出の御礼|提出ありがとう|ご応募ありがとうございます|ご応募ありがとうございました|今後のスケジュール|次のステップ|選考フロー|エントリーシート提出|es提出|カジュアル面談|適正検査|適性検査|面接\(個別\)|面接（個別）|内定)/i;
+const PLATFORM_SURVEY_HINTS =
+  /(アンケート|調査|ご協力のお願い|業界イメージ|意識調査|満足度調査|questant\.jp)/i;
+const PLATFORM_INCENTIVE_HINTS =
+  /(抽選|当たります|プレゼント|ギフトカード|ギフトコード|amazon\s*ギフト|amazonギフト)/i;
 
 // ─── Event rules (multi-signal — ALL evaluated) ─────────────────────────────
 
@@ -318,6 +322,25 @@ export function runRecruitingNlpPipeline(
 
   // ③ Negative signal penalty
   const negPenalty = calculateNegativeSignalPenalty(lowerText);
+  const isPlatformSurveyPromo =
+    domainRep.tier === "recruiting_platform" &&
+    PLATFORM_SURVEY_HINTS.test(lowerText) &&
+    PLATFORM_INCENTIVE_HINTS.test(lowerText);
+  if (isPlatformSurveyPromo) {
+    return {
+      isJobRelated: false,
+      confidence: 0.98,
+      reason: "hard-negative:platform-survey",
+      eventType: "other",
+      companyName: null,
+      eventDate: input.fallbackDate,
+      eventTime: input.fallbackTime,
+      location: null,
+      todoItems: [],
+      shouldSkipLlm: true,
+      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+    };
+  }
   const hasActionableProcessHints =
     ACTIONABLE_PROCESS_HINTS.test(`${input.subject}\n${input.body}`) ||
     (/【[^】]{2,40}】/.test(input.subject) && PROCESS_HINTS.test(input.subject));
