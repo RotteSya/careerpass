@@ -278,6 +278,17 @@ type GmailPayloadPart = {
   parts?: GmailPayloadPart[];
 };
 
+function extractMeetingUrlFromText(text: string): string | null {
+  const m = text.match(
+    /(https?:\/\/(?:[a-zA-Z0-9-]+\.)?(?:zoom\.us|teams\.microsoft\.com|meet\.google\.com|webex\.com)\/[^\s　<>"]{10,200})/i
+  );
+  return m?.[1] ?? null;
+}
+
+export function __extractMeetingUrlFromTextForTests(text: string): string | null {
+  return extractMeetingUrlFromText(text);
+}
+
 function decodeGmailBase64Url(input: string): string {
   const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
   const padLength = (4 - (normalized.length % 4)) % 4;
@@ -417,7 +428,7 @@ export function __extractCleanMailTextFromGmailPayloadForTests(payload: GmailPay
 async function fetchEmailDetail(
   accessToken: string,
   messageId: string
-): Promise<{ subject: string; from: string; date: string; body: string } | null> {
+): Promise<{ subject: string; from: string; date: string; body: string; threadId: string | null } | null> {
   try {
     const res = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
@@ -428,6 +439,7 @@ async function fetchEmailDetail(
     const data = (await res.json()) as {
       payload?: GmailPayloadPart & { headers?: Array<{ name: string; value: string }> };
       snippet?: string;
+      threadId?: string;
     };
 
     const headers = data.payload?.headers ?? [];
@@ -443,7 +455,29 @@ async function fetchEmailDetail(
       ? __extractCleanMailTextFromGmailPayloadForTests(data.payload, data.snippet ?? "")
       : cleanMailTextForAi(data.snippet ?? "");
 
-    return { subject, from, date, body };
+    return { subject, from, date, body, threadId: data.threadId ?? null };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchThreadMeetingUrl(accessToken: string, threadId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      messages?: Array<{ payload?: GmailPayloadPart; snippet?: string }>;
+    };
+    for (const msg of data.messages ?? []) {
+      const body = msg.payload
+        ? __extractCleanMailTextFromGmailPayloadForTests(msg.payload, msg.snippet ?? "")
+        : cleanMailTextForAi(msg.snippet ?? "");
+      const url = extractMeetingUrlFromText(body);
+      if (url) return url;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -631,9 +665,43 @@ function inferInterviewStatusFromText(text: string): JobStatus | null {
   if (/三次面[接談]|3次面[接談]|３次面[接談]|third\s*interview|3rd\s*interview/.test(t)) return "interview_3";
   if (/二次面[接談]|2次面[接談]|２次面[接談]|second\s*interview|2nd\s*interview/.test(t)) return "interview_2";
   if (/一次面[接談]|1次面[接談]|１次面[接談]|first\s*interview|1st\s*interview/.test(t)) return "interview_1";
+  if (
+    /(最終選考|final\s*selection)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_final";
+  }
+  if (
+    /(四次選考|4次選考|４次選考)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_4";
+  }
+  if (
+    /(三次選考|3次選考|３次選考)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_3";
+  }
+  if (
+    /(二次選考|2次選考|２次選考)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_2";
+  }
+  if (
+    /(一次選考|1次選考|１次選考)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_1";
+  }
   // Standalone round markers only when adjacent to 面接/選考 context
   if (/最終/.test(t) && /面[接談]|選考/.test(t)) return "interview_final";
   return null;
+}
+
+export function __inferInterviewStatusFromTextForTests(text: string): JobStatus | null {
+  return inferInterviewStatusFromText(text);
 }
 
 function jobStatusLabelZh(status: JobStatus): string {
@@ -1314,6 +1382,7 @@ async function processGmailMessageIds(params: {
   const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
   const detectedEvents: EmailEvent[] = [];
   const isFirstForCompanyInBatch = createCompanyBatchDeduper();
+  const threadMeetingUrlCache = new Map<string, string | null>();
   let calendarCount = 0;
 
   const notifyCutoffMs =
@@ -1323,7 +1392,7 @@ async function processGmailMessageIds(params: {
 
   const fetched: Array<{
     messageId: string;
-    detail: { subject: string; from: string; date: string; body: string };
+    detail: { subject: string; from: string; date: string; body: string; threadId: string | null };
     mailTs: number;
   }> = [];
   const fetchedResults = await mapWithConcurrency(messageIds, 12, async (messageId) => {
@@ -1426,6 +1495,26 @@ async function processGmailMessageIds(params: {
         normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
         null;
 
+      let location = decision.location ?? null;
+      if (eventType === "interview" && detail.threadId) {
+        const hasUrlInLocation = typeof location === "string" && /https?:\/\//i.test(location);
+        const hasUrlInBody = /https?:\/\//i.test(mailText);
+        const needsUrlHint = /(teams|zoom|webex|google\s*meet|会議に参加|参加ください|url|リンク)/i.test(mailText);
+        if (!hasUrlInLocation && !hasUrlInBody && needsUrlHint) {
+          const cached = threadMeetingUrlCache.get(detail.threadId);
+          const url =
+            cached !== undefined
+              ? cached
+              : await fetchThreadMeetingUrl(accessToken, detail.threadId).then((u) => {
+                  threadMeetingUrlCache.set(detail.threadId as string, u);
+                  return u;
+                });
+          if (url) {
+            location = location ? `${location} ${url}` : url;
+          }
+        }
+      }
+
       if (!decision.isJobRelated || !companyName) {
         console.info("[Gmail] analyze-drop", {
           userId,
@@ -1449,7 +1538,7 @@ async function processGmailMessageIds(params: {
         companyName,
         eventDate: date,
         eventTime: time,
-        location: decision.location ?? null,
+        location,
         todoItems: decision.todoItems ?? [],
         mailLink: `https://mail.google.com/mail/u/0/#inbox/${messageId}`,
       };
@@ -1511,7 +1600,7 @@ async function processGmailMessageIds(params: {
             eventType,
             eventDate: date,
             eventTime: time,
-            location: decision.location ?? null,
+            location,
             mailSubject: detail.subject,
             source: "gmail",
           });
