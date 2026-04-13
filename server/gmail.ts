@@ -542,7 +542,7 @@ function nextStepsZh(status: JobStatus): string[] {
   if (status === "document_screening") return ["确认筛选周期与反馈时间", "先准备常见面试题与案例证据"];
   if (status === "written_test") return ["确认笔试范围与平台", "做一套时限模拟题并复盘错题"];
   if (status === "interview_1") return ["整理面试题库：动机/强项/失败经历", "把 ES 的每一句都准备可追问的证据"];
-  if (status === "interview_2") return ["补齐职业规划与岗位匹配的逻辑链", "准备 1 个“你如何推进项目”的深挖案例"];
+  if (status === "interview_2") return ["补齐职业规划与岗位匹配的逻辑链", "准备 1 个'你如何推进项目'的深挖案例"];
   if (status === "interview_3") return ["补充跨团队协作与抗压案例", "准备对业务理解和价值贡献的回答"];
   if (status === "interview_4") return ["准备高层关注点：入社动机与长期发展", "确认最后一轮的提问清单和条件确认项"];
   if (status === "interview_final") return ["准备入社动机与价值观对齐", "准备薪资/条件/入社时间的确认问题"];
@@ -764,30 +764,91 @@ async function runCareerpassmailAgent(input: {
     };
   }
 
-  const systemPrompt = `你是 CareerPass 的”邮件监控 Agent”。
-任务：判断这封邮件是否与用户求职行为相关（面试邀请、说明会、测试、结果通知、offer、流程更新等），并抽取结构化字段。
-判断要求：
-- 以语义理解为主，不依赖固定关键词匹配。
-- 结合发件人域名可信度、邮件语气、流程信息、行动要求来判断。
-- 对日本求职邮件格式做本地化：例如”2026年4月10日(金) 14:00〜15:00””【日時】””■日時”。
-- companyName 必须是用户正在应聘的**实际企业名**。就活会議 / syukatsu-kaigi / OpenWork / ONE CAREER 等求职平台本身不是应聘企业，绝不可作为 companyName 输出。
-- eventType 区分要点：
-  - “entry”：エントリー完了/受付/申し込み確認（用户已向企业提交了报名或申请）
-  - “briefing”：説明会/セミナー/会社紹介（企业举办的说明会、尚未进入选考）
-  - “interview”：面接/面談の案内（选考流程中的面试）
-  - “test”：Webテスト/SPI/適性検査/筆記試験
-  - “deadline”：ES締切/提出期限
-  - 区分 entry vs briefing：「エントリー」は応募行為、「説明会」は情報提供行事。混同しないこと。
-输出必须是 JSON：{
-  “isJobRelated”: boolean,
-  “confidence”: number,
-  “reason”: string,
-  “eventType”: “interview” | “briefing” | “test” | “deadline” | “entry” | “offer” | “rejection” | “other”,
-  “companyName”: string | null,
-  “eventDate”: “YYYY-MM-DD” | null,
-  “eventTime”: “HH:MM” | null,
-  “location”: string | null,
-  “todoItems”: string[]
+  // Build pre-flight NER hints to give the LLM a head-start
+  const nerCompany = preflight.companyName;
+  const nerDate = preflight.eventDate;
+  const nerTime = preflight.eventTime;
+  const nerLocation = preflight.location;
+  const ruleHint = (preflight._meta?.ruleSignals ?? [])
+    .map((s) => `${s.eventType}(${s.confidence.toFixed(2)})`)
+    .join(", ") || "none";
+  const domainTier = preflight._meta?.domainReputation?.tier ?? "unknown";
+
+  const systemPrompt = `你是 CareerPass 的"邮件监控 Agent"——一个专业的日本求职邮件智能分析系统。
+你的核心任务是深度语义理解邮件内容，判断是否与求职相关，并精准抽取结构化字段。
+
+## 判断原则
+
+1. **语义优先**：以 Transformer 级别的深度语义理解为主，不依赖关键词简单匹配。
+   - 区分"面接のご案内"（面试邀请）与"面接結果のご連絡"（结果通知）——即使都含有"面接"。
+   - 区分"説明会のご案内"（说明会）与"エントリー完了のお知らせ"（报名确认）。
+   - 理解语气和意图：客气的拒绝表达（「ご期待に添えず」）仍是拒绝。
+2. **多信号融合**：结合发件人域名类型(${domainTier})、邮件语气、是否包含行动要求（URL/日期/集合地点）来综合判断。
+3. **公司名提取**：
+   - companyName 必须是用户正在应聘的**实际企业名**。
+   - 求职平台（就活会議/OpenWork/ONE CAREER/リクナビ/マイナビ/OfferBox 等）**绝不可**作为 companyName。
+   - 优先提取「株式会社XX」等法人名称，其次从发件人/件名中推断。
+4. **事件时间提取**：注意日本特有格式：2026年4月10日(金) 14:00〜15:00、■日時、【日時】等。
+5. **Noise 过滤**：含"配信停止""メルマガ""おすすめ求人""口コミ"等的邮件大概率是噪音。
+
+## eventType 判断细则
+
+| eventType | 含义 | 典型特征 |
+|-----------|------|----------|
+| interview | 面接/面談の案内 | 有日時/場所/Zoom URL、要求准备 |
+| briefing | 説明会/セミナー | 企業情報提供、无选考性质 |
+| test | Webテスト/SPI/筆記 | 含测试 URL/期限 |
+| deadline | ES/書類提出締切 | 含明确截止日期 |
+| entry | エントリー/応募受付 | 确认报名成功 |
+| offer | 内定/採用通知 | 正面结果 |
+| rejection | 不採用/お見送り | 负面结果、含"お祈り" |
+| other | 不属于上述 / 不确定 | 给低 confidence |
+
+**关键区分**：entry 是"报名行为确认"，briefing 是"信息提供活动"。不可混淆。
+
+## Few-shot 示例
+
+**示例1** — 面试邀请（正例）
+件名: 【株式会社ABC】一次面接のご案内
+正文: ...2026年4月15日(火) 14:00〜14:45 オンライン（Zoom）...
+→ {"isJobRelated":true,"confidence":0.95,"reason":"面接日程案内+日時あり","eventType":"interview","companyName":"株式会社ABC","eventDate":"2026-04-15","eventTime":"14:00","location":"オンライン（Zoom）","todoItems":["确认Zoom链接和面试形式","准备1分钟自我介绍和志望动机"]}
+
+**示例2** — 拒信（容易误判为"結果通知"）
+件名: 選考結果のご連絡
+正文: ...誠に残念ではございますが、今回は貴意に沿えない結果となりました...
+→ {"isJobRelated":true,"confidence":0.97,"reason":"お祈りメール:語気から不採用","eventType":"rejection","companyName":"...","eventDate":null,"eventTime":null,"location":null,"todoItems":["记录原因并更新投递策略"]}
+
+**示例3** — 平台噪音（应排除）
+件名: 【就活会議】新着企業口コミのお知らせ
+正文: あなたにおすすめの企業口コミが届いています...配信停止はこちら
+→ {"isJobRelated":false,"confidence":0.95,"reason":"求人プラットフォーム通知、求職行為に直接関連しない","eventType":"other","companyName":null,"eventDate":null,"eventTime":null,"location":null,"todoItems":[]}
+
+**示例4** — 说明会 vs エントリー 区分
+件名: 会社説明会のご予約確認
+正文: ...下記日程で説明会のご予約を承りました。2026/04/20 10:00〜11:30...
+→ {"isJobRelated":true,"confidence":0.90,"reason":"説明会予約確認","eventType":"briefing","companyName":"...","eventDate":"2026-04-20","eventTime":"10:00","location":null,"todoItems":["确认参加方式","准备2个问题"]}
+
+## 规则引擎预判（参考信息，不强制覆盖你的语义判断）
+- 规则引擎匹配: [${ruleHint}]
+- NER 提取公司名: ${nerCompany ?? "未提取到"}
+- NER 提取日期: ${nerDate ?? "未提取到"} ${nerTime ?? ""}
+- NER 提取地点: ${nerLocation ?? "未提取到"}
+
+你可以参考以上信息，但如果你的语义理解与规则冲突，以语义为准（除非是明确的 offer/rejection 硬判断）。
+
+## 输出格式
+
+严格输出一个 JSON object，不输出任何多余文本：
+{
+  "isJobRelated": boolean,
+  "confidence": number (0-1),
+  "reason": string (简短判断依据),
+  "eventType": "interview" | "briefing" | "test" | "deadline" | "entry" | "offer" | "rejection" | "other",
+  "companyName": string | null,
+  "eventDate": "YYYY-MM-DD" | null,
+  "eventTime": "HH:MM" | null,
+  "location": string | null,
+  "todoItems": string[] (最多3条)
 }`;
   const soul = await loadAgentSoul("careerpassmail");
   const agents = await loadAgentAgents("careerpassmail");
@@ -806,9 +867,8 @@ async function runCareerpassmailAgent(input: {
           content:
             `件名: ${input.subject}\n\n` +
             `送信者: ${input.from}\n` +
-            `送信者ドメイン: ${domain ?? "unknown"}\n` +
-            `送信者ドメイン信号: ${domainSignal}\n` +
-            `本地化时间提示: ${localized.date ?? basic.date ?? "none"} ${localized.time ?? basic.time ?? "none"}\n\n` +
+            `送信者ドメイン: ${domain ?? "unknown"} (${domainTier})\n` +
+            `送信者ドメイン信号: ${domainSignal}\n\n` +
             `正文:\n${input.body.slice(0, 2500)}`,
         },
       ],

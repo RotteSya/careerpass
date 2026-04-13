@@ -1,3 +1,24 @@
+/**
+ * mailNlpPipeline.ts — Hybrid classification pipeline (heuristic rules + LLM)
+ *
+ * Architecture inspired by JobFight:
+ *   1. Multi-signal rule scoring (not first-match — ALL rules evaluated)
+ *   2. Domain reputation & negative signal filtering
+ *   3. NER-based entity extraction (company, date/time, location)
+ *   4. Dynamic confidence merging with LLM output
+ */
+
+import {
+  extractBestCompanyName,
+  extractBestDateTime,
+  extractLocation,
+  detectInterviewRound,
+  getDomainReputation,
+  calculateNegativeSignalPenalty,
+  type DomainReputation,
+  type InterviewRound,
+} from "./mailNer";
+
 type MailEventType =
   | "interview"
   | "briefing"
@@ -37,43 +58,72 @@ export interface RecruitingNlpDecision extends MailDecisionLike {
   location: string | null;
   todoItems: string[];
   shouldSkipLlm: boolean;
+  /** Extra metadata exposed for downstream logic / debugging */
+  _meta?: {
+    domainReputation: DomainReputation;
+    interviewRound: InterviewRound | null;
+    negPenalty: number;
+    ruleSignals: Array<{ eventType: MailEventType; confidence: number; reason: string }>;
+  };
 }
 
-const JOB_PLATFORM_HINTS = /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind)/i;
-const PROCESS_HINTS = /(選考|面接|面談|説明会|webテスト|spi|適性検査|筆記試験|締切|提出期限|エントリー|応募|内定|不採用|お見送り|合否)/i;
-const NON_COMPANY_NAME_HINTS =
-  /(noreply|no-reply|support|info|notification|採用担当|人事部|運営事務局|マイページ|事務局|team|system)/i;
+// ─── Platform noise ──────────────────────────────────────────────────────────
 
-const EVENT_RULES: Array<{ eventType: MailEventType; confidence: number; reason: string; pattern: RegExp }> = [
+const JOB_PLATFORM_HINTS =
+  /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind)/i;
+const PROCESS_HINTS =
+  /(選考|面接|面談|説明会|webテスト|spi|適性検査|筆記試験|締切|提出期限|エントリー|応募|内定|不採用|お見送り|合否)/i;
+
+// ─── Event rules (multi-signal — ALL evaluated) ─────────────────────────────
+
+interface EventRule {
+  eventType: MailEventType;
+  confidence: number;
+  reason: string;
+  pattern: RegExp;
+  /** Higher = more specific match. Used as tiebreaker. */
+  specificity: number;
+}
+
+const EVENT_RULES: EventRule[] = [
+  // ── Hard outcomes (highest priority, not overridden by LLM) ──
   {
     eventType: "rejection",
     confidence: 0.97,
     reason: "rule:rejection",
+    specificity: 10,
     pattern:
-      /(不採用|見送り|お見送り|不合格|不通過|残念ながら|ご期待に添え|rejected|not selected|we regret|selection result.*unsuccessful)/i,
+      /(不採用|見送り|お見送り|不合格|不通過|残念ながら|ご期待に添え|ご縁がなく|rejected|not selected|we regret|selection result.*unsuccessful)/i,
   },
   {
     eventType: "offer",
     confidence: 0.97,
     reason: "rule:offer",
-    pattern: /(内定|内々定|offer|採用決定|採用通知|内定通知|job offer)/i,
+    specificity: 10,
+    pattern: /(内定|内々定|offer|採用決定|採用通知|内定通知|job offer|合格通知|合格のお知らせ)/i,
   },
+  // ── Core event types ──
   {
     eventType: "interview",
     confidence: 0.92,
     reason: "rule:interview",
-    pattern: /(面接|面談|interview|一次面接|二次面接|三次面接|最終面接|グループ面接|個別面接|面接日程)/i,
+    specificity: 8,
+    pattern:
+      /(面接|面談|interview|一次面接|二次面接|三次面接|最終面接|グループ面接|個別面接|面接日程|面接のご案内|カジュアル面談)/i,
   },
   {
     eventType: "test",
-    confidence: 0.9,
+    confidence: 0.90,
     reason: "rule:test",
-    pattern: /(webテスト|spi|適性検査|筆記試験|テスト受検|受検案内|coding test|online assessment|assessment)/i,
+    specificity: 7,
+    pattern:
+      /(webテスト|spi|適性検査|筆記試験|テスト受検|受検案内|coding test|online assessment|assessment|玉手箱|GAB|CAB|テストセンター)/i,
   },
   {
     eventType: "deadline",
-    confidence: 0.9,
+    confidence: 0.90,
     reason: "rule:deadline",
+    specificity: 7,
     pattern:
       /(締切|提出期限|deadline|提出期日|エントリーシート提出|es提出|回答期限|期限までに|応募締切|予約締切)/i,
   },
@@ -81,24 +131,60 @@ const EVENT_RULES: Array<{ eventType: MailEventType; confidence: number; reason:
     eventType: "briefing",
     confidence: 0.86,
     reason: "rule:briefing",
-    pattern: /(説明会|セミナー|会社説明|briefing|会社紹介|オープンカンパニー|web説明会|オンライン説明会)/i,
+    specificity: 6,
+    pattern:
+      /(説明会|セミナー|会社説明|briefing|会社紹介|オープンカンパニー|web説明会|オンライン説明会|座談会|懇親会)/i,
   },
   {
     eventType: "entry",
     confidence: 0.82,
     reason: "rule:entry",
+    specificity: 5,
     pattern:
-      /(エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます)/i,
+      /(エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます|マイページ登録|プレエントリー)/i,
   },
 ];
 
+// ─── Co-occurrence boosting rules ────────────────────────────────────────────
+// When certain keyword combinations appear together, boost confidence.
+
+interface CoOccurrenceRule {
+  primary: RegExp;
+  secondary: RegExp;
+  boost: number;
+  appliesTo: MailEventType;
+}
+
+const CO_OCCURRENCE_RULES: CoOccurrenceRule[] = [
+  // "面接" + date/time near each other → strong interview signal
+  { primary: /面接|面談|interview/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{1,2}):(\d{2})|(\d{4})[\/年]/, boost: 0.05, appliesTo: "interview" },
+  // "説明会" + date → strong briefing signal
+  { primary: /説明会|セミナー/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{1,2}):(\d{2})/, boost: 0.04, appliesTo: "briefing" },
+  // "テスト" + URL → likely a real test invitation
+  { primary: /テスト|spi|適性検査|assessment/i, secondary: /https?:\/\/|URL|リンク|ログイン/i, boost: 0.04, appliesTo: "test" },
+  // "締切" + specific date → real deadline
+  { primary: /締切|期限|deadline/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{4})[\/年\-]/, boost: 0.04, appliesTo: "deadline" },
+  // Rejection + apology pattern → definite rejection
+  { primary: /見送り|不採用|不合格/i, secondary: /残念|お祈り|ご縁/i, boost: 0.02, appliesTo: "rejection" },
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function normalizeEventType(v: string | null | undefined): MailEventType {
-  if (v === "interview" || v === "briefing" || v === "test" || v === "deadline" || v === "entry" || v === "offer" || v === "rejection" || v === "other") {
+  if (
+    v === "interview" || v === "briefing" || v === "test" ||
+    v === "deadline" || v === "entry" || v === "offer" ||
+    v === "rejection" || v === "other"
+  ) {
     return v;
   }
   return "other";
 }
 
+/**
+ * Legacy company-name normalizer (kept for backward compat with LLM output).
+ * For rule-based extraction, prefer `extractBestCompanyName` from mailNer.
+ */
 function normalizeCompanyName(name: string | null | undefined): string | null {
   const raw = (name ?? "").trim();
   if (!raw) return null;
@@ -110,47 +196,7 @@ function normalizeCompanyName(name: string | null | undefined): string | null {
     .trim();
   if (cleaned.length < 2) return null;
   if (JOB_PLATFORM_HINTS.test(cleaned)) return null;
-  if (NON_COMPANY_NAME_HINTS.test(cleaned)) return null;
   return cleaned;
-}
-
-function extractCompanyCandidate(input: RecruitingNlpInput): string | null {
-  const subject = input.subject;
-  const from = input.from;
-  const displayName = from.split("<")[0]?.trim() ?? "";
-
-  const legalName = subject.match(/((?:株式会社|合同会社)\s*[^\s【】\[\]<>]{1,40})/);
-  if (legalName?.[1]) return normalizeCompanyName(legalName[1]);
-
-  const fromLegalName = `${displayName}\n${subject}`.match(/((?:株式会社|合同会社)\s*[^\n【】\[\]<>]{1,40})/);
-  if (fromLegalName?.[1]) return normalizeCompanyName(fromLegalName[1]);
-
-  const fromBrackets = displayName.match(/(?:【|\[|「)?([^】\]」]{2,30})(?:】|\]|」)?\s*(?:採用|採用担当|人事|HR)/i);
-  if (fromBrackets?.[1]) return normalizeCompanyName(fromBrackets[1]);
-
-  const subjectCompanyLead = subject.match(/^(?:\[|【)?([^】\]\s]{2,24})(?:\]|】)?\s*(?:採用|選考|面接|説明会|エントリー)/);
-  if (subjectCompanyLead?.[1]) return normalizeCompanyName(subjectCompanyLead[1]);
-
-  const bracket = subject.match(/【([^】]{2,30})】/);
-  if (bracket?.[1]) return normalizeCompanyName(bracket[1]);
-
-  const dm = from.match(/@([a-zA-Z0-9-]+)\./);
-  if (dm?.[1]) {
-    const sld = dm[1];
-    if (!/^(gmail|yahoo|outlook|hotmail|icloud|mail|noreply|no-reply)$/i.test(sld)) {
-      return normalizeCompanyName(sld);
-    }
-  }
-  return null;
-}
-
-function inferRuleEventType(text: string): { eventType: MailEventType; confidence: number; reason: string } {
-  for (const rule of EVENT_RULES) {
-    if (rule.pattern.test(text)) {
-      return { eventType: rule.eventType, confidence: rule.confidence, reason: rule.reason };
-    }
-  }
-  return { eventType: "other", confidence: 0.35, reason: "rule:other" };
 }
 
 function defaultTodo(eventType: MailEventType): string[] {
@@ -164,15 +210,75 @@ function defaultTodo(eventType: MailEventType): string[] {
   return [];
 }
 
+// ─── Multi-signal rule evaluation ────────────────────────────────────────────
+
+interface RuleSignal {
+  eventType: MailEventType;
+  confidence: number;
+  reason: string;
+  specificity: number;
+}
+
+function evaluateAllRules(text: string): RuleSignal[] {
+  const signals: RuleSignal[] = [];
+  for (const rule of EVENT_RULES) {
+    const m = text.match(rule.pattern);
+    if (m) {
+      // Actual matched length contributes to specificity
+      const matchSpecificity = rule.specificity + Math.min(m[0].length / 20, 0.5);
+      signals.push({
+        eventType: rule.eventType,
+        confidence: rule.confidence,
+        reason: rule.reason,
+        specificity: matchSpecificity,
+      });
+    }
+  }
+  return signals;
+}
+
+function applyCoOccurrenceBoosts(text: string, signals: RuleSignal[]): RuleSignal[] {
+  return signals.map((s) => {
+    let boost = 0;
+    for (const rule of CO_OCCURRENCE_RULES) {
+      if (rule.appliesTo === s.eventType && rule.primary.test(text) && rule.secondary.test(text)) {
+        boost += rule.boost;
+      }
+    }
+    return { ...s, confidence: Math.min(s.confidence + boost, 1) };
+  });
+}
+
+function pickBestRuleSignal(
+  signals: RuleSignal[],
+): { eventType: MailEventType; confidence: number; reason: string } {
+  if (signals.length === 0) return { eventType: "other", confidence: 0.35, reason: "rule:other" };
+
+  // Hard outcome rules ALWAYS win
+  const hard = signals.find((s) => s.eventType === "offer" || s.eventType === "rejection");
+  if (hard) return { eventType: hard.eventType, confidence: hard.confidence, reason: hard.reason };
+
+  // Sort by composite score: confidence first, specificity as tiebreaker
+  const sorted = [...signals].sort((a, b) => {
+    const diff = b.confidence - a.confidence;
+    return diff !== 0 ? diff : b.specificity - a.specificity;
+  });
+  return { eventType: sorted[0].eventType, confidence: sorted[0].confidence, reason: sorted[0].reason };
+}
+
+// ─── Main pipeline ───────────────────────────────────────────────────────────
+
 export function runRecruitingNlpPipeline(
   input: RecruitingNlpInput,
-  llmDecision?: MailDecisionLike | null
+  llmDecision?: MailDecisionLike | null,
 ): RecruitingNlpDecision {
   const text = `${input.subject}\n${input.body}\n${input.from}`;
   const lowerText = text.toLowerCase();
-  const rule = inferRuleEventType(lowerText);
-  const ruleCompany = extractCompanyCandidate(input);
 
+  // ① Domain reputation
+  const domainRep = getDomainReputation(input.from);
+
+  // ② Platform noise gate (unchanged behavior)
   const obviousPlatformNoise = JOB_PLATFORM_HINTS.test(lowerText) && !PROCESS_HINTS.test(lowerText);
   if (obviousPlatformNoise) {
     return {
@@ -186,33 +292,106 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
+      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty: 0, ruleSignals: [] },
     };
   }
 
+  // ③ Negative signal penalty
+  const negPenalty = calculateNegativeSignalPenalty(lowerText);
+  const isLikelyNoise = negPenalty <= -0.4 && domainRep.tier === "noise_platform";
+  if (isLikelyNoise) {
+    return {
+      isJobRelated: false,
+      confidence: 0.90,
+      reason: "hard-negative:noise-signals",
+      eventType: "other",
+      companyName: null,
+      eventDate: input.fallbackDate,
+      eventTime: input.fallbackTime,
+      location: null,
+      todoItems: [],
+      shouldSkipLlm: true,
+      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+    };
+  }
+
+  // ④ Multi-signal rule evaluation
+  let ruleSignals = evaluateAllRules(lowerText);
+  ruleSignals = applyCoOccurrenceBoosts(lowerText, ruleSignals);
+  const rule = pickBestRuleSignal(ruleSignals);
+
+  // ⑤ NER: company name
+  const nerCompany = extractBestCompanyName(input.subject, input.from, input.body);
+
+  // ⑥ NER: date/time
+  const nerDateTime = extractBestDateTime(text);
+
+  // ⑦ NER: location
+  const nerLocation = extractLocation(input.body);
+
+  // ⑧ Interview round detection
+  const interviewRound = detectInterviewRound(text);
+
+  // ⑨ Merge with LLM decision
   const llmEventType = normalizeEventType(llmDecision?.eventType ?? null);
   const hardRuleOutcome = rule.eventType === "offer" || rule.eventType === "rejection";
+
+  // Event type resolution: hard rules > LLM > best rule
   const mergedEventType: MailEventType = hardRuleOutcome
     ? rule.eventType
     : llmEventType !== "other"
-    ? llmEventType
-    : rule.eventType;
+      ? llmEventType
+      : rule.eventType;
 
+  // ⑩ Dynamic confidence merging
   const llmConfidence =
     typeof llmDecision?.confidence === "number" && Number.isFinite(llmDecision.confidence)
       ? Math.max(0, Math.min(1, llmDecision.confidence))
       : 0;
-  const mergedConfidence = llmDecision
-    ? Math.max(0, Math.min(1, llmConfidence * 0.7 + rule.confidence * 0.3))
-    : Math.max(rule.confidence, input.domainSignal * 0.7);
 
+  let mergedConfidence: number;
+  if (llmDecision) {
+    // Dynamic weight: if rule is very confident (>=0.9), give rules more weight
+    const ruleWeight = rule.confidence >= 0.90 ? 0.45 : 0.30;
+    const llmWeight = 1 - ruleWeight;
+    const rawConfidence = llmConfidence * llmWeight + rule.confidence * ruleWeight;
+    // Apply domain reputation as a multiplier (0.7–1.0)
+    const domainMultiplier = 0.7 + domainRep.score * 0.3;
+    // Apply negative signal penalty
+    mergedConfidence = Math.max(0, Math.min(1, rawConfidence * domainMultiplier + negPenalty * 0.3));
+  } else {
+    // No LLM — rule + domain signal
+    mergedConfidence = Math.max(
+      rule.confidence,
+      input.domainSignal * 0.7,
+      domainRep.score * 0.8,
+    );
+    mergedConfidence = Math.max(0, Math.min(1, mergedConfidence + negPenalty * 0.3));
+  }
+
+  // ⑪ isJobRelated decision
   const mergedIsJobRelated = llmDecision
     ? !!llmDecision.isJobRelated || mergedEventType !== "other"
-    : mergedEventType !== "other" || (input.domainSignal >= 0.9 && !!input.fallbackDate);
+    : mergedEventType !== "other" || (domainRep.score >= 0.8 && !!input.fallbackDate);
 
-  const mergedCompany = normalizeCompanyName(llmDecision?.companyName ?? null) ?? ruleCompany;
+  // ⑫ Company name: NER result > LLM > rule-extracted
+  const llmCompany = normalizeCompanyName(llmDecision?.companyName ?? null);
+  const mergedCompany =
+    (nerCompany.confidence >= 0.70 ? nerCompany.name : null) ??
+    llmCompany ??
+    (nerCompany.name);
+
+  // ⑬ Date/time: LLM > NER > fallback
+  const mergedDate = llmDecision?.eventDate ?? nerDateTime.date ?? input.fallbackDate;
+  const mergedTime = llmDecision?.eventTime ?? nerDateTime.time ?? input.fallbackTime;
+
+  // ⑭ Location: LLM > NER
+  const mergedLocation = llmDecision?.location ?? nerLocation ?? null;
+
+  // ⑮ Todo items
   const mergedTodo =
     (Array.isArray(llmDecision?.todoItems) ? llmDecision?.todoItems : null)?.filter(
-      (t): t is string => typeof t === "string" && t.trim().length > 0
+      (t): t is string => typeof t === "string" && t.trim().length > 0,
     ) ?? defaultTodo(mergedEventType);
 
   return {
@@ -221,10 +400,11 @@ export function runRecruitingNlpPipeline(
     reason: llmDecision ? `${llmDecision.reason ?? "llm"} | ${rule.reason}` : rule.reason,
     eventType: mergedEventType,
     companyName: mergedCompany ?? null,
-    eventDate: llmDecision?.eventDate ?? input.fallbackDate,
-    eventTime: llmDecision?.eventTime ?? input.fallbackTime,
-    location: llmDecision?.location ?? null,
+    eventDate: mergedDate,
+    eventTime: mergedTime,
+    location: mergedLocation,
     todoItems: mergedTodo.slice(0, 3),
     shouldSkipLlm: false,
+    _meta: { domainReputation: domainRep, interviewRound, negPenalty, ruleSignals },
   };
 }
