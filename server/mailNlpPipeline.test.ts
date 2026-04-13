@@ -426,4 +426,57 @@ describe("runRecruitingNlpPipeline", () => {
     });
     expect(d.eventType).toBe("test");
   });
+
+  // ─── Bug fix: platform newsletter company extraction ─────────────────────
+
+  it("does not extract ダイナム from マイナビ newsletter body", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "マイナビメール2027★ピックアップ★",
+      body: "初めまして！ダイナム採用担当です。株式会社ダイナムは全国に店舗展開...\n説明会にご参加ください\n配信停止はこちら",
+      from: "job-s27@mynavi.jp",
+      domainSignal: 0.7,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    // Should NOT extract ダイナム as company — it's from a platform newsletter
+    expect(d.companyName === null || !d.companyName.includes("ダイナム")).toBe(true);
+  });
+
+  it("blocks recruiting platform newsletter with negative signals", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "マイナビメール2027★ピックアップ★",
+      body: "新着求人をお届け！おすすめ企業のご紹介\n配信停止はこちら\n説明会情報あり",
+      from: "job-s27@mynavi.jp",
+      domainSignal: 0.5,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    // Should be marked as noise due to recruiting_platform + negative signals
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(false);
+  });
+
+  // ─── Bug fix: stray quote in company name ────────────────────────────────
+
+  it("strips leading quote from LLM company name", () => {
+    const d = runRecruitingNlpPipeline(
+      {
+        subject: "面接のご案内",
+        body: "面接のご案内です。",
+        from: "hr@example.co.jp",
+        domainSignal: 0.9,
+        fallbackDate: null,
+        fallbackTime: null,
+      },
+      {
+        isJobRelated: true,
+        confidence: 0.85,
+        reason: "llm",
+        eventType: "interview",
+        companyName: '"メイテックフィルダーズ',
+      },
+    );
+    expect(d.companyName).not.toMatch(/^"/);
+    expect(d.companyName).toBe("メイテックフィルダーズ");
+  });
 });

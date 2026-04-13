@@ -519,7 +519,10 @@ function jobStatusLabelZh(status: JobStatus): string {
 }
 
 function normalizeCompanyName(name: string | null | undefined): string | null {
-  const raw = (name ?? "").trim();
+  let raw = (name ?? "").trim();
+  if (!raw) return null;
+  // Strip leading/trailing quotes and whitespace
+  raw = raw.replace(/^[\s"'`\u201c\u201d]+|[\s"'`\u201c\u201d]+$/g, "").trim();
   if (!raw) return null;
   const lower = raw.toLowerCase();
   const blocked = new Set([
@@ -527,6 +530,9 @@ function normalizeCompanyName(name: string | null | undefined): string | null {
     // Job-hunting review/info platforms — never treat as a company name
     "syukatsu-kaigi", "syukatsukaigi", "就活会議", "openwork", "vorkers",
     "onecareer", "one-career", "offerbox", "goodfind",
+    // Recruiting platforms
+    "mynavi", "マイナビ", "rikunabi", "リクナビ", "doda", "bizreach", "ビズリーチ",
+    "wantedly", "green",
   ]);
   if (blocked.has(lower)) return null;
   if (raw.length < 2) return null;

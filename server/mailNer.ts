@@ -44,7 +44,7 @@ const PLATFORM_NAME_HINTS =
 
 const LEGAL_ENTITY_PREFIX = /(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)/;
 
-function extractOrgCandidates(subject: string, from: string, body: string): OrgCandidate[] {
+function extractOrgCandidates(subject: string, from: string, body: string, fromDomainTier?: DomainTier): OrgCandidate[] {
   const candidates: OrgCandidate[] = [];
   const displayName = from.split("<")[0]?.trim() ?? "";
 
@@ -95,14 +95,21 @@ function extractOrgCandidates(subject: string, from: string, body: string): OrgC
     candidates.push({ name: subjectLead[1], source: "subject_lead", confidence: 0.75 });
   }
 
+  // Strategies 7-9 are suppressed when the sender is a recruiting/noise platform,
+  // because body text and domain SLD would reference promoted companies, not the sender.
+  const isFromPlatform =
+    fromDomainTier === "recruiting_platform" || fromDomainTier === "noise_platform";
+
   // Strategy 7: Legal entity in body (first 500 chars, lower confidence)
-  const bodyPrefix = body.slice(0, 500);
-  const reBodyLegal = new RegExp(
-    `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」\\n]{1,40})`
-  );
-  const bodyLegal = bodyPrefix.match(reBodyLegal);
-  if (bodyLegal?.[1]) {
-    candidates.push({ name: bodyLegal[1], source: "body_legal", confidence: 0.70 });
+  if (!isFromPlatform) {
+    const bodyPrefix = body.slice(0, 500);
+    const reBodyLegal = new RegExp(
+      `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」\\n]{1,40})`
+    );
+    const bodyLegal = bodyPrefix.match(reBodyLegal);
+    if (bodyLegal?.[1]) {
+      candidates.push({ name: bodyLegal[1], source: "body_legal", confidence: 0.70 });
+    }
   }
 
   // Strategy 8: Clean display name as fallback (skip if it looks like an email)
@@ -113,14 +120,16 @@ function extractOrgCandidates(subject: string, from: string, body: string): OrgC
     }
   }
 
-  // Strategy 9: Email domain SLD (lowest confidence)
-  const domainMatch = from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-  if (domainMatch?.[1]) {
-    const fullDomain = domainMatch[1].toLowerCase();
-    if (!FREE_MAIL_DOMAINS_NER.has(fullDomain) && !PLATFORM_DOMAINS.has(fullDomain)) {
-      const sld = fullDomain.split(".")[0];
-      if (sld && sld.length >= 2 && !NON_COMPANY_PATTERNS.test(sld)) {
-        candidates.push({ name: sld, source: "domain_sld", confidence: 0.40 });
+  // Strategy 9: Email domain SLD (lowest confidence) — also suppressed for platforms
+  if (!isFromPlatform) {
+    const domainMatch = from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    if (domainMatch?.[1]) {
+      const fullDomain = domainMatch[1].toLowerCase();
+      if (!FREE_MAIL_DOMAINS_NER.has(fullDomain) && !PLATFORM_DOMAINS.has(fullDomain)) {
+        const sld = fullDomain.split(".")[0];
+        if (sld && sld.length >= 2 && !NON_COMPANY_PATTERNS.test(sld)) {
+          candidates.push({ name: sld, source: "domain_sld", confidence: 0.40 });
+        }
       }
     }
   }
@@ -131,7 +140,7 @@ function extractOrgCandidates(subject: string, from: string, body: string): OrgC
 function normalizeOrgName(raw: string): string | null {
   let c = raw.trim();
   c = c.replace(/^(【|「|\[|\()(.+?)(】|」|\]|\))$/, "$2");
-  c = c.replace(/^[\s\-:：|｜·・]+|[\s\-:：|｜·・]+$/g, "");
+  c = c.replace(/^[\s\-:：|｜·・"'`"']+|[\s\-:：|｜·・"'`"']+$/g, "");
   c = c.replace(/(（株）|\(株\))/g, "株式会社");
   c = c.replace(HR_SUFFIXES, "").trim();
   c = c.replace(/[のよりからへ]$/, "").trim();
@@ -149,8 +158,9 @@ export function extractBestCompanyName(
   subject: string,
   from: string,
   body: string,
+  fromDomainTier?: DomainTier,
 ): { name: string | null; confidence: number } {
-  const candidates = extractOrgCandidates(subject, from, body);
+  const candidates = extractOrgCandidates(subject, from, body, fromDomainTier);
   const normalized = candidates
     .map((c) => ({ ...c, name: normalizeOrgName(c.name) ?? "" }))
     .filter((c) => c.name.length >= 2);

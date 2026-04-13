@@ -190,7 +190,7 @@ function normalizeCompanyName(name: string | null | undefined): string | null {
   if (!raw) return null;
   const cleaned = raw
     .replace(/^(【|「|\[|\()(.+?)(】|」|\]|\))$/, "$2")
-    .replace(/^[\s\-:：|｜]+|[\s\-:：|｜]+$/g, "")
+    .replace(/^[\s\-:：|｜"'`"']+|[\s\-:：|｜"'`"']+$/g, "")
     .replace(/(株式会社|（株）|\(株\))/g, "株式会社")
     .replace(/(採用|採用担当|採用事務局|人事部|人事|HR|Recruiting|recruit)$/i, "")
     .trim();
@@ -298,7 +298,8 @@ export function runRecruitingNlpPipeline(
 
   // ③ Negative signal penalty
   const negPenalty = calculateNegativeSignalPenalty(lowerText);
-  const isLikelyNoise = negPenalty <= -0.4 && domainRep.tier === "noise_platform";
+  const isLikelyNoise =
+    negPenalty <= -0.4 && (domainRep.tier === "noise_platform" || domainRep.tier === "recruiting_platform");
   if (isLikelyNoise) {
     return {
       isJobRelated: false,
@@ -320,8 +321,8 @@ export function runRecruitingNlpPipeline(
   ruleSignals = applyCoOccurrenceBoosts(lowerText, ruleSignals);
   const rule = pickBestRuleSignal(ruleSignals);
 
-  // ⑤ NER: company name
-  const nerCompany = extractBestCompanyName(input.subject, input.from, input.body);
+  // ⑤ NER: company name (pass domain tier so platform emails don't extract from body)
+  const nerCompany = extractBestCompanyName(input.subject, input.from, input.body, domainRep.tier);
 
   // ⑥ NER: date/time
   const nerDateTime = extractBestDateTime(text);

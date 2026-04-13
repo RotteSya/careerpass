@@ -106,6 +106,56 @@ describe("extractBestCompanyName", () => {
     );
     expect(r.name).toContain("合同会社テスト");
   });
+
+  // ── Bug fix: platform newsletter should NOT extract company from body ──
+
+  it("does not extract body company from mynavi newsletter", () => {
+    const r = extractBestCompanyName(
+      "マイナビメール2027★ピックアップ★",
+      "job-s27@mynavi.jp",
+      "初めまして！ダイナム採用担当です。株式会社ダイナムは...",
+      "recruiting_platform",
+    );
+    // Should NOT return ダイナム — it's mentioned in body of a platform newsletter
+    // name should be null or at least not contain ダイナム
+    expect(r.name === null || !r.name.includes("ダイナム")).toBe(true);
+  });
+
+  it("does not extract body company from noise platform email", () => {
+    const r = extractBestCompanyName(
+      "【就活会議】あなたにおすすめ",
+      "noreply@syukatsu-kaigi.jp",
+      "株式会社サンプルの口コミが更新されました",
+      "noise_platform",
+    );
+    expect(r.name === null || !r.name.includes("サンプル")).toBe(true);
+  });
+
+  it("still extracts subject company even from platform emails", () => {
+    // If the subject explicitly names a company (e.g. forwarded notification),
+    // we should still pick it up from subject
+    const r = extractBestCompanyName(
+      "【株式会社テスト】エントリー完了",
+      "noreply@mynavi.jp",
+      "マイナビ経由のエントリーが完了しました。",
+      "recruiting_platform",
+    );
+    expect(r.name).toBe("株式会社テスト");
+  });
+
+  // ── Bug fix: stray quote in company name ──
+
+  it("strips leading double-quote from company name", () => {
+    const r = extractBestCompanyName(
+      '"メイテックフィルダーズ 面接のご案内',
+      "hr@example.co.jp",
+      "",
+    );
+    // The leading " should be stripped
+    if (r.name) {
+      expect(r.name).not.toMatch(/^"/);
+    }
+  });
 });
 
 describe("extractTimeCandidates / extractBestDateTime", () => {
