@@ -483,6 +483,87 @@ async function fetchThreadMeetingUrl(accessToken: string, threadId: string): Pro
   }
 }
 
+function buildMeetingUrlSearchQuery(params: {
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+}): string {
+  const parts: string[] = [];
+  parts.push("-category:social -category:promotions");
+  parts.push("(teams.microsoft.com OR meet.google.com OR zoom.us OR webex.com)");
+  if (params.fromDomain) parts.push(`from:${params.fromDomain}`);
+  if (params.companyName) parts.push(`(${params.companyName})`);
+  if (params.eventDate) {
+    const ymd = params.eventDate;
+    const ymdSlash = ymd.replace(/-/g, "/");
+    const md = ymd.slice(5).replace("-", "/");
+    parts.push(`(${ymd} OR ${ymdSlash} OR ${md})`);
+  }
+  parts.push("newer_than:180d");
+  return parts.join(" ");
+}
+
+export function __buildMeetingUrlSearchQueryForTests(params: {
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+}): string {
+  return buildMeetingUrlSearchQuery(params);
+}
+
+async function searchGmailMessageIds(params: {
+  accessToken: string;
+  q: string;
+  maxResults: number;
+}): Promise<string[]> {
+  const { accessToken, q, maxResults } = params;
+  try {
+    const ids: string[] = [];
+    let pageToken: string | undefined;
+    while (ids.length < maxResults) {
+      const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+      url.searchParams.set("maxResults", String(Math.min(50, maxResults - ids.length)));
+      url.searchParams.set("q", q);
+      if (pageToken) url.searchParams.set("pageToken", pageToken);
+      const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (!res.ok) return ids;
+      const data = (await res.json()) as { messages?: Array<{ id: string }>; nextPageToken?: string };
+      for (const m of data.messages ?? []) {
+        if (m.id) ids.push(m.id);
+        if (ids.length >= maxResults) break;
+      }
+      if (!data.nextPageToken) break;
+      pageToken = data.nextPageToken;
+    }
+    return ids;
+  } catch {
+    return [];
+  }
+}
+
+async function fetchMeetingUrlBySearch(params: {
+  accessToken: string;
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+  excludeMessageId: string;
+}): Promise<string | null> {
+  const q = buildMeetingUrlSearchQuery({
+    fromDomain: params.fromDomain,
+    companyName: params.companyName,
+    eventDate: params.eventDate,
+  });
+  const ids = await searchGmailMessageIds({ accessToken: params.accessToken, q, maxResults: 12 });
+  for (const id of ids) {
+    if (!id || id === params.excludeMessageId) continue;
+    const detail = await fetchEmailDetail(params.accessToken, id);
+    if (!detail) continue;
+    const url = extractMeetingUrlFromText(detail.body);
+    if (url) return url;
+  }
+  return null;
+}
+
 async function fetchGmailProfileHistoryId(accessToken: string): Promise<string | null> {
   try {
     const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
@@ -1383,6 +1464,7 @@ async function processGmailMessageIds(params: {
   const detectedEvents: EmailEvent[] = [];
   const isFirstForCompanyInBatch = createCompanyBatchDeduper();
   const threadMeetingUrlCache = new Map<string, string | null>();
+  const searchMeetingUrlCache = new Map<string, string | null>();
   let calendarCount = 0;
 
   const notifyCutoffMs =
@@ -1509,8 +1591,27 @@ async function processGmailMessageIds(params: {
                   threadMeetingUrlCache.set(detail.threadId as string, u);
                   return u;
                 });
-          if (url) {
-            location = location ? `${location} ${url}` : url;
+          let finalUrl = url ?? null;
+          if (!finalUrl) {
+            const senderDomain = getSenderDomain(detail.from);
+            const cacheKey = `${senderDomain ?? "unknown"}|${companyName ?? "unknown"}|${date ?? "unknown"}`;
+            const cachedSearch = searchMeetingUrlCache.get(cacheKey);
+            finalUrl =
+              cachedSearch !== undefined
+                ? cachedSearch
+                : await fetchMeetingUrlBySearch({
+                    accessToken,
+                    fromDomain: senderDomain,
+                    companyName,
+                    eventDate: date,
+                    excludeMessageId: messageId,
+                  }).then((u) => {
+                    searchMeetingUrlCache.set(cacheKey, u);
+                    return u;
+                  });
+          }
+          if (finalUrl) {
+            location = location ? `${location} ${finalUrl}` : finalUrl;
           }
         }
       }

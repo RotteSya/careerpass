@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { __extractMeetingUrlFromTextForTests, __inferInterviewStatusFromTextForTests } from "./gmail";
+import {
+  __buildMeetingUrlSearchQueryForTests,
+  __extractMeetingUrlFromTextForTests,
+  __inferInterviewStatusFromTextForTests,
+} from "./gmail";
 
 describe("gmail helpers", () => {
   it("maps 2次選考 to interview_2 when interview context exists", () => {
@@ -21,5 +25,16 @@ describe("gmail helpers", () => {
     const url2 = __extractMeetingUrlFromTextForTests("Join https://meet.google.com/abc-defg-hij to start");
     expect(url2).toBe("https://meet.google.com/abc-defg-hij");
   });
-});
 
+  it("builds cross-thread query for meeting url search", () => {
+    const q = __buildMeetingUrlSearchQueryForTests({
+      fromDomain: "hito-link.jp",
+      companyName: "テクバン株式会社",
+      eventDate: "2026-03-26",
+    });
+    expect(q).toContain("from:hito-link.jp");
+    expect(q).toContain("(teams.microsoft.com OR meet.google.com OR zoom.us OR webex.com)");
+    expect(q).toContain("(テクバン株式会社)");
+    expect(q).toContain("(2026-03-26 OR 2026/03/26 OR 03/26)");
+  });
+});
