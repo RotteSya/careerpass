@@ -738,7 +738,7 @@ async function runCareerpassmailAgent(input: {
   subject: string;
   body: string;
   from: string;
-}): Promise<CareerpassmailDecision> {
+}): Promise<CareerpassmailDecision & { _meta?: { pipelineOnly?: boolean; pipelineShouldSkipLlm?: boolean } }> {
   const domain = getSenderDomain(input.from);
   const domainSignal = senderDomainScore(input.from);
   const localized = extractJapaneseTimeRange(`${input.subject}\n${input.body}`);
@@ -752,6 +752,14 @@ async function runCareerpassmailAgent(input: {
     fallbackTime: localized.time ?? basic.time ?? null,
   });
   if (preflight.shouldSkipLlm) {
+    console.info("[careerpassmail] preflight-skip-llm", {
+      from: input.from.slice(0, 120),
+      subject: input.subject.slice(0, 120),
+      reason: preflight.reason,
+      eventType: preflight.eventType,
+      companyName: preflight.companyName,
+      confidence: preflight.confidence,
+    });
     return {
       isJobRelated: preflight.isJobRelated,
       confidence: preflight.confidence,
@@ -762,6 +770,10 @@ async function runCareerpassmailAgent(input: {
       eventTime: preflight.eventTime,
       location: preflight.location,
       todoItems: preflight.todoItems,
+      _meta: {
+        pipelineOnly: true,
+        pipelineShouldSkipLlm: true,
+      },
     };
   }
 
@@ -900,6 +912,10 @@ async function runCareerpassmailAgent(input: {
         eventTime: merged.eventTime,
         location: merged.location,
         todoItems: merged.todoItems,
+        _meta: {
+          pipelineOnly: true,
+          pipelineShouldSkipLlm: false,
+        },
       };
     }
   } catch (err) {
@@ -925,6 +941,10 @@ async function runCareerpassmailAgent(input: {
     eventTime: fallback.eventTime,
     location: fallback.location,
     todoItems: fallback.todoItems,
+    _meta: {
+      pipelineOnly: true,
+      pipelineShouldSkipLlm: false,
+    },
   };
 }
 
@@ -1119,6 +1139,7 @@ async function processGmailMessageIds(params: {
   accessToken: string;
   messageIds: string[];
   notifyWindowDays?: number;
+  suppressTelegramItemNotifications?: boolean;
   enableAutoBoardWrite?: boolean;
   enableAutoWorkflow?: boolean;
 }): Promise<MonitorResult> {
@@ -1128,6 +1149,7 @@ async function processGmailMessageIds(params: {
     accessToken,
     messageIds,
     notifyWindowDays,
+    suppressTelegramItemNotifications = false,
     enableAutoBoardWrite = true,
     enableAutoWorkflow = true,
   } = params;
@@ -1215,6 +1237,7 @@ async function processGmailMessageIds(params: {
       const decision = entry.decision;
       const messageId = item.messageId;
       const detail = item.value;
+      const decisionMeta = decision._meta ?? {};
 
       const mailText = `${detail.subject}\n${detail.body}`;
       const hardOutcome = inferHardOutcomeStatusFromText(mailText);
@@ -1245,6 +1268,20 @@ async function processGmailMessageIds(params: {
         normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
         null;
 
+      if (!decision.isJobRelated || !companyName) {
+        console.info("[Gmail] analyze-drop", {
+          userId,
+          messageId,
+          subject: detail.subject.slice(0, 120),
+          from: detail.from.slice(0, 120),
+          isJobRelated: decision.isJobRelated,
+          companyName,
+          reason: decision.reason,
+          eventType: decision.eventType,
+          pipelineShouldSkipLlm: decisionMeta.pipelineShouldSkipLlm ?? false,
+        });
+      }
+
       const emailEvent: EmailEvent = {
         subject: detail.subject,
         from: detail.from,
@@ -1268,6 +1305,20 @@ async function processGmailMessageIds(params: {
           : null;
       const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(eventType);
       const inferredStatus = companyName ? desiredStatus : null;
+      if (decision.isJobRelated && (!companyName || !inferredStatus)) {
+        console.info("[Gmail] board-write-skip", {
+          userId,
+          messageId,
+          subject: detail.subject.slice(0, 120),
+          from: detail.from.slice(0, 120),
+          companyName,
+          eventType,
+          rawEventType,
+          hardOutcome: hardOutcome ?? null,
+          stageStatus: stageStatus ?? null,
+          reason: decision.reason,
+        });
+      }
       const progressUpdate =
         enableAutoBoardWrite && inferredStatus && companyName
           ? await upsertJobProgressFromMail({
@@ -1322,7 +1373,8 @@ async function processGmailMessageIds(params: {
       const companyKey = companyName?.toLowerCase() ?? null;
       const isNewestForCompany = isFirstForCompanyInBatch(companyKey);
 
-      const shouldNotify = isWithinWindow && isNewestForCompany;
+      const shouldNotify =
+        !suppressTelegramItemNotifications && isWithinWindow && isNewestForCompany;
 
       let orchestrationActions: string[] = [];
       if (telegramChatId && shouldNotify) {
@@ -1427,6 +1479,7 @@ export async function monitorGmailAndSync(
   telegramChatId?: string,
   options?: {
     notifyWindowDays?: number;
+    suppressTelegramItemNotifications?: boolean;
     enableAutoBoardWrite?: boolean;
     enableAutoWorkflow?: boolean;
     fullMailboxScan?: boolean;
@@ -1451,6 +1504,7 @@ export async function monitorGmailAndSync(
     accessToken,
     messageIds: ids,
     notifyWindowDays: options?.notifyWindowDays,
+    suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
     enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
     enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
   });
@@ -1472,6 +1526,7 @@ export async function syncGmailIncremental(
   telegramChatId: string | undefined,
   endHistoryId: string,
   options?: {
+    suppressTelegramItemNotifications?: boolean;
     enableAutoBoardWrite?: boolean;
     enableAutoWorkflow?: boolean;
   }
@@ -1489,6 +1544,7 @@ export async function syncGmailIncremental(
     // notify the user about mails from the last 14 days to avoid an avalanche.
     const fallback = await monitorGmailAndSync(userId, telegramChatId, {
       notifyWindowDays: 14,
+      suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
       enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
       fullMailboxScan: true,
@@ -1508,6 +1564,7 @@ export async function syncGmailIncremental(
     // notify the user about mails from the last 14 days to avoid an avalanche.
     const fallback = await monitorGmailAndSync(userId, telegramChatId, {
       notifyWindowDays: 14,
+      suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
       enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
       fullMailboxScan: true,
@@ -1526,6 +1583,7 @@ export async function syncGmailIncremental(
     telegramChatId,
     accessToken,
     messageIds: changes.messageIds,
+    suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
     enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
     enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
   });

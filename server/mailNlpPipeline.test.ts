@@ -469,6 +469,22 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.isJobRelated).toBe(false);
   });
 
+  it("keeps actionable mynavi process mail as job-related instead of noise", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "【サンプルホールディングス】エントリーシート提出の御礼",
+      body:
+        "このメールはマイナビの応募者管理システムです。\n今後のスケジュール:\n・カジュアル面談(Web)\n・適正検査\n・面接(個別)\n・内定",
+      from: "株式会社サンプルホールディングス <info-job@miws.mynavi.jp>",
+      domainSignal: 0.7,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(false);
+    expect(d.isJobRelated).toBe(true);
+    expect(d.eventType).not.toBe("other");
+    expect(d.companyName).toContain("サンプルホールディングス");
+  });
+
   // ─── Bug fix: stray quote in company name ────────────────────────────────
 
   it("strips leading quote from LLM company name", () => {

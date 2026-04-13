@@ -1,6 +1,7 @@
 import express from "express";
 import { getTelegramBinding, getUserByEmail, getUserIdByOauthProviderAccount } from "./db";
 import { monitorGmailAndSync, syncGmailIncremental } from "./gmail";
+import { isRealtimeTelegramSuppressed } from "./mailMonitoring";
 
 export const gmailPushRouter = express.Router();
 
@@ -66,16 +67,22 @@ gmailPushRouter.post("/push", (req, res) => {
       const binding = await getTelegramBinding(user.id);
       const chatId = binding?.telegramId ?? undefined;
       const endHistoryId = payload?.historyId;
+      const suppressTelegramItemNotifications = isRealtimeTelegramSuppressed(user.id);
 
       await enqueuePerUser(user.id, async () => {
         const result = endHistoryId
-          ? await syncGmailIncremental(user.id, chatId, endHistoryId)
-          : await monitorGmailAndSync(user.id, chatId);
+          ? await syncGmailIncremental(user.id, chatId, endHistoryId, {
+              suppressTelegramItemNotifications,
+            })
+          : await monitorGmailAndSync(user.id, chatId, {
+              suppressTelegramItemNotifications,
+            });
         console.log("[GmailPush] Processed:", {
           userId: user.id,
           emailAddress,
           historyId: endHistoryId ?? null,
           mode: endHistoryId ? "incremental" : "fallback-scan",
+          suppressTelegramItemNotifications,
           scanned: result.scanned,
           detected: result.detected,
           calendarEvents: result.calendarEvents,

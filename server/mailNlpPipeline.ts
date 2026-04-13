@@ -73,6 +73,9 @@ const JOB_PLATFORM_HINTS =
   /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind)/i;
 const PROCESS_HINTS =
   /(選考|面接|面談|説明会|webテスト|spi|適性検査|筆記試験|締切|提出期限|エントリー|応募|内定|不採用|お見送り|合否)/i;
+// Stronger signals for actionable process emails relayed by recruiting platforms.
+const ACTIONABLE_PROCESS_HINTS =
+  /(提出の御礼|提出ありがとう|ご応募ありがとうございます|ご応募ありがとうございました|今後のスケジュール|次のステップ|選考フロー|エントリーシート提出|es提出|カジュアル面談|適正検査|適性検査|面接\(個別\)|面接（個別）|内定)/i;
 
 // ─── Event rules (multi-signal — ALL evaluated) ─────────────────────────────
 
@@ -100,7 +103,10 @@ const EVENT_RULES: EventRule[] = [
     confidence: 0.97,
     reason: "rule:offer",
     specificity: 10,
-    pattern: /(内定|内々定|offer|採用決定|採用通知|内定通知|job offer|合格通知|合格のお知らせ)/i,
+    // Avoid bare "内定" because it often appears in process outlines
+    // (e.g. "今後のスケジュール: ... 内定") and can cause false positives.
+    pattern:
+      /(内々定|内定通知|内定のご連絡|内定のお知らせ|採用決定|採用通知|job offer|offer letter|合格通知|合格のお知らせ)/i,
   },
   // ── Core event types ──
   {
@@ -298,8 +304,13 @@ export function runRecruitingNlpPipeline(
 
   // ③ Negative signal penalty
   const negPenalty = calculateNegativeSignalPenalty(lowerText);
+  const hasActionableProcessHints =
+    ACTIONABLE_PROCESS_HINTS.test(`${input.subject}\n${input.body}`) ||
+    (/【[^】]{2,40}】/.test(input.subject) && PROCESS_HINTS.test(input.subject));
   const isLikelyNoise =
-    negPenalty <= -0.4 && (domainRep.tier === "noise_platform" || domainRep.tier === "recruiting_platform");
+    negPenalty <= -0.4 &&
+    (domainRep.tier === "noise_platform" || domainRep.tier === "recruiting_platform") &&
+    !hasActionableProcessHints;
   if (isLikelyNoise) {
     return {
       isJobRelated: false,

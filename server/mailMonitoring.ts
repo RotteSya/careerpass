@@ -2,6 +2,23 @@ import { getBillingFeatureAccess, getOauthToken } from "./db";
 import { monitorGmailAndSync, registerGmailPushWatch } from "./gmail";
 import type { MonitorResult } from "./gmail";
 
+const POST_SCAN_SUPPRESS_MS = 2 * 60 * 1000;
+const suppressRealtimeTelegramUntil = new Map<number, number>();
+
+export function markRealtimeTelegramSuppressedAfterScan(userId: number, ttlMs = POST_SCAN_SUPPRESS_MS): void {
+  suppressRealtimeTelegramUntil.set(userId, Date.now() + Math.max(0, ttlMs));
+}
+
+export function isRealtimeTelegramSuppressed(userId: number): boolean {
+  const until = suppressRealtimeTelegramUntil.get(userId);
+  if (!until) return false;
+  if (Date.now() >= until) {
+    suppressRealtimeTelegramUntil.delete(userId);
+    return false;
+  }
+  return true;
+}
+
 export async function startMailMonitoringAndCheckmail(params: {
   userId: number;
   telegramChatId?: string;
@@ -34,7 +51,11 @@ export async function startMailMonitoringAndCheckmail(params: {
     mode === "auto" && access.autoMonitoringEnabled
       ? await registerGmailPushWatch(params.userId)
       : false;
+  // Scan completion should produce only a digest summary in Telegram flow,
+  // not per-mail bubbles; additionally suppress immediate push-trigger bursts.
+  markRealtimeTelegramSuppressedAfterScan(params.userId);
   const result = await monitorGmailAndSync(params.userId, params.telegramChatId, {
+    suppressTelegramItemNotifications: true,
     enableAutoBoardWrite: access.autoBoardWriteEnabled,
     enableAutoWorkflow: access.autoWorkflowEnabled,
   });
