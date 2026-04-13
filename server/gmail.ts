@@ -33,7 +33,7 @@ import {
 } from "./agents";
 import { syncJobToNotionBoard } from "./notion";
 import { createCompanyBatchDeduper, sortMailItemsByTsDesc } from "./gmail_dedup";
-import { sendTelegramBubbles, sendTelegramMessage } from "./telegramMessaging";
+import { sendTelegramMessage } from "./telegramMessaging";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
 import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
 
@@ -1004,11 +1004,8 @@ export interface MonitorResult {
   events: EmailEvent[];
 }
 
-function buildDashboardUrl(params?: { companyName?: string | null }): string {
-  const base = `${APP_DOMAIN.replace(/\/+$/, "")}/dashboard`;
-  const company = params?.companyName?.trim();
-  if (!company) return base;
-  return `${base}?company=${encodeURIComponent(company)}`;
+function buildLatestBoardScreenshotUrl(): string {
+  return `${APP_DOMAIN.replace(/\/+$/, "")}/images/latest-dashboard-board.png`;
 }
 
 async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<string[]> {
@@ -1041,14 +1038,41 @@ interface ComposeNotificationInput {
   location: string | null;
   todoItems: string[];
   mailLink: string;
-  boardLink: string | null;
+  boardScreenshotLink: string | null;
   progressLabel: string | null;
   outcomeUncertain: boolean;
   workflowTriggered: boolean;
 }
 
+const TELEGRAM_MAIL_NOTICE_TTL_MS = 15 * 60 * 1000;
+const telegramMailNoticeDedup = new Map<string, number>();
+
+export function buildTelegramMailNoticeDedupKey(params: { userId: number; messageId: string }): string {
+  return `${params.userId}:${params.messageId}`;
+}
+
+export function shouldSendTelegramMailNoticeOnce(params: {
+  userId: number;
+  messageId: string;
+  nowMs?: number;
+}): boolean {
+  const now = params.nowMs ?? Date.now();
+  for (const [k, expireAt] of telegramMailNoticeDedup.entries()) {
+    if (expireAt <= now) telegramMailNoticeDedup.delete(k);
+  }
+  const key = buildTelegramMailNoticeDedupKey({ userId: params.userId, messageId: params.messageId });
+  const existing = telegramMailNoticeDedup.get(key);
+  if (existing && existing > now) return false;
+  telegramMailNoticeDedup.set(key, now + TELEGRAM_MAIL_NOTICE_TTL_MS);
+  return true;
+}
+
+export function __resetTelegramMailNoticeDedupForTests(): void {
+  telegramMailNoticeDedup.clear();
+}
+
 function fallbackMailNotification(input: ComposeNotificationInput): string {
-  const { companyName, eventType, date, time, todoItems, mailLink, boardLink, progressLabel, outcomeUncertain, workflowTriggered } = input;
+  const { companyName, eventType, date, time, todoItems, mailLink, boardScreenshotLink, progressLabel, outcomeUncertain, workflowTriggered } = input;
   const primaryAction =
     todoItems[0] ??
     (date
@@ -1057,7 +1081,6 @@ function fallbackMailNotification(input: ComposeNotificationInput): string {
   const extra = todoItems.slice(1);
   const lines: string[] = [];
   lines.push(`下一步：${primaryAction}`);
-  lines.push("");
   lines.push(
     `${companyName ?? "这家公司"}发来一封${typeLabels[eventType]}邮件${
       date ? `（${date}${time ? ` ${time}` : ""} JST）` : ""
@@ -1065,11 +1088,10 @@ function fallbackMailNotification(input: ComposeNotificationInput): string {
   );
   lines.push(`[查看原邮件](${mailLink})`);
   if (extra.length) {
-    lines.push("其他要做的：");
-    for (const t of extra) lines.push(`- ${t}`);
+    lines.push(`其他要做的：${extra.join("；")}`);
   }
   if (progressLabel) lines.push(`看板已更新到「${progressLabel}」。`);
-  if (boardLink) lines.push(`[打开求职看板](${boardLink})`);
+  if (boardScreenshotLink) lines.push(`[查看最新看板截图](${boardScreenshotLink})`);
   if (outcomeUncertain) lines.push("这封邮件可能涉及结果，语义不够确定，我没有自动标记，方便时去看板确认。");
   if (workflowTriggered) lines.push("这家公司的后续流程我已经帮你往前推进了。");
   return lines.join("\n");
@@ -1088,7 +1110,7 @@ async function composeMailNotification(input: ComposeNotificationInput): Promise
       地点或链接: input.location ?? null,
       待办: input.todoItems,
       原邮件链接: input.mailLink,
-      看板链接: input.boardLink,
+      最新看板截图: input.boardScreenshotLink,
       看板已更新到: input.progressLabel,
       结果语义不确定: input.outcomeUncertain,
       已自动推进后续流程: input.workflowTriggered,
@@ -1101,9 +1123,9 @@ async function composeMailNotification(input: ComposeNotificationInput): Promise
       `- 开门见山点出「下一步要做什么」，但表达方式可以变化（不必每次都用「下一步：」开头）。\n` +
       `- 邮件内容只用一句话带过，不要复述邮件主题。\n` +
       `- 必须把「原邮件链接」用 markdown 链接的形式放进消息里，方便用户点开核对。\n` +
-      `- 如果有「看板链接」，也用 markdown 链接放进去。\n` +
-      `- **重要：把消息切成 2–4 个气泡**。每个气泡 1–3 句话，用 \`\\n\\n\` 空行分隔，不要把所有内容挤在一段里。\n` +
-      `- 一条气泡里不要塞超过 3 行的内容，方便用户在 Telegram 上阅读。\n` +
+      `- 如果有「最新看板截图」，也用 markdown 链接放进去。\n` +
+      `- **重要：整条通知必须只用 1 个气泡**，不要用空行分段，不要输出多段。\n` +
+      `- 总长度控制在 6 行内，保证移动端易读。\n` +
       `- 只输出最终消息正文，不要加引号、不要解释。` +
       (soul.content ? `\n\n[SOUL]\n${soul.content}` : "") +
       (agents.content ? `\n\n[AGENTS]\n${agents.content}` : "");
@@ -1378,15 +1400,19 @@ async function processGmailMessageIds(params: {
 
       let orchestrationActions: string[] = [];
       if (telegramChatId && shouldNotify) {
+        if (!shouldSendTelegramMailNoticeOnce({ userId, messageId })) {
+          console.info("[Gmail] telegram-notice-dedup-skip", { userId, messageId });
+          continue;
+        }
         orchestrationActions = enableAutoWorkflow
           ? await orchestrateSubAgents(userId, emailEvent)
           : [];
         const workflowTriggered = orchestrationActions.length > 0;
 
         const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
-        const boardLink =
+        const boardScreenshotLink =
           progressUpdate && progressUpdate.jobId && progressUpdate.changed
-            ? buildDashboardUrl({ companyName })
+            ? buildLatestBoardScreenshotUrl()
             : null;
 
         const notifText = await composeMailNotification({
@@ -1399,7 +1425,7 @@ async function processGmailMessageIds(params: {
           location: emailEvent.location,
           todoItems: emailEvent.todoItems,
           mailLink,
-          boardLink,
+          boardScreenshotLink,
           progressLabel:
             progressUpdate && progressUpdate.jobId && progressUpdate.changed
               ? jobStatusLabelZh(progressUpdate.nextStatus)
@@ -1408,7 +1434,7 @@ async function processGmailMessageIds(params: {
             (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome,
           workflowTriggered,
         });
-        await sendTelegramBubbles(telegramChatId, notifText);
+        await sendTelegramMessage(telegramChatId, notifText);
       }
 
       if (date && CALENDAR_WRITABLE_TYPES.includes(eventType)) {
