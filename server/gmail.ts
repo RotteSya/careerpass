@@ -1152,9 +1152,14 @@ async function processGmailMessageIds(params: {
     mailTs: number;
   }> = [];
   const fetchedResults = await mapWithConcurrency(messageIds, 12, async (messageId) => {
-    const detail = await fetchEmailDetail(accessToken, messageId);
-    if (!detail) return null;
-    return { messageId, detail, mailTs: Date.parse(detail.date) };
+    try {
+      const detail = await fetchEmailDetail(accessToken, messageId);
+      if (!detail) return null;
+      return { messageId, detail, mailTs: Date.parse(detail.date) };
+    } catch (err) {
+      console.error("[Gmail] Failed to fetch detail for message:", { userId, messageId, err });
+      return null;
+    }
   });
   for (const row of fetchedResults) {
     if (!row) continue;
@@ -1194,210 +1199,223 @@ async function processGmailMessageIds(params: {
   }
 
   const analyzed = await mapWithConcurrency(candidates, 4, async (item) => {
-    const decision = await runCareerpassmailAgent({
-      subject: item.value.subject,
-      body: item.value.body,
-      from: item.value.from,
-    });
-    if (!decision.isJobRelated) return null;
-    return { item, decision };
+    try {
+      const decision = await runCareerpassmailAgent({
+        subject: item.value.subject,
+        body: item.value.body,
+        from: item.value.from,
+      });
+      if (!decision.isJobRelated) return null;
+      return { item, decision };
+    } catch (err) {
+      console.error("[Gmail] Failed to analyze message:", { userId, messageId: item.messageId, err });
+      return null;
+    }
   });
 
   for (const entry of analyzed) {
     if (!entry) continue;
-    const item = entry.item;
-    const decision = entry.decision;
-    const messageId = item.messageId;
-    const detail = item.value;
+    try {
+      const item = entry.item;
+      const decision = entry.decision;
+      const messageId = item.messageId;
+      const detail = item.value;
 
-    const mailText = `${detail.subject}\n${detail.body}`;
-    const hardOutcome = inferHardOutcomeStatusFromText(mailText);
-    const rawEventType = decision.eventType ?? "other";
-    // Result-notification subjects (結果通知 / 選考結果 / 合否通知 …) are never
-    // schedulable events. Force them down to offer / rejection / other so they
-    // bypass CALENDAR_WRITABLE_TYPES regardless of how the LLM classified them.
-    const resultNotificationSubject = isResultNotificationSubject(detail.subject);
-    const eventType = resultNotificationSubject
-      ? hardOutcome === "offer"
-        ? "offer"
-        : hardOutcome === "rejected"
-        ? "rejection"
-        : "other"
-      : rawEventType === "offer"
-      ? hardOutcome === "offer"
-        ? "offer"
-        : "other"
-      : rawEventType === "rejection"
-      ? hardOutcome === "rejected"
-        ? "rejection"
-        : "other"
-      : rawEventType;
-    const date = decision.eventDate ?? null;
-    const time = decision.eventTime ?? null;
-    const companyName =
-      normalizeCompanyName(decision.companyName) ??
-      normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
-      null;
+      const mailText = `${detail.subject}\n${detail.body}`;
+      const hardOutcome = inferHardOutcomeStatusFromText(mailText);
+      const rawEventType = decision.eventType ?? "other";
+      // Result-notification subjects (結果通知 / 選考結果 / 合否通知 …) are never
+      // schedulable events. Force them down to offer / rejection / other so they
+      // bypass CALENDAR_WRITABLE_TYPES regardless of how the LLM classified them.
+      const resultNotificationSubject = isResultNotificationSubject(detail.subject);
+      const eventType = resultNotificationSubject
+        ? hardOutcome === "offer"
+          ? "offer"
+          : hardOutcome === "rejected"
+          ? "rejection"
+          : "other"
+        : rawEventType === "offer"
+        ? hardOutcome === "offer"
+          ? "offer"
+          : "other"
+        : rawEventType === "rejection"
+        ? hardOutcome === "rejected"
+          ? "rejection"
+          : "other"
+        : rawEventType;
+      const date = decision.eventDate ?? null;
+      const time = decision.eventTime ?? null;
+      const companyName =
+        normalizeCompanyName(decision.companyName) ??
+        normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
+        null;
 
-    const emailEvent: EmailEvent = {
-      subject: detail.subject,
-      from: detail.from,
-      date: detail.date,
-      body: detail.body.slice(0, 500),
-      eventType,
-      companyName,
-      eventDate: date,
-      eventTime: time,
-      location: decision.location ?? null,
-      todoItems: decision.todoItems ?? [],
-      mailLink: `https://mail.google.com/mail/u/0/#inbox/${messageId}`,
-    };
-
-    detectedEvents.push(emailEvent);
-    await reportToCareerpassAgent(userId, emailEvent, decision.reason);
-
-    const stageStatus =
-      rawEventType === "interview" || rawEventType === "test" || /面接|interview/.test(mailText.toLowerCase())
-        ? inferInterviewStatusFromText(mailText)
-        : null;
-    const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(rawEventType);
-    const inferredStatus = companyName ? desiredStatus : null;
-    const progressUpdate =
-      enableAutoBoardWrite && inferredStatus && companyName
-        ? await upsertJobProgressFromMail({
-            userId,
-            companyName,
-            nextStatus: inferredStatus,
-            mail: {
-              messageId,
-              from: detail.from,
-              subject: detail.subject,
-              snippet: detail.body.slice(0, 120),
-              reason: `${decision.reason ?? ""} (eventType=${rawEventType}, hardOutcome=${hardOutcome ?? "none"})`,
-            },
-          })
-        : null;
-
-    if (companyName) {
-      await trackCompanyForBilling({
-        userId,
-        companyName,
-        firstStatus: inferredStatus,
-        occurredAt: Number.isFinite(Date.parse(detail.date)) ? new Date(detail.date) : null,
-      });
-    }
-
-    if (enableAutoBoardWrite && companyName) {
-      try {
-        await syncJobToNotionBoard({
-          userId,
-          companyName,
-          status: inferredStatus ?? null,
-          eventType,
-          eventDate: date,
-          eventTime: time,
-          location: decision.location ?? null,
-          mailSubject: detail.subject,
-          source: "gmail",
-        });
-      } catch (e) {
-        console.warn("[Notion] Gmail sync failed:", (e as Error).message);
-      }
-    }
-
-    // Decide whether to notify the user about this mail.
-    // - First-scan window: skip notifications for mails older than notifyWindowDays
-    //   (the dashboard/Notion sync above still runs, so the board stays complete).
-    // - Same-company dedup: only notify for the newest mail per company in this batch.
-    const mailTs = item.mailTs;
-    const isWithinWindow =
-      notifyCutoffMs === null || (Number.isFinite(mailTs) && mailTs >= notifyCutoffMs);
-
-    const companyKey = companyName?.toLowerCase() ?? null;
-    const isNewestForCompany = isFirstForCompanyInBatch(companyKey);
-
-    const shouldNotify = isWithinWindow && isNewestForCompany;
-
-    let orchestrationActions: string[] = [];
-    if (telegramChatId && shouldNotify) {
-      orchestrationActions = enableAutoWorkflow
-        ? await orchestrateSubAgents(userId, emailEvent)
-        : [];
-      const workflowTriggered = orchestrationActions.length > 0;
-
-      const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
-      const boardLink =
-        progressUpdate && progressUpdate.jobId && progressUpdate.changed
-          ? buildDashboardUrl({ companyName })
-          : null;
-
-      const notifText = await composeMailNotification({
-        userId,
-        companyName,
+      const emailEvent: EmailEvent = {
+        subject: detail.subject,
+        from: detail.from,
+        date: detail.date,
+        body: detail.body.slice(0, 500),
         eventType,
-        rawEventType,
-        date,
-        time,
-        location: emailEvent.location,
-        todoItems: emailEvent.todoItems,
-        mailLink,
-        boardLink,
-        progressLabel:
-          progressUpdate && progressUpdate.jobId && progressUpdate.changed
-            ? jobStatusLabelZh(progressUpdate.nextStatus)
-            : null,
-        outcomeUncertain:
-          (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome,
-        workflowTriggered,
-      });
-      await sendTelegramBubbles(telegramChatId, notifText);
-    }
-
-    if (date && CALENDAR_WRITABLE_TYPES.includes(eventType)) {
-      const startDateTime = time ? `${date}T${time}:00` : `${date}T09:00:00`;
-      const endDateTime = time
-        ? `${date}T${String(parseInt(time.split(":")[0]) + 1).padStart(2, "0")}:${time.split(":")[1]}:00`
-        : `${date}T10:00:00`;
-
-      const colorId = calendarColorForEventType(eventType, calendarColorPrefs);
-      const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
-      const todoText = emailEvent.todoItems.length > 0
-        ? emailEvent.todoItems.map(t => `- ${t}`).join("\n")
-        : "- なし";
-      const calEvent: CalendarEvent & { colorId?: string } = {
-        summary: `${typeLabels[eventType]}${companyName ?? ""} - ${detail.subject.slice(0, 40)}`,
-        description: [
-          "CareerPass 自動登録",
-          "",
-          `種別: ${typeLabels[eventType]}`,
-          `会社: ${companyName ?? "未特定"}`,
-          `日時: ${date}${time ? ` ${time}` : ""} (JST)`,
-          `場所/リンク: ${emailEvent.location ?? "未記入"}`,
-          "",
-          "やるべきこと:",
-          todoText,
-          "",
-          `メール件名: ${detail.subject.slice(0, 160)}`,
-          `送信元: ${detail.from.slice(0, 160)}`,
-          `Gmail: ${mailLink}`,
-          `MessageId: ${messageId}`,
-          "",
-          "本文はプライバシー保護のためカレンダーには記載しません。必要なら Gmail を開いて確認してください。",
-        ].join("\n"),
-        start: { dateTime: `${startDateTime}+09:00`, timeZone: "Asia/Tokyo" },
-        end: { dateTime: `${endDateTime}+09:00`, timeZone: "Asia/Tokyo" },
-        colorId,
+        companyName,
+        eventDate: date,
+        eventTime: time,
+        location: decision.location ?? null,
+        todoItems: decision.todoItems ?? [],
+        mailLink: `https://mail.google.com/mail/u/0/#inbox/${messageId}`,
       };
 
-      const written = await writeToGoogleCalendar(accessToken, calEvent);
-      if (written) {
-        calendarCount++;
-      } else if (telegramChatId) {
-        await sendTelegramMessage(
-          telegramChatId,
-          `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`
-        );
+      detectedEvents.push(emailEvent);
+      await reportToCareerpassAgent(userId, emailEvent, decision.reason);
+
+      const stageStatus =
+        rawEventType === "interview" || rawEventType === "test" || /面接|interview/.test(mailText.toLowerCase())
+          ? inferInterviewStatusFromText(mailText)
+          : null;
+      const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(rawEventType);
+      const inferredStatus = companyName ? desiredStatus : null;
+      const progressUpdate =
+        enableAutoBoardWrite && inferredStatus && companyName
+          ? await upsertJobProgressFromMail({
+              userId,
+              companyName,
+              nextStatus: inferredStatus,
+              mail: {
+                messageId,
+                from: detail.from,
+                subject: detail.subject,
+                snippet: detail.body.slice(0, 120),
+                reason: `${decision.reason ?? ""} (eventType=${rawEventType}, hardOutcome=${hardOutcome ?? "none"})`,
+              },
+            })
+          : null;
+
+      if (companyName) {
+        await trackCompanyForBilling({
+          userId,
+          companyName,
+          firstStatus: inferredStatus,
+          occurredAt: Number.isFinite(Date.parse(detail.date)) ? new Date(detail.date) : null,
+        });
       }
+
+      if (enableAutoBoardWrite && companyName) {
+        try {
+          await syncJobToNotionBoard({
+            userId,
+            companyName,
+            status: inferredStatus ?? null,
+            eventType,
+            eventDate: date,
+            eventTime: time,
+            location: decision.location ?? null,
+            mailSubject: detail.subject,
+            source: "gmail",
+          });
+        } catch (e) {
+          console.warn("[Notion] Gmail sync failed:", (e as Error).message);
+        }
+      }
+
+      // Decide whether to notify the user about this mail.
+      // - First-scan window: skip notifications for mails older than notifyWindowDays
+      //   (the dashboard/Notion sync above still runs, so the board stays complete).
+      // - Same-company dedup: only notify for the newest mail per company in this batch.
+      const mailTs = item.mailTs;
+      const isWithinWindow =
+        notifyCutoffMs === null || (Number.isFinite(mailTs) && mailTs >= notifyCutoffMs);
+
+      const companyKey = companyName?.toLowerCase() ?? null;
+      const isNewestForCompany = isFirstForCompanyInBatch(companyKey);
+
+      const shouldNotify = isWithinWindow && isNewestForCompany;
+
+      let orchestrationActions: string[] = [];
+      if (telegramChatId && shouldNotify) {
+        orchestrationActions = enableAutoWorkflow
+          ? await orchestrateSubAgents(userId, emailEvent)
+          : [];
+        const workflowTriggered = orchestrationActions.length > 0;
+
+        const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
+        const boardLink =
+          progressUpdate && progressUpdate.jobId && progressUpdate.changed
+            ? buildDashboardUrl({ companyName })
+            : null;
+
+        const notifText = await composeMailNotification({
+          userId,
+          companyName,
+          eventType,
+          rawEventType,
+          date,
+          time,
+          location: emailEvent.location,
+          todoItems: emailEvent.todoItems,
+          mailLink,
+          boardLink,
+          progressLabel:
+            progressUpdate && progressUpdate.jobId && progressUpdate.changed
+              ? jobStatusLabelZh(progressUpdate.nextStatus)
+              : null,
+          outcomeUncertain:
+            (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome,
+          workflowTriggered,
+        });
+        await sendTelegramBubbles(telegramChatId, notifText);
+      }
+
+      if (date && CALENDAR_WRITABLE_TYPES.includes(eventType)) {
+        const startDateTime = time ? `${date}T${time}:00` : `${date}T09:00:00`;
+        const endDateTime = time
+          ? `${date}T${String(parseInt(time.split(":")[0]) + 1).padStart(2, "0")}:${time.split(":")[1]}:00`
+          : `${date}T10:00:00`;
+
+        const colorId = calendarColorForEventType(eventType, calendarColorPrefs);
+        const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
+        const todoText = emailEvent.todoItems.length > 0
+          ? emailEvent.todoItems.map(t => `- ${t}`).join("\n")
+          : "- なし";
+        const calEvent: CalendarEvent & { colorId?: string } = {
+          summary: `${typeLabels[eventType]}${companyName ?? ""} - ${detail.subject.slice(0, 40)}`,
+          description: [
+            "CareerPass 自動登録",
+            "",
+            `種別: ${typeLabels[eventType]}`,
+            `会社: ${companyName ?? "未特定"}`,
+            `日時: ${date}${time ? ` ${time}` : ""} (JST)`,
+            `場所/リンク: ${emailEvent.location ?? "未記入"}`,
+            "",
+            "やるべきこと:",
+            todoText,
+            "",
+            `メール件名: ${detail.subject.slice(0, 160)}`,
+            `送信元: ${detail.from.slice(0, 160)}`,
+            `Gmail: ${mailLink}`,
+            `MessageId: ${messageId}`,
+            "",
+            "本文はプライバシー保護のためカレンダーには記載しません。必要なら Gmail を開いて確認してください。",
+          ].join("\n"),
+          start: { dateTime: `${startDateTime}+09:00`, timeZone: "Asia/Tokyo" },
+          end: { dateTime: `${endDateTime}+09:00`, timeZone: "Asia/Tokyo" },
+          colorId,
+        };
+
+        const written = await writeToGoogleCalendar(accessToken, calEvent);
+        if (written) {
+          calendarCount++;
+        } else if (telegramChatId) {
+          await sendTelegramMessage(
+            telegramChatId,
+            `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`
+          );
+        }
+      }
+    } catch (err) {
+      console.error("[Gmail] Failed to process analyzed message. Continue with next one.", {
+        userId,
+        messageId: entry.item.messageId,
+        err,
+      });
     }
   }
 
