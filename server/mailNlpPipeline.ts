@@ -115,7 +115,7 @@ const EVENT_RULES: EventRule[] = [
     reason: "rule:interview",
     specificity: 8,
     pattern:
-      /(面接|面談|interview|一次面接|二次面接|三次面接|最終面接|グループ面接|個別面接|面接日程|面接のご案内|カジュアル面談)/i,
+      /(面接|面談|interview|一次面接|二次面接|三次面接|最終面接|グループ面接|個別面接|面接日程|面接のご案内|カジュアル面談|書類選考通過|書類選考合格)/i,
   },
   {
     eventType: "test",
@@ -123,7 +123,7 @@ const EVENT_RULES: EventRule[] = [
     reason: "rule:test",
     specificity: 7,
     pattern:
-      /(webテスト|spi|適性検査|筆記試験|テスト受検|受検案内|coding test|online assessment|assessment|玉手箱|GAB|CAB|テストセンター)/i,
+      /(webテスト|spi|適性検査|筆記試験|テスト受検|受検案内|coding test|online assessment|assessment|玉手箱|GAB|CAB|テストセンター|コーディングテスト)/i,
   },
   {
     eventType: "deadline",
@@ -147,7 +147,7 @@ const EVENT_RULES: EventRule[] = [
     reason: "rule:entry",
     specificity: 5,
     pattern:
-      /(エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます|マイページ登録|プレエントリー)/i,
+      /(エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます|マイページ登録|プレエントリー|書類選考のご案内)/i,
   },
 ];
 
@@ -164,14 +164,20 @@ interface CoOccurrenceRule {
 const CO_OCCURRENCE_RULES: CoOccurrenceRule[] = [
   // "面接" + date/time near each other → strong interview signal
   { primary: /面接|面談|interview/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{1,2}):(\d{2})|(\d{4})[\/年]/, boost: 0.05, appliesTo: "interview" },
+  // "面接" + Zoom/Teams/Meet → strong interview signal
+  { primary: /面接|面談|interview/i, secondary: /zoom|teams|google\s*meet|webex|skype|オンライン|web/i, boost: 0.05, appliesTo: "interview" },
   // "説明会" + date → strong briefing signal
   { primary: /説明会|セミナー/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{1,2}):(\d{2})/, boost: 0.04, appliesTo: "briefing" },
+  // "説明会" + viewing link → strong briefing signal
+  { primary: /説明会|セミナー/i, secondary: /視聴|参加|URL/i, boost: 0.03, appliesTo: "briefing" },
   // "テスト" + URL → likely a real test invitation
   { primary: /テスト|spi|適性検査|assessment/i, secondary: /https?:\/\/|URL|リンク|ログイン/i, boost: 0.04, appliesTo: "test" },
+  // "テスト" + deadline → real test invitation
+  { primary: /テスト|spi|適性検査|assessment/i, secondary: /受検期間|受検期限|締切|期限/i, boost: 0.04, appliesTo: "test" },
   // "締切" + specific date → real deadline
   { primary: /締切|期限|deadline/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{4})[\/年\-]/, boost: 0.04, appliesTo: "deadline" },
   // Rejection + apology pattern → definite rejection
-  { primary: /見送り|不採用|不合格/i, secondary: /残念|お祈り|ご縁/i, boost: 0.02, appliesTo: "rejection" },
+  { primary: /見送り|不採用|不合格/i, secondary: /残念|お祈り|ご縁|沿いかねる/i, boost: 0.04, appliesTo: "rejection" },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -205,8 +211,16 @@ function normalizeCompanyName(name: string | null | undefined): string | null {
   return cleaned;
 }
 
-function defaultTodo(eventType: MailEventType): string[] {
-  if (eventType === "interview") return ["确认面试时间和形式，准备1分钟自我介绍"];
+function defaultTodo(eventType: MailEventType, text?: string): string[] {
+  if (eventType === "interview") {
+    if (text && /カジュアル面談/.test(text)) {
+      return ["确认 Casual 面谈的时间和形式，准备简单的自我介绍", "准备 3 个你想了解的公司业务或文化问题"];
+    }
+    if (text && /最終面接/.test(text)) {
+      return ["确认最终面试时间和形式", "准备入社意愿、价值观对齐及逆提问"];
+    }
+    return ["确认面试时间和形式，准备1分钟自我介绍"];
+  }
   if (eventType === "briefing") return ["确认说明会参加方式，提前准备2个问题"];
   if (eventType === "test") return ["确认测试平台和时限，先做一次模拟题"];
   if (eventType === "deadline") return ["把提交截止时间写入日程并预留缓冲"];
@@ -404,7 +418,24 @@ export function runRecruitingNlpPipeline(
   const mergedTodo =
     (Array.isArray(llmDecision?.todoItems) ? llmDecision?.todoItems : null)?.filter(
       (t): t is string => typeof t === "string" && t.trim().length > 0,
-    ) ?? defaultTodo(mergedEventType);
+    ) ?? defaultTodo(mergedEventType, text);
+
+  // ⑯ Check if we can skip LLM
+  let skipLlm = false;
+  if (!llmDecision) {
+    const hasGoodCompany = !!mergedCompany;
+    const hasGoodDate = !!mergedDate;
+    
+    if (mergedIsJobRelated && hasGoodCompany) {
+      if ((mergedEventType === "rejection" || mergedEventType === "offer" || mergedEventType === "entry") && mergedConfidence >= 0.90) {
+        skipLlm = true; // These types don't strictly need date/time
+      } else if (mergedEventType !== "other" && mergedConfidence >= 0.92 && hasGoodDate) {
+        skipLlm = true; // Interview/Test/Briefing with high confidence + date + company
+      }
+    } else if (!mergedIsJobRelated && mergedConfidence >= 0.90) {
+      skipLlm = true; // High confidence noise
+    }
+  }
 
   return {
     isJobRelated: mergedIsJobRelated,
@@ -416,7 +447,7 @@ export function runRecruitingNlpPipeline(
     eventTime: mergedTime,
     location: mergedLocation,
     todoItems: mergedTodo.slice(0, 3),
-    shouldSkipLlm: false,
+    shouldSkipLlm: skipLlm,
     _meta: { domainReputation: domainRep, interviewRound, negPenalty, ruleSignals },
   };
 }

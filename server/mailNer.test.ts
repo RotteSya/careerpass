@@ -341,10 +341,10 @@ describe("calculateNegativeSignalPenalty", () => {
     expect(p).toBeLessThan(-0.3);
   });
 
-  it("caps penalty at -0.6", () => {
+  it("caps penalty at -0.8", () => {
     const p = calculateNegativeSignalPenalty(
-      "メルマガ ニュースレター キャンペーン 広告 口コミ 新着求人 配信停止",
+      "メルマガ ニュースレター キャンペーン 広告 口コミ 新着求人 配信停止"
     );
-    expect(p).toBeGreaterThanOrEqual(-0.6);
+    expect(p).toBeGreaterThanOrEqual(-0.8);
   });
 });

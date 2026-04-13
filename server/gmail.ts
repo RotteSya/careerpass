@@ -851,11 +851,11 @@ async function runCareerpassmailAgent(input: {
 
 | eventType | 含义 | 典型特征 |
 |-----------|------|----------|
-| interview | 面接/面談の案内 | 有日時/場所/Zoom URL、要求准备 |
+| interview | 面接/面談の案内 | 有日時/場所/Zoom URL、要求准备（含カジュアル面談、書類選考通過） |
 | briefing | 説明会/セミナー | 企業情報提供、无选考性质 |
-| test | Webテスト/SPI/筆記 | 含测试 URL/期限 |
+| test | Webテスト/SPI/筆記 | 含测试 URL/期限（コーディングテスト等） |
 | deadline | ES/書類提出締切 | 含明确截止日期 |
-| entry | エントリー/応募受付 | 确认报名成功 |
+| entry | エントリー/応募受付 | 确认报名成功、書類選考のご案内 |
 | offer | 内定/採用通知 | 正面结果 |
 | rejection | 不採用/お見送り | 负面结果、含"お祈り" |
 | other | 不属于上述 / 不确定 | 给低 confidence |

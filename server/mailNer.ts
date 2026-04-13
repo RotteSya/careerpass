@@ -31,23 +31,25 @@ const PLATFORM_DOMAINS = new Set([
   "bizreach.jp", "doda.jp", "type.jp", "green-japan.com",
   "openwork.jp", "vorkers.com", "onecareer.jp", "offerbox.jp",
   "goodfind.jp", "unistyle.net", "syukatsu-kaigi.jp",
-  "careerselect.jp", "paiza.jp", "atcoder.jp",
+  "careerselect.jp", "paiza.jp", "atcoder.jp", "career-tasu.jp",
+  "doda-student.jp", "iroots.jp", "massnavi.com", "gakujo.ne.jp",
+  "talentbase.co.jp", "linkedin.com"
 ]);
 
 const FREE_MAIL_DOMAINS_NER = new Set([
   "gmail.com", "yahoo.co.jp", "yahoo.com", "outlook.com", "outlook.jp",
   "hotmail.com", "hotmail.co.jp", "icloud.com", "live.com", "live.jp",
-  "qq.com", "163.com", "126.com", "naver.com",
+  "qq.com", "163.com", "126.com", "naver.com", "me.com", "mac.com"
 ]);
 
 const NON_COMPANY_PATTERNS =
-  /(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine)/i;
+  /(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster)/i;
 
 const HR_SUFFIXES =
   /(採用担当|採用チーム|人事部|人事課|リクルート|Recruiting|recruit|HR|人材|キャリア|新卒採用|中途採用|採用事務局|運営事務局|事務局|マイページ|team|Team|採用)$/i;
 
 const PLATFORM_NAME_HINTS =
-  /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind|rikunabi|リクナビ|マイナビ|mynavi|ビズリーチ|bizreach|doda|wantedly|green)/i;
+  /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind|rikunabi|リクナビ|マイナビ|mynavi|ビズリーチ|bizreach|doda|wantedly|green|キャリタス|iroots|マスナビ|あさがくナビ)/i;
 
 const LEGAL_ENTITY_PREFIX = /(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)/;
 
@@ -216,6 +218,12 @@ const NER_DATE_PATTERNS: Array<{ re: RegExp; hasYear: boolean; confidence: numbe
   { re: /(?<!\d)(\d{1,2})月(\d{1,2})日/g, hasYear: false, confidence: 0.75 },
 ];
 
+const NER_RELATIVE_DATE_PATTERNS: Array<{ re: RegExp; offsetDays: number; confidence: number }> = [
+  { re: /本日|今日/g, offsetDays: 0, confidence: 0.85 },
+  { re: /明日|あす|あした/g, offsetDays: 1, confidence: 0.85 },
+  { re: /明後日|あさって/g, offsetDays: 2, confidence: 0.85 },
+];
+
 const NER_TIME_PATTERNS: Array<{ re: RegExp; hasEnd: boolean }> = [
   { re: /(\d{1,2})[:：](\d{2})\s*[~〜\-－]\s*(\d{1,2})[:：](\d{2})/, hasEnd: true },
   { re: /(\d{1,2})時(\d{2})分?\s*[~〜\-－]\s*(\d{1,2})時(\d{2})分?/, hasEnd: true },
@@ -230,6 +238,7 @@ export function extractTimeCandidates(text: string): TimeCandidate[] {
   const candidates: TimeCandidate[] = [];
   const now = new Date();
 
+  // 1. Absolute Dates
   for (const dp of NER_DATE_PATTERNS) {
     const regex = new RegExp(dp.re.source, dp.re.flags);
     let m: RegExpExecArray | null;
@@ -278,6 +287,40 @@ export function extractTimeCandidates(text: string): TimeCandidate[] {
     }
   }
 
+  // 2. Relative Dates
+  for (const rdp of NER_RELATIVE_DATE_PATTERNS) {
+    const regex = new RegExp(rdp.re.source, rdp.re.flags);
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + rdp.offsetDays);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+      const afterDate = text.slice(m.index + m[0].length, m.index + m[0].length + 60);
+      let time: string | null = null;
+      let endTime: string | null = null;
+
+      for (const tp of NER_TIME_PATTERNS) {
+        const tm = afterDate.match(tp.re);
+        if (tm) {
+          time = `${String(tm[1]).padStart(2, "0")}:${String(tm[2] ?? "00").padStart(2, "0")}`;
+          if (tp.hasEnd && tm[3]) {
+            endTime = `${String(tm[3]).padStart(2, "0")}:${String(tm[4] ?? "00").padStart(2, "0")}`;
+          }
+          break;
+        }
+      }
+
+      const ctxStart = Math.max(0, m.index - 50);
+      const ctxEnd = Math.min(text.length, m.index + m[0].length + 50);
+      const contextWindow = text.slice(ctxStart, ctxEnd);
+      const hasEventContext = EVENT_DATE_CONTEXT.test(contextWindow);
+      // Boost is lower if no time is attached, since "明日" could just mean "I will send it tomorrow"
+      const conf = Math.min(rdp.confidence + (hasEventContext ? 0.05 : -0.1) + (time ? 0.05 : -0.1), 1);
+
+      candidates.push({ date: dateStr, time, endTime, confidence: conf, context: contextWindow.trim() });
+    }
+  }
+
   // Deduplicate by date+time, keep highest confidence
   const seen = new Map<string, TimeCandidate>();
   for (const c of candidates) {
@@ -313,8 +356,10 @@ export function extractBestDateTime(text: string): {
 const LOC_LABEL_PATTERN =
   /(?:会場|場所|アクセス|住所|開催場所|集合場所|面接場所|面接会場|venue|location)\s*[:：]\s*(.{3,80})/i;
 const LOC_POSTAL_PATTERN = /〒\d{3}-?\d{4}\s*(.{5,80})/;
+const LOC_ADDRESS_PATTERN = /(東京都|北海道|(?:京都|大阪)府|.{2,3}県).{2,5}(?:区|市|町|村).{2,30}/;
 const LOC_ONLINE_URL_PATTERN =
   /((?:zoom|teams|google\s*meet|webex|skype)\s*(?:url|リンク|ミーティング)?)\s*[:：]?\s*(https?:\/\/\S{10,120})/i;
+const LOC_RAW_URL_PATTERN = /(https?:\/\/(?:[a-zA-Z0-9-]+\.)?(?:zoom\.us|teams\.microsoft\.com|meet\.google\.com|webex\.com)\/[^\s　]+)/i;
 const LOC_ONLINE_KEYWORD_PATTERN =
   /(オンライン(?:面接|面談|説明会)?|web(?:面接|面談|説明会)|リモート(?:面接|面談))/i;
 
@@ -325,8 +370,14 @@ export function extractLocation(text: string): string | null {
   const postalMatch = text.match(LOC_POSTAL_PATTERN);
   if (postalMatch?.[1]) return postalMatch[1].split("\n")[0].trim();
 
+  const addressMatch = text.match(LOC_ADDRESS_PATTERN);
+  if (addressMatch?.[0]) return addressMatch[0].split("\n")[0].trim();
+
   const onlineUrl = text.match(LOC_ONLINE_URL_PATTERN);
   if (onlineUrl) return `${onlineUrl[1]} ${onlineUrl[2]}`.trim();
+
+  const rawUrl = text.match(LOC_RAW_URL_PATTERN);
+  if (rawUrl) return rawUrl[1].trim();
 
   const onlineKw = text.match(LOC_ONLINE_KEYWORD_PATTERN);
   if (onlineKw?.[1]) return onlineKw[1].trim();
@@ -413,13 +464,16 @@ const NEGATIVE_SIGNALS: Array<{ pattern: RegExp; weight: number }> = [
   { pattern: /(広告|PR|sponsored|advertisement|プロモーション)/i, weight: -0.20 },
   { pattern: /(口コミ|レビュー|review|評判|ランキング|ranking|年収|給与データ)/i, weight: -0.15 },
   { pattern: /(新着求人|おすすめ求人|求人情報|job alert|recommended jobs|あなたへのおすすめ)/i, weight: -0.10 },
+  { pattern: /(アンケート|アンケートのお願い|ご回答のお願い)/i, weight: -0.20 },
+  { pattern: /(自動配信|自動送信|自動返信|this is an automated message)/i, weight: -0.15 },
+  { pattern: /(登録完了|パスワード変更|パスワード再発行|メールアドレスの確認|セキュリティ通知|アカウント設定)/i, weight: -0.25 },
 ];
 
-/** Returns a penalty score ∈ [-0.6, 0]. More negative = more likely noise. */
+/** Returns a penalty score ∈ [-0.8, 0]. More negative = more likely noise. */
 export function calculateNegativeSignalPenalty(text: string): number {
   let penalty = 0;
   for (const s of NEGATIVE_SIGNALS) {
     if (s.pattern.test(text)) penalty += s.weight;
   }
-  return Math.max(penalty, -0.6);
+  return Math.max(penalty, -0.8);
 }
