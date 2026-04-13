@@ -509,6 +509,24 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.eventType).toBe("other");
   });
 
+  it("detects hrmos rejection mail correctly (オロ)", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "【オロ】選考結果のご連絡｜ＳＨＥ ＬＩＮＧＺＨＡＯ様",
+      body:
+        "株式会社オロ 人事採用チームです。\n" +
+        "この度は選考に参加いただき、誠にありがとうございました。\n" +
+        "その結果、残念ながらＳＨＥ様の採用をお見送りとさせていただくことになりました。",
+      from: "株式会社オロ 採用担当 <2245720181511430144.candidate@orocoltd.n-ats.hrmos.co>",
+      domainSignal: 0.9,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(true);
+    expect(d.eventType).toBe("rejection");
+    expect(d.companyName).toBe("株式会社オロ");
+  });
+
   it("keeps actionable mynavi process mail as job-related instead of noise", () => {
     const d = runRecruitingNlpPipeline({
       subject: "【サンプルホールディングス】エントリーシート提出の御礼",
