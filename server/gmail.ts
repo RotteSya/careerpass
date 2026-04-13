@@ -272,6 +272,57 @@ async function fetchInboxMessageIds(params: {
   }
 }
 
+type GmailPayloadPart = {
+  mimeType?: string;
+  body?: { data?: string };
+  parts?: GmailPayloadPart[];
+};
+
+function decodeGmailBase64Url(input: string): string {
+  const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padLength = (4 - (normalized.length % 4)) % 4;
+  const padded = normalized + "=".repeat(padLength);
+  return Buffer.from(padded, "base64").toString("utf-8");
+}
+
+function collectTextPlainBodies(part: GmailPayloadPart | undefined, out: string[]): void {
+  if (!part) return;
+  if (part.mimeType?.toLowerCase() === "text/plain" && part.body?.data) {
+    out.push(decodeGmailBase64Url(part.body.data));
+  }
+  for (const child of part.parts ?? []) collectTextPlainBodies(child, out);
+}
+
+function decodeGmailHeaderValue(value: string): string {
+  // Minimal RFC 2047 support for common UTF-8/B payloads from Gmail headers.
+  return value.replace(/=\?([^?]+)\?([bBqQ])\?([^?]+)\?=/g, (_m, _charset: string, enc: string, payload: string) => {
+    try {
+      if (enc.toUpperCase() === "B") {
+        return Buffer.from(payload, "base64").toString("utf-8");
+      }
+      // Q-encoding: "_" stands for space.
+      const qp = payload.replace(/_/g, " ").replace(/=([0-9A-Fa-f]{2})/g, (_s: string, h: string) =>
+        String.fromCharCode(parseInt(h, 16))
+      );
+      return Buffer.from(qp, "binary").toString("utf-8");
+    } catch {
+      return payload;
+    }
+  });
+}
+
+export function __extractGmailBodyFromPayloadForTests(payload: GmailPayloadPart, snippet = ""): string {
+  let body = snippet;
+  const plainBodies: string[] = [];
+  collectTextPlainBodies(payload, plainBodies);
+  if (plainBodies.length > 0) {
+    body = plainBodies.join("\n");
+  } else if (payload?.body?.data) {
+    body = decodeGmailBase64Url(payload.body.data);
+  }
+  return body.slice(0, 8000);
+}
+
 async function fetchEmailDetail(
   accessToken: string,
   messageId: string
@@ -284,28 +335,20 @@ async function fetchEmailDetail(
     if (!res.ok) return null;
 
     const data = (await res.json()) as {
-      payload?: {
-        headers?: Array<{ name: string; value: string }>;
-        body?: { data?: string };
-        parts?: Array<{ mimeType: string; body?: { data?: string } }>;
-      };
+      payload?: GmailPayloadPart & { headers?: Array<{ name: string; value: string }> };
       snippet?: string;
     };
 
     const headers = data.payload?.headers ?? [];
-    const subject = headers.find((h) => h.name === "Subject")?.value ?? "(件名なし)";
-    const from = headers.find((h) => h.name === "From")?.value ?? "";
-    const date = headers.find((h) => h.name === "Date")?.value ?? "";
+    const subjectRaw = headers.find((h) => h.name === "Subject")?.value ?? "(件名なし)";
+    const fromRaw = headers.find((h) => h.name === "From")?.value ?? "";
+    const dateRaw = headers.find((h) => h.name === "Date")?.value ?? "";
+    const subject = decodeGmailHeaderValue(subjectRaw);
+    const from = decodeGmailHeaderValue(fromRaw);
+    const date = decodeGmailHeaderValue(dateRaw);
 
     // Extract body text
-    let body = data.snippet ?? "";
-    const parts = data.payload?.parts ?? [];
-    const textPart = parts.find((p) => p.mimeType === "text/plain");
-    if (textPart?.body?.data) {
-      body = Buffer.from(textPart.body.data, "base64").toString("utf-8").slice(0, 2000);
-    } else if (data.payload?.body?.data) {
-      body = Buffer.from(data.payload.body.data, "base64").toString("utf-8").slice(0, 2000);
-    }
+    const body = data.payload ? __extractGmailBodyFromPayloadForTests(data.payload, data.snippet ?? "") : (data.snippet ?? "");
 
     return { subject, from, date, body };
   } catch {
