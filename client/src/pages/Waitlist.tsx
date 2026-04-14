@@ -11,7 +11,7 @@ export default function Waitlist() {
     if (!email) return;
 
     // Simulate joining waitlist
-    toast.success("您已成功加入候补名单，敬请期待！");
+    toast.success("先行リストに参加しました！");
     setEmail("");
   };
 
@@ -21,10 +21,10 @@ export default function Waitlist() {
         {/* Header section */}
         <div className="space-y-3">
           <p className="text-[#00A86B] font-bold tracking-widest text-sm mb-4">
-            增长自动化
+            就活自动化
           </p>
           <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-[#111] mb-1">
-            持续获客。
+            日本就活。
           </h1>
           <h1 className="text-5xl sm:text-6xl font-black tracking-tighter text-[#00A86B]">
             全自动。
@@ -33,17 +33,18 @@ export default function Waitlist() {
 
         {/* Sub-headline section */}
         <div className="space-y-3 text-2xl sm:text-3xl font-medium pt-8 pb-4">
-          <p className="text-gray-400">不用你去做 SEO。</p>
-          <p className="text-gray-400">不用你去写内容。</p>
-          <p className="text-gray-400">不用你去管分发。</p>
-          <p className="text-[#111] font-bold pt-2">用户，自己会来。</p>
+          <p className="text-gray-400">不用你去盯邮箱。</p>
+          <p className="text-gray-400">不用你去排日程。</p>
+          <p className="text-gray-400">不用你去写ES。</p>
+          <p className="text-[#111] font-bold pt-2">内定，一定会来。</p>
+          <p className="text-gray-500 text-lg font-normal pt-4">就活のすべてを、AIがサポートする。</p>
         </div>
 
         {/* Form section */}
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <Input
             type="email"
-            placeholder="输入你的邮箱"
+            placeholder="メールアドレスを入力"
             className="w-full h-16 text-lg rounded-2xl border-gray-200 px-6 focus-visible:ring-[#00A86B] shadow-sm"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -53,7 +54,7 @@ export default function Waitlist() {
             type="submit"
             className="w-full h-16 text-lg font-bold rounded-2xl bg-[#1a1a1a] hover:bg-black text-white"
           >
-            加入候补名单
+            先行リストに参加する
           </Button>
         </form>
 
@@ -63,7 +64,7 @@ export default function Waitlist() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00A86B] opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-[#00A86B]"></span>
           </span>
-          <span className="text-base font-semibold">已有 28 人加入候补名单</span>
+          <span className="text-base font-semibold">すでに 28 人が参加しています</span>
         </div>
       </div>
     </div>
