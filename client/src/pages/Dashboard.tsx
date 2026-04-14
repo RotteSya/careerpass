@@ -1031,7 +1031,7 @@ export default function Dashboard() {
                       className="h-7 text-xs bg-transparent"
                       onClick={() => {
                         const header = "公司名称,申请状态,职位名称,締切,联系方式,优先级\n";
-                        const csv = jobs.map(c => {
+                        const csv = boardCards.map((c: any) => {
                           const name = `"${(c.job.companyNameJa ?? '').replace(/"/g, '""')}"`;
                           const status = `"${(c.job.status ?? '').replace(/"/g, '""')}"`;
                           const position = `"${(c.job.position ?? '').replace(/"/g, '""')}"`;
