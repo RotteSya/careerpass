@@ -1030,7 +1030,7 @@ export default function Dashboard() {
                       variant="outline" 
                       className="h-7 text-xs bg-transparent"
                       onClick={() => {
-                        const header = "公司名称,申请状态,职位名称,締切,联系方式,优先级\n";
+                        const header = "公司名称,申请状态,职位名称,締切,联系方式,优先级,来源邮件标题,来源邮箱,提取依据\n";
                         const csv = boardCards.map((c: any) => {
                           const name = `"${(c.job.companyNameJa ?? '').replace(/"/g, '""')}"`;
                           const status = `"${(c.job.status ?? '').replace(/"/g, '""')}"`;
@@ -1038,7 +1038,10 @@ export default function Dashboard() {
                           const deadline = `"${c.job.nextActionAt ? new Date(c.job.nextActionAt).toLocaleDateString('ja-JP') : ''}"`;
                           const contact = `"${(c.job.contactInfo ?? '').replace(/"/g, '""')}"`;
                           const priority = `"${(c.job.priority ?? '').replace(/"/g, '""')}"`;
-                          return `${name},${status},${position},${deadline},${contact},${priority}`;
+                          const mailSubject = `"${(c.job._latestMailSubject ?? '').replace(/"/g, '""')}"`;
+                          const mailFrom = `"${(c.job._latestMailFrom ?? '').replace(/"/g, '""')}"`;
+                          const reason = `"${(c.job._latestReason ?? '').replace(/"/g, '""')}"`;
+                          return `${name},${status},${position},${deadline},${contact},${priority},${mailSubject},${mailFrom},${reason}`;
                         }).join("\n");
                         
                         // Add BOM for Excel UTF-8 support

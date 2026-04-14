@@ -561,11 +561,40 @@ export async function createTelegramBinding(binding: InsertTelegramBinding) {
 export async function getJobApplications(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db
-    .select()
+  
+  // Join with the latest jobStatusEvent to attach mail details for debugging/CSV
+  const jobs = await db
+    .select({
+      job: jobApplications,
+      latestEvent: {
+        mailSubject: jobStatusEvents.mailSubject,
+        mailFrom: jobStatusEvents.mailFrom,
+        reason: jobStatusEvents.reason,
+      },
+    })
     .from(jobApplications)
+    .leftJoin(
+      jobStatusEvents,
+      eq(jobApplications.id, jobStatusEvents.jobApplicationId)
+    )
     .where(eq(jobApplications.userId, userId))
-    .orderBy(desc(jobApplications.updatedAt));
+    .orderBy(desc(jobApplications.updatedAt), desc(jobStatusEvents.createdAt));
+
+  // Deduplicate by job id to keep only the latest event
+  const dedupedMap = new Map<number, typeof jobs[0]>();
+  for (const row of jobs) {
+    if (!dedupedMap.has(row.job.id)) {
+      dedupedMap.set(row.job.id, row);
+    }
+  }
+
+  // Flatten back to a single object per job, appending event info
+  return Array.from(dedupedMap.values()).map(row => ({
+    ...row.job,
+    _latestMailSubject: row.latestEvent?.mailSubject ?? null,
+    _latestMailFrom: row.latestEvent?.mailFrom ?? null,
+    _latestReason: row.latestEvent?.reason ?? null,
+  }));
 }
 
 export async function createJobApplication(data: InsertJobApplication) {
