@@ -19,6 +19,8 @@ import {
   listJobStatusEvents,
   getAgentMemory,
   deleteUserAccountData,
+  joinWaitlist,
+  getWaitlistCount,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import crypto from "crypto";
@@ -744,6 +746,21 @@ export const appRouter = router({
         const ok = await sendTelegramMessage(input.chatId, input.message);
         return { success: ok };
       }),
+  }),
+
+  // ── Waitlist ────────────────────────────────────────────────────────────────
+  waitlist: router({
+    join: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        const result = await joinWaitlist(input.email);
+        const count = await getWaitlistCount();
+        return { ...result, count };
+      }),
+    count: publicProcedure.query(async () => {
+      const count = await getWaitlistCount();
+      return { count };
+    }),
   }),
 });
 

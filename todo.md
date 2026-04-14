@@ -134,3 +134,10 @@
 - [x] 修复标题：扩充至 27 字符（就活パス CareerPass｜AI就活エージェント・ES・面接対策）
 - [x] 新增 meta description：79 字符，含 ES/面接/AI就活/Gmail監視/カレンダー連携等关键词
 - [x] 新增 meta keywords 标签，包含就活/ES/面接/AI/内定等 11 个关键词
+
+## v3.0 候补名单页面
+- [ ] 候补名单页面：数据库建表 waitlist，执行迁移
+- [ ] 候补名单页面：tRPC publicProcedure（waitlist.join / waitlist.count）
+- [ ] 候补名单页面：前端 /waitlist 路由，仿参考图排版（大标题+绿色强调+邮箱输入+计数）
+- [ ] 候补名单页面：非 Owner 用户访问根路径时重定向到 /waitlist
+- [ ] 候补名单页面：Owner（OWNER_OPEN_ID）访问时跳过重定向
