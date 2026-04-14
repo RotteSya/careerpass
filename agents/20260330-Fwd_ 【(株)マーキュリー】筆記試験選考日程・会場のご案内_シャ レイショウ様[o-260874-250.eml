@@ -1,0 +1,356 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a9a:5c46:0:b0:32f:2baf:8ecc with SMTP id g6csp953596lko;
+        Sun, 29 Mar 2026 12:40:01 -0700 (PDT)
+X-Received: by 2002:a17:90b:1e4f:b0:35b:e56e:b58b with SMTP id 98e67ed59e1d1-35c300321b2mr9379050a91.15.1774813201552;
+        Sun, 29 Mar 2026 12:40:01 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1774813201; cv=none;
+        d=google.com; s=arc-20240605;
+        b=Su6W3BwsEl8NCxXpBMwGm4zUv87tm4Esm5hKzE9D2UrjMiX8JVhvIoy/qaSQOhiDg0
+         7awRhjtrQOaDu4OzN+RG9wi6rzaNsrBuy9+N6FYn8pFVAdJmNfUC6CqRmBbSts4d0K20
+         tjI1xQDnZKn9kK2oAF3mXtzmFQGAdRSERva5G3K4dvfOjcLCyIKsg0YeiNvLDGGWkC+V
+         6cdI4Ng7C9cXT2S+N8HmPurEJB0Hm1UQQf1aQ4KKhx7uk5PtDZ7unngMVfyaRUpKYQ3y
+         bwbxsrv/UPUMKRr6jt9vuFC/mIYpH2Ead1nl0LjaLvHaxkc/rumBvLX4MBvle8g9Bbmd
+         9Z+Q==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=date:to:references:message-id:subject:mime-version:from
+         :dkim-signature;
+        bh=9zz9T4VEVmS0LN8kZZzpohWk8es8EpBIvXJu+d3Yknw=;
+        fh=i0/5UnAX/RWLEwAwvaOD7wTlUZieQBek+xhYMSo0q/Q=;
+        b=JaoXoguDLka447uPbvxbmMrvT3wVOX3ajuFHgu4A89vBEYVAahR5dKg/D9N5fbok3B
+         /Ev/VTJEraXIRHaozjjPuSCfHXpp+aWOTKH7XJttWDHm8esDDYose+4lTDvarJJCgL4C
+         b4fPIQV/rYDApJNzcT1xLXBbnL2HhZz1CXbBu8IDcCscSoMj6aZ9fYISEBwe5mZQKcT6
+         TZtDazcxfugFMBZwP3HE6ArW89WVZPR+M+ePWJ9txQusI9sdmipHo/UYrDZF6GffMzZV
+         71S+04yQomNZSGhqltChR0Y/SLLUKoQMTI4fLL4za1TtZ6sShOaTURa/d5MiKmm6gdsO
+         CM4w==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20251104 header.b=AHXTlh67;
+       spf=pass (google.com: domain of raysyadesu@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=raysyadesu@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <raysyadesu@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 98e67ed59e1d1-35d950ebff9sor1330768a91.11.2026.03.29.12.40.01
+        for <raysya.biz@gmail.com>
+        (Google Transport Security);
+        Sun, 29 Mar 2026 12:40:01 -0700 (PDT)
+Received-SPF: pass (google.com: domain of raysyadesu@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20251104 header.b=AHXTlh67;
+       spf=pass (google.com: domain of raysyadesu@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=raysyadesu@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20251104; t=1774813200; x=1775418000; dara=google.com;
+        h=date:to:references:message-id:subject:mime-version:from:from:to:cc
+         :subject:date:message-id:reply-to;
+        bh=9zz9T4VEVmS0LN8kZZzpohWk8es8EpBIvXJu+d3Yknw=;
+        b=AHXTlh67vxVMvwbbMRmAMX12roAsmVNXeRavGBXzlp9NYSeYEU1Yp0gjIWUbBs3rtP
+         og15y9bwx5rMVF/joYlqnxPhKEBB3VKOPnTH/+i4ySHGEZW39v8P5LPQSFuvOYiMiX9z
+         e37xWI2+3YJiyhY7hNMl4wMPvnGKpq5821gPUEndtSbfQW+w2gHpcBjEpAapFlJS9Wk5
+         PfPk6vyFZwmJzko0S3u1FLVaqajasFX6Kj+CWYwnxcS0kJsUICPyej+uKATO2ny7fUc1
+         hig7/+XTcTG1T7vZuFore0CsfK/I7phy3l9xkDRDDsSzG5cqL2SkY0+cZI0RTIXCXSUi
+         I8nA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20251104; t=1774813200; x=1775418000;
+        h=date:to:references:message-id:subject:mime-version:from:x-gm-gg
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
+        bh=9zz9T4VEVmS0LN8kZZzpohWk8es8EpBIvXJu+d3Yknw=;
+        b=ScEmPaFtNDVzNGoCm6MuQrzqqtNrsSym1nHYhvSN8Lep/YZn4VZJhF/t0s9a73OlYR
+         Gsfd7Dedqzut5kSNp4kO/4EWQEkf5C0xaMp4c1Q185SPi51TSxNiZN5al9q/ZYRLMSR/
+         gFCi4qC1Vntzeta9xcfxsR5Rh+dHtV6taBqdqjFghDpjZqVD9+/YQFJrz9L+CuuQ5SoU
+         j3ePsRHLITY5shaTbjVx0vawdA2A+c5rM1sTd4nJ+f4w6sgIUO454I61jox83UfC1Bh4
+         9w7GOJIN+T+qm736rjdlhLZvEDKKVptHy06WM4J5YLl1Cv5ypvglSMwOnTsfy8agWB+X
+         4ozQ==
+X-Gm-Message-State: AOJu0YyKheMOfoJVGu2rNzMZSe/becYuMGttwRpcMPKaTeBEU1NeFSLw
+	cxh4+x7bvWQVS1tzZgE64V3Dydysp7d/2WAlyN2NBuEFRN/p0pHTuoEVII9jxwGn
+X-Gm-Gg: ATEYQzxCLUrTYCH/TP78cvhtjHJryG0f86PGp0zGKlg/tOCVLm/e19FLNRh1VD5sxn+
+	qoWDTtx0l/GIoWK/Y7ttK2w2Lctcgbr+2p0X4SHBHpW3EqUbf98hMzYB7LO/9H4kNL1GuFJbGn9
+	Yxo++Sf66xpNI17Dx0NwvXRCUtgj+yT6IkMD73MCDbwe3ZoRKnms82gb2GRfoQW+rhxOLh4uSwq
+	xBMS+aHkS9Eyg/s9D4dwk0MtkhllkyCRCFZhsDN8ohReDBoSVySS89OuUuFfxaB39mIODkbsrMf
+	FLvO6xcbigGgp0xXHOAhE6YlYTmQ2GzXRRwOOh91avIVu3wsTnC7lkGV7QVQRvk7gFv6SPDWjwI
+	y5M9jb/i7H9gZ+P0Gi5zWfbCrL15plLOgQWdGPrkcYF+9pPgLAic8jiCYg5nLgLNlKqdvPAn1zr
+	zZpx36x9xgclqN8TOHvV6+kQAgJZcSJt1BbcxCKKaismR8CFir++eB+DA=
+X-Received: by 2002:a17:90b:35cc:b0:35c:29ba:bf92 with SMTP id 98e67ed59e1d1-35c2ffa8af9mr9558772a91.5.1774813200415;
+        Sun, 29 Mar 2026 12:40:00 -0700 (PDT)
+Return-Path: <raysyadesu@gmail.com>
+Received: from smtpclient.apple ([240b:250:38c0:b600:edaa:4e0a:3c92:609d])
+        by smtp.gmail.com with ESMTPSA id 41be03b00d2f7-c76916baa6asm4113230a12.4.2026.03.29.12.39.59
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Sun, 29 Mar 2026 12:40:00 -0700 (PDT)
+From: Ray Sya <raysyadesu@gmail.com>
+Content-Type: multipart/alternative;
+	boundary="Apple-Mail=_118CF7DA-7E14-4899-B07D-CD93CB93F4BD"
+Mime-Version: 1.0 (Mac OS X Mail 16.0 \(3864.500.181\))
+Subject: =?utf-8?B?RndkOiDjgJAo5qCqKeODnuODvOOCreODpeODquODvOOAkeethg==?=
+ =?utf-8?B?6KiY6Kmm6aiT6YG46ICD5pel56iL44O75Lya5aC044Gu44GU5qGI5YaFLw==?=
+ =?utf-8?B?44K344OjIOODrOOCpOOCt+ODp+OCpuanmFtvLTI2MDg3NF0=?=
+Message-Id: <1D8DEE82-3BD7-45DB-A3A7-F7CB2743768C@gmail.com>
+References: <69c22a555f269_456073890514f6@rpm-prod-job-rb3.mail>
+To: =?utf-8?B?5L2Y5Luk6ZKK?= <raysya.biz@gmail.com>
+Date: Mon, 30 Mar 2026 04:39:28 +0900
+X-Mailer: Apple Mail (2.3864.500.181)
+
+
+--Apple-Mail=_118CF7DA-7E14-4899-B07D-CD93CB93F4BD
+Content-Transfer-Encoding: base64
+Content-Type: text/plain;
+	charset=utf-8
+
+DQoNCj4g5LiL6Z2i5piv6KKr6L2s5Y+R55qE6YKu5Lu277yaDQo+IA0KPiDlj5Hku7bkuro6IOag
+quW8j+S8muekvuODnuODvOOCreODpeODquODvCA8bWVyY3VyeS1ncm91cEBycG1zLmpwPg0KPiDk
+uLvpopg6IOOAkCjmoKop44Oe44O844Kt44Ol44Oq44O844CR562G6KiY6Kmm6aiT6YG46ICD5pel
+56iL44O75Lya5aC044Gu44GU5qGI5YaFL+OCt+ODoyDjg6zjgqTjgrfjg6fjgqbmp5hbby0yNjA4
+NzRdDQo+IOaXpeacnzogMjAyNuW5tDPmnIgyNOaXpSBHTVQrOSAxNTowODoyMQ0KPiDmlLbku7bk
+uro6IHJheXN5YWRlc3VAZ21haWwuY29tDQo+IA0KPiDigLvov5Tkv6HjgpLjgZnjgovloLTlkIjj
+ga/ku7blkI3jga/liYrpmaTjgZvjgZrjgavov5Tkv6HjgZfjgabjgY/jgaDjgZXjgYTjgIINCj4g
+DQo+IOOCt+ODoyDjg6zjgqTjgrfjg6fjgqbmp5gNCj4gDQo+IOOBk+OCk+OBq+OBoeOBr++8gQ0K
+PiDmoKrlvI/kvJrnpL7jg57jg7zjgq3jg6Xjg6rjg7zmjqHnlKjmi4XlvZPjga7kvZDol6Tjgafj
+gZnjgIINCj4gDQo+IOOBk+OBruW6puOBr+W8iuekvuiqrOaYjuS8muOBuOOBlOWPguWKoOOBhOOB
+n+OBoOOBjeiqoOOBq+OBguOCiuOBjOOBqOOBhuOBlOOBluOBhOOBvuOBl+OBn++8gQ0KPiANCj4g
+44Ki44Oz44Kx44O844OI44Gr44Gm44GU5Zue562U44GE44Gf44Gg44GE44Gf5biM5pyb5pel56iL
+44KS44KC44Go44Gr44CB562G6KiY6Kmm6aiT44Gu5pel56iL44GM56K65a6a44GE44Gf44GX44G+
+44GX44Gf44CCDQo+IOS6i+WJjeOBruaPkOWHuueJqeOCguOBlOOBluOBhOOBvuOBmeOBruOBp+OA
+geS4i+iomOips+e0sOOBruOBlOeiuuiqjeOBqOOCueOCseOCuOODpeODvOODq+OBrueiuuS/neOC
+kuOBiumhmOOBhOOBhOOBn+OBl+OBvuOBmeKXjg0KPiANCj4gDQo+IO+8ne+8ne+8ne+8ne+8ne+8
+ne+8ne+8ne+8ne+8ne+8ne+8ne+8ne+8ne+8ne+8ne+8nQ0KPiANCj4g4pag562G6KiY6Kmm6aiT
+5pel56iLDQo+IDIwMjYvMDQvMDIgMTU6MDDjgJzvvIjntIQx5pmC6ZaT44Gu5LqI5a6a77yJDQo+
+IA0KPiDilqDnrYboqJjoqabpqJPkvJrloLQNCj4g44CA5qCq5byP5Lya56S+44Oe44O844Kt44Ol
+44Oq44O8DQo+IOOAgOWkp+mYquW6nOWkp+mYquW4guWMl+WMuuaiheeUsDEtMS0z5aSn6Ziq6aeF
+5YmN56ysM+ODk+ODqzI46ZqODQo+IOOAgOKWvOOCouOCr+OCu+OCueODnuODg+ODlw0KPiDjgIBo
+dHRwczovL2dvby5nbC9tYXBzL2hCVDFydDluRllCZFp6ck44DQo+IA0KPiDigLvliLDnnYDjgZfj
+gb7jgZfjgZ/jgonlj5fku5jjga7jgIzpm7voqbHmqZ/jgI3jgb7jgZ/jga/jgIzlkbzjgbPpiLTj
+gI3jgYzjgZTjgZbjgYTjgb7jgZnjga7jgacNCj4g44CM5o6h55So6Z2i5o6l44Gn44GK6LaK44GX
+44Gr44Gq44Gj44Gf5peo44Go44GK5ZCN5YmN44CN44KS44GK5Lyd44GI44GP44Gg44GV44GE44CC
+DQo+IA0KPiDilqDmnI3oo4UNCj4g6Ieq55SxKOengeacjU9LISkNCj4gDQo+IOKWoOaPkOWHuueJ
+qeOBruOBiumhmOOBhA0KPiDjgJDnrYboqJjoqabpqJPliY3llrbmpa3ml6Ug5Y2I5YmNMTA6MDDj
+gb7jgafjgJHjgavjgIEx5bGl5q205pu444Gu5o+Q5Ye6IOOBqCAy6YGp5oCn5qSc5p+744Gu5Y+X
+5qScIOOCkuOBiumhmOOBhOOBhOOBn+OBl+OBvuOBmeOAgg0KPiANCj4gMeWxpeattOabuA0KPiDi
+lrzkuIvoqJhVUkzjgojjgorjgZTmj5Dlh7rjgY/jgaDjgZXjgYTjgIINCj4g77yIUEPvvIlodHRw
+czovL3d3dy5zZWN1cmUtY2xvdWQuanAvc2YvYnVzaW5lc3MvMTc2NDMyNDU3MXpRbEtPTUpODQo+
+IO+8iOOCueODnuODm++8iWh0dHBzOi8vd3d3LnNlY3VyZS1jbG91ZC5qcC9zZi9idXNpbmVzcy9z
+cC8xNzY0MzI0NTcxelFsS09NSk4NCj4gDQo+IOKAu1BERuOBp+OBruOBlOaPkOWHuuOBq+OBlOWN
+lOWKm+OCkuOBiumhmOOBhOOBl+OBpuOBiuOCiuOBvuOBmeOBjOOAgembo+OBl+OBhOWgtOWQiOOB
+r+WGmeecn+OBp+OBruOBlOaPkOWHuuOBp+ani+OBhOOBvuOBm+OCk+OAgg0KPiDjgIDmm7jpoZ7l
+hajkvZPjgYzmmI7norrjgavopovjgYjjgovjgojjgYbjgavmkq7lvbHjgpLjgYrpoZjjgYTjgYTj
+gZ/jgZfjgb7jgZnjgIINCj4g4oC744K544Oe44O844OI44OV44Kp44Oz44Gu5pa544Gv54Sh5paZ
+44Ki44OX44Oq44CMQ2FtU2Nhbm5lcuOAjeOBi+OCieOBruOCouODg+ODl+ODreODvOODieaOqOWl
+qA0KPiANCj4gMumBqeaAp+aknOafu++8iOe0hDE15YiG77yJDQo+IOKWvOS4i+iomFVSTOOCiOOC
+iuOBlOWPl+aknOOBj+OBoOOBleOBhOOAgg0KPiBodHRwczovL2FwcC5taWtpd2FtZS5jb20vcmVj
+cnVpdG1lbnQvOGYwZGUxNDUtNmQ4NC00M2M0LTk4NzYtYmFiMGQyYTU4MzcyL2V4YW1pbmVlcy9u
+ZXc/bGluaz0xDQo+IOKAu+mBqeaAp+aknOafu+OBrue1kOaenOOBr+WQiOWQpuOBq+OBr+W9semf
+v+OBlOOBluOBhOOBvuOBm+OCk+OAgg0KPiANCj4g77yd77yd77yd77yd77yd77yd77yd77yd77yd
+77yd77yd77yd77yd77yd77yd77yd77yd77yd77yd77ydDQo+IA0KPiANCj4g77y844GV44KJ44Gr
+77yB6Z2i5o6l57e057+S44Gr44G044Gj44Gf44KK44GqQUnpnaLmjqXjgoLjgZTnlKjmhI/jgZfj
+gabjgYTjgb7jgZnvvI8NCj4g4pa8QUnpnaLmjqXjg6rjg7Pjgq8NCj4gaHR0cHM6Ly9tZXJjdXJ5
+LWdyb3VwLWludGVydmlldy5kdWRvLmNvLmpwLw0KPiDpgbjogIPjga7oqZXkvqHjgavplqLjgo/j
+govjgoLjga7jgafjga/jgYLjgorjgb7jgZvjgpPjga7jgafjgIHjgZzjgbLmnKznlarliY3jga7n
+t7Tnv5LjgoTjgYroqabjgZfmhJ/opprjgafjgYrmsJfou73jgavkvZPpqJPjgY/jgaDjgZXjgYTi
+maoNCj4gDQo+IOW9k+aXpeOBr+OCt+ODo+anmOOBq+OBiuS8muOBhOOBp+OBjeOCi+OBruOCkual
+veOBl+OBv+OBq+OBl+OBpuOBiuOCiuOBvuOBme+8gQ0KPiDlvJXjgY3ntprjgY3jganjgYbjgZ7j
+gojjgo3jgZfjgY/jgYrpoZjjgYTjgYTjgZ/jgZfjgb7jgZnjgIINCj4gDQo+IA0KPiDvvL/vvL/v
+vL/vvL/vvL/vvL/vvL/vvL/vvL/vvL/vvL/vvL/vvL/vvL/vvL/vvL/vvL/vvL8NCj4gDQo+IOKY
+huODnuODvOOCreODpeODquODvOOCkuOCguOBo+OBqOefpeOCiuOBn+OBhOaWueOBr+KGk+OBk+OB
+oeOCieOCkkNIRUNL77yBDQo+IOOAkFlvdVR1YmXjgJFodHRwczovL3d3dy55b3V0dWJlLmNvbS9A
+bWVyY3VyeV9jaGFubmVsL3ZpZGVvcw0KPiANCj4g4piG6YG46ICD5YmN44Gu55aR5ZWP44Gc44KT
+44G244G+44KL44KP44GL44KK77yB4q2Q6YG46ICD5YmN57eo4q2QDQo+IGh0dHBzOi8vc2Fhcy5h
+Y3RpYm9va29uZS5jb20vY29udGVudC9kZXRhaWw/cGFyYW09ZXlKamIyNTBaVzUwVG5WdElqbzJO
+elV6TmpOOSZkZXRhaWxGbGc9MCZwTm89MQ0KPiANCj4g4piG6YG46ICD5YmN44Gr44Oe44O844Kt
+44Ol44Oq44O844KSN+WIhuOBp+OBiuOBleOCieOBhO+8gQ0KPiDjgJA35YiG57S55LuL44CRaHR0
+cHM6Ly95b3V0dS5iZS9kUFQxUTBaUTN6bz9zaT1RVU5YVVVWSUV6WWl1RzQwDQo+IA0KPiDimIbj
+ganjgpPjgarlhYjovKnnpL7lk6HjgYzjgYTjgovjgYvnn6XjgorjgZ/jgYTmlrnjga/jgZPjgaHj
+gonvvIENCj4g44CQ44Kt44Oj44Oq44Ki44K544OI44O844Oq44O844CRaHR0cHM6Ly94LmdkL1Ba
+aWZ2DQo+IA0KPiDilqAgTSBFIFIgQyBVIFIgWSDilIHilIHilIHilIHilIHilIHilIHilIHilIHi
+lIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilIHilqANCj4gDQo+IOagquW8j+S8muekvuOD
+nuODvOOCreODpeODquODvCDlpKfpmKrmlK/lupfjgIANCj4gDQo+IOOAkjUzMC0wMDAxDQo+IOWk
+p+mYquW6nOWkp+mYquW4guWMl+WMuuaiheeUsDEtMS0zIOWkp+mYqumnheWJjeesrDPjg5Pjg6sy
+OOmajg0KPiBURUzvvJowMTIwLTk5OS04NjTvvIjmjqHnlKjpg6jnm7TpgJrjg5Xjg6rjg7zjg4Dj
+gqTjg6Tjg6vvvIkNCj4g44CA44CAICAgMDYtNjM0My05NTU577yI5Luj6KGo77yJDQo+IA0KPiDi
+lrzmlrDljZLmjqHnlKhIUA0KPiBodHRwOi8vcmVjcnVpdC5tZXJjdXJ5LWdyb3VwLmNvLmpwLw0K
+PiDilrzlhazlvI9Zb3VUdWJlL+ODnuODvOOCreODpeODquODvOODgeODo+ODs+ODjeODqw0KPiBo
+dHRwczovL3d3dy5Zb3VUdWJlLmNvbS9AbWVyY3VyeV9jaGFubmVsDQo+IOKWvEluc3RhZ3JhbQ0K
+PiBodHRwczovL3d3dy5JbnN0YWdyYW0uY29tL21lcmN1cnlfcmVjcnVpdG1lbnQvDQo+IOKWvFdh
+bnRlZGx5DQo+IGh0dHBzOi8vd3d3LldhbnRlZGx5LmNvbS9jb21wYW5pZXMvY29tcGFueV83MDIy
+Njc5L3N0b3JpZXMNCj4g4pag4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB
+4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pSB4pagDQo+IA0KDQo=
+--Apple-Mail=_118CF7DA-7E14-4899-B07D-CD93CB93F4BD
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html;
+	charset=utf-8
+
+<html aria-label=3D"message body"><head><meta http-equiv=3D"content-type" =
+content=3D"text/html; charset=3Dutf-8"></head><body =
+style=3D"overflow-wrap: break-word; -webkit-nbsp-mode: space; =
+line-break: after-white-space;"><br =
+id=3D"lineBreakAtBeginningOfMessage"><div><br><blockquote =
+type=3D"cite"><div>=E4=B8=8B=E9=9D=A2=E6=98=AF=E8=A2=AB=E8=BD=AC=E5=8F=91=E7=
+=9A=84=E9=82=AE=E4=BB=B6=EF=BC=9A</div><br =
+class=3D"Apple-interchange-newline"><div style=3D"margin-top: 0px; =
+margin-right: 0px; margin-bottom: 0px; margin-left: 0px;"><span =
+style=3D"font-family: -webkit-system-font, Helvetica Neue, Helvetica, =
+sans-serif; color:rgba(0, 0, 0, 1.0);"><b>=E5=8F=91=E4=BB=B6=E4=BA=BA: =
+</b></span><span style=3D"font-family: -webkit-system-font, Helvetica =
+Neue, Helvetica, sans-serif;">=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=83=9E=
+=E3=83=BC=E3=82=AD=E3=83=A5=E3=83=AA=E3=83=BC =
+&lt;mercury-group@rpms.jp&gt;<br></span></div><div style=3D"margin-top: =
+0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px;"><span =
+style=3D"font-family: -webkit-system-font, Helvetica Neue, Helvetica, =
+sans-serif; color:rgba(0, 0, 0, 1.0);"><b>=E4=B8=BB=E9=A2=98: =
+</b></span><span style=3D"font-family: -webkit-system-font, Helvetica =
+Neue, Helvetica, =
+sans-serif;"><b>=E3=80=90(=E6=A0=AA)=E3=83=9E=E3=83=BC=E3=82=AD=E3=83=A5=E3=
+=83=AA=E3=83=BC=E3=80=91=E7=AD=86=E8=A8=98=E8=A9=A6=E9=A8=93=E9=81=B8=E8=80=
+=83=E6=97=A5=E7=A8=8B=E3=83=BB=E4=BC=9A=E5=A0=B4=E3=81=AE=E3=81=94=E6=A1=88=
+=E5=86=85/=E3=82=B7=E3=83=A3 =
+=E3=83=AC=E3=82=A4=E3=82=B7=E3=83=A7=E3=82=A6=E6=A7=98[o-260874]</b><br></=
+span></div><div style=3D"margin-top: 0px; margin-right: 0px; =
+margin-bottom: 0px; margin-left: 0px;"><span style=3D"font-family: =
+-webkit-system-font, Helvetica Neue, Helvetica, sans-serif; =
+color:rgba(0, 0, 0, 1.0);"><b>=E6=97=A5=E6=9C=9F: </b></span><span =
+style=3D"font-family: -webkit-system-font, Helvetica Neue, Helvetica, =
+sans-serif;">2026=E5=B9=B43=E6=9C=8824=E6=97=A5 GMT+9 =
+15:08:21<br></span></div><div style=3D"margin-top: 0px; margin-right: =
+0px; margin-bottom: 0px; margin-left: 0px;"><span style=3D"font-family: =
+-webkit-system-font, Helvetica Neue, Helvetica, sans-serif; =
+color:rgba(0, 0, 0, 1.0);"><b>=E6=94=B6=E4=BB=B6=E4=BA=BA: =
+</b></span><span style=3D"font-family: -webkit-system-font, Helvetica =
+Neue, Helvetica, =
+sans-serif;">raysyadesu@gmail.com<br></span></div><br><div><div>=E2=80=BB=E8=
+=BF=94=E4=BF=A1=E3=82=92=E3=81=99=E3=82=8B=E5=A0=B4=E5=90=88=E3=81=AF=E4=BB=
+=B6=E5=90=8D=E3=81=AF=E5=89=8A=E9=99=A4=E3=81=9B=E3=81=9A=E3=81=AB=E8=BF=94=
+=E4=BF=A1=E3=81=97=E3=81=A6=E3=81=8F=E3=81=A0=E3=81=95=E3=81=84=E3=80=82<b=
+r><br>=E3=82=B7=E3=83=A3 =
+=E3=83=AC=E3=82=A4=E3=82=B7=E3=83=A7=E3=82=A6=E6=A7=98<br><br>=E3=81=93=E3=
+=82=93=E3=81=AB=E3=81=A1=E3=81=AF=EF=BC=81<br>=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=
+=A4=BE=E3=83=9E=E3=83=BC=E3=82=AD=E3=83=A5=E3=83=AA=E3=83=BC=E6=8E=A1=E7=94=
+=A8=E6=8B=85=E5=BD=93=E3=81=AE=E4=BD=90=E8=97=A4=E3=81=A7=E3=81=99=E3=80=82=
+<br><br>=E3=81=93=E3=81=AE=E5=BA=A6=E3=81=AF=E5=BC=8A=E7=A4=BE=E8=AA=AC=E6=
+=98=8E=E4=BC=9A=E3=81=B8=E3=81=94=E5=8F=82=E5=8A=A0=E3=81=84=E3=81=9F=E3=81=
+=A0=E3=81=8D=E8=AA=A0=E3=81=AB=E3=81=82=E3=82=8A=E3=81=8C=E3=81=A8=E3=81=86=
+=E3=81=94=E3=81=96=E3=81=84=E3=81=BE=E3=81=97=E3=81=9F=EF=BC=81<br><br>=E3=
+=82=A2=E3=83=B3=E3=82=B1=E3=83=BC=E3=83=88=E3=81=AB=E3=81=A6=E3=81=94=E5=9B=
+=9E=E7=AD=94=E3=81=84=E3=81=9F=E3=81=A0=E3=81=84=E3=81=9F=E5=B8=8C=E6=9C=9B=
+=E6=97=A5=E7=A8=8B=E3=82=92=E3=82=82=E3=81=A8=E3=81=AB=E3=80=81=E7=AD=86=E8=
+=A8=98=E8=A9=A6=E9=A8=93=E3=81=AE=E6=97=A5=E7=A8=8B=E3=81=8C=E7=A2=BA=E5=AE=
+=9A=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=81=97=E3=81=9F=E3=80=82<br>=E4=BA=
+=8B=E5=89=8D=E3=81=AE=E6=8F=90=E5=87=BA=E7=89=A9=E3=82=82=E3=81=94=E3=81=96=
+=E3=81=84=E3=81=BE=E3=81=99=E3=81=AE=E3=81=A7=E3=80=81=E4=B8=8B=E8=A8=98=E8=
+=A9=B3=E7=B4=B0=E3=81=AE=E3=81=94=E7=A2=BA=E8=AA=8D=E3=81=A8=E3=82=B9=E3=82=
+=B1=E3=82=B8=E3=83=A5=E3=83=BC=E3=83=AB=E3=81=AE=E7=A2=BA=E4=BF=9D=E3=82=92=
+=E3=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=81=99=E2=
+=97=8E<br><br><br>=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=
+=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=
+=9D=EF=BC=9D=EF=BC=9D<br><br>=E2=96=A0=E7=AD=86=E8=A8=98=E8=A9=A6=E9=A8=93=
+=E6=97=A5=E7=A8=8B<br>2026/04/02 =
+15:00=E3=80=9C=EF=BC=88=E7=B4=841=E6=99=82=E9=96=93=E3=81=AE=E4=BA=88=E5=AE=
+=9A=EF=BC=89<br><br>=E2=96=A0=E7=AD=86=E8=A8=98=E8=A9=A6=E9=A8=93=E4=BC=9A=
+=E5=A0=B4<br>=E3=80=80=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=83=9E=E3=83=BC=
+=E3=82=AD=E3=83=A5=E3=83=AA=E3=83=BC<br>=E3=80=80=E5=A4=A7=E9=98=AA=E5=BA=9C=
+=E5=A4=A7=E9=98=AA=E5=B8=82=E5=8C=97=E5=8C=BA=E6=A2=85=E7=94=B01-1-3=E5=A4=
+=A7=E9=98=AA=E9=A7=85=E5=89=8D=E7=AC=AC3=E3=83=93=E3=83=AB28=E9=9A=8E<br>=E3=
+=80=80=E2=96=BC=E3=82=A2=E3=82=AF=E3=82=BB=E3=82=B9=E3=83=9E=E3=83=83=E3=83=
+=97<br>=E3=80=80https://goo.gl/maps/hBT1rt9nFYBdZzrN8<br><br>=E2=80=BB=E5=88=
+=B0=E7=9D=80=E3=81=97=E3=81=BE=E3=81=97=E3=81=9F=E3=82=89=E5=8F=97=E4=BB=98=
+=E3=81=AE=E3=80=8C=E9=9B=BB=E8=A9=B1=E6=A9=9F=E3=80=8D=E3=81=BE=E3=81=9F=E3=
+=81=AF=E3=80=8C=E5=91=BC=E3=81=B3=E9=88=B4=E3=80=8D=E3=81=8C=E3=81=94=E3=81=
+=96=E3=81=84=E3=81=BE=E3=81=99=E3=81=AE=E3=81=A7<br>=E3=80=8C=E6=8E=A1=E7=94=
+=A8=E9=9D=A2=E6=8E=A5=E3=81=A7=E3=81=8A=E8=B6=8A=E3=81=97=E3=81=AB=E3=81=AA=
+=E3=81=A3=E3=81=9F=E6=97=A8=E3=81=A8=E3=81=8A=E5=90=8D=E5=89=8D=E3=80=8D=E3=
+=82=92=E3=81=8A=E4=BC=9D=E3=81=88=E3=81=8F=E3=81=A0=E3=81=95=E3=81=84=E3=80=
+=82<br><br>=E2=96=A0=E6=9C=8D=E8=A3=85<br>=E8=87=AA=E7=94=B1(=E7=A7=81=E6=9C=
+=8DOK!)<br><br>=E2=96=A0=E6=8F=90=E5=87=BA=E7=89=A9=E3=81=AE=E3=81=8A=E9=A1=
+=98=E3=81=84<br>=E3=80=90=E7=AD=86=E8=A8=98=E8=A9=A6=E9=A8=93=E5=89=8D=E5=96=
+=B6=E6=A5=AD=E6=97=A5 =E5=8D=88=E5=89=8D10:00=E3=81=BE=E3=81=A7=E3=80=91=E3=
+=81=AB=E3=80=811=E5=B1=A5=E6=AD=B4=E6=9B=B8=E3=81=AE=E6=8F=90=E5=87=BA =
+=E3=81=A8 2=E9=81=A9=E6=80=A7=E6=A4=9C=E6=9F=BB=E3=81=AE=E5=8F=97=E6=A4=9C=
+ =
+=E3=82=92=E3=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=
+=81=99=E3=80=82<br><br>1=E5=B1=A5=E6=AD=B4=E6=9B=B8<br>=E2=96=BC=E4=B8=8B=E8=
+=A8=98URL=E3=82=88=E3=82=8A=E3=81=94=E6=8F=90=E5=87=BA=E3=81=8F=E3=81=A0=E3=
+=81=95=E3=81=84=E3=80=82<br>=EF=BC=88PC=EF=BC=89https://www.secure-cloud.j=
+p/sf/business/1764324571zQlKOMJN<br>=EF=BC=88=E3=82=B9=E3=83=9E=E3=83=9B=EF=
+=BC=89https://www.secure-cloud.jp/sf/business/sp/1764324571zQlKOMJN<br><br=
+>=E2=80=BBPDF=E3=81=A7=E3=81=AE=E3=81=94=E6=8F=90=E5=87=BA=E3=81=AB=E3=81=94=
+=E5=8D=94=E5=8A=9B=E3=82=92=E3=81=8A=E9=A1=98=E3=81=84=E3=81=97=E3=81=A6=E3=
+=81=8A=E3=82=8A=E3=81=BE=E3=81=99=E3=81=8C=E3=80=81=E9=9B=A3=E3=81=97=E3=81=
+=84=E5=A0=B4=E5=90=88=E3=81=AF=E5=86=99=E7=9C=9F=E3=81=A7=E3=81=AE=E3=81=94=
+=E6=8F=90=E5=87=BA=E3=81=A7=E6=A7=8B=E3=81=84=E3=81=BE=E3=81=9B=E3=82=93=E3=
+=80=82<br>=E3=80=80=E6=9B=B8=E9=A1=9E=E5=85=A8=E4=BD=93=E3=81=8C=E6=98=8E=E7=
+=A2=BA=E3=81=AB=E8=A6=8B=E3=81=88=E3=82=8B=E3=82=88=E3=81=86=E3=81=AB=E6=92=
+=AE=E5=BD=B1=E3=82=92=E3=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=
+=E3=81=BE=E3=81=99=E3=80=82<br>=E2=80=BB=E3=82=B9=E3=83=9E=E3=83=BC=E3=83=88=
+=E3=83=95=E3=82=A9=E3=83=B3=E3=81=AE=E6=96=B9=E3=81=AF=E7=84=A1=E6=96=99=E3=
+=82=A2=E3=83=97=E3=83=AA=E3=80=8CCamScanner=E3=80=8D=E3=81=8B=E3=82=89=E3=81=
+=AE=E3=82=A2=E3=83=83=E3=83=97=E3=83=AD=E3=83=BC=E3=83=89=E6=8E=A8=E5=A5=A8=
+<br><br>2=E9=81=A9=E6=80=A7=E6=A4=9C=E6=9F=BB=EF=BC=88=E7=B4=8415=E5=88=86=
+=EF=BC=89<br>=E2=96=BC=E4=B8=8B=E8=A8=98URL=E3=82=88=E3=82=8A=E3=81=94=E5=8F=
+=97=E6=A4=9C=E3=81=8F=E3=81=A0=E3=81=95=E3=81=84=E3=80=82<br>https://app.m=
+ikiwame.com/recruitment/8f0de145-6d84-43c4-9876-bab0d2a58372/examinees/new=
+?link=3D1<br>=E2=80=BB=E9=81=A9=E6=80=A7=E6=A4=9C=E6=9F=BB=E3=81=AE=E7=B5=90=
+=E6=9E=9C=E3=81=AF=E5=90=88=E5=90=A6=E3=81=AB=E3=81=AF=E5=BD=B1=E9=9F=BF=E3=
+=81=94=E3=81=96=E3=81=84=E3=81=BE=E3=81=9B=E3=82=93=E3=80=82<br><br>=EF=BC=
+=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=
+=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=BC=9D=EF=
+=BC=9D=EF=BC=9D=EF=BC=9D<br><br><br>=EF=BC=BC=E3=81=95=E3=82=89=E3=81=AB=EF=
+=BC=81=E9=9D=A2=E6=8E=A5=E7=B7=B4=E7=BF=92=E3=81=AB=E3=81=B4=E3=81=A3=E3=81=
+=9F=E3=82=8A=E3=81=AAAI=E9=9D=A2=E6=8E=A5=E3=82=82=E3=81=94=E7=94=A8=E6=84=
+=8F=E3=81=97=E3=81=A6=E3=81=84=E3=81=BE=E3=81=99=EF=BC=8F<br>=E2=96=BCAI=E9=
+=9D=A2=E6=8E=A5=E3=83=AA=E3=83=B3=E3=82=AF<br>https://mercury-group-interv=
+iew.dudo.co.jp/<br>=E9=81=B8=E8=80=83=E3=81=AE=E8=A9=95=E4=BE=A1=E3=81=AB=E9=
+=96=A2=E3=82=8F=E3=82=8B=E3=82=82=E3=81=AE=E3=81=A7=E3=81=AF=E3=81=82=E3=82=
+=8A=E3=81=BE=E3=81=9B=E3=82=93=E3=81=AE=E3=81=A7=E3=80=81=E3=81=9C=E3=81=B2=
+=E6=9C=AC=E7=95=AA=E5=89=8D=E3=81=AE=E7=B7=B4=E7=BF=92=E3=82=84=E3=81=8A=E8=
+=A9=A6=E3=81=97=E6=84=9F=E8=A6=9A=E3=81=A7=E3=81=8A=E6=B0=97=E8=BB=BD=E3=81=
+=AB=E4=BD=93=E9=A8=93=E3=81=8F=E3=81=A0=E3=81=95=E3=81=84=E2=99=AA<br><br>=
+=E5=BD=93=E6=97=A5=E3=81=AF=E3=82=B7=E3=83=A3=E6=A7=98=E3=81=AB=E3=81=8A=E4=
+=BC=9A=E3=81=84=E3=81=A7=E3=81=8D=E3=82=8B=E3=81=AE=E3=82=92=E6=A5=BD=E3=81=
+=97=E3=81=BF=E3=81=AB=E3=81=97=E3=81=A6=E3=81=8A=E3=82=8A=E3=81=BE=E3=81=99=
+=EF=BC=81<br>=E5=BC=95=E3=81=8D=E7=B6=9A=E3=81=8D=E3=81=A9=E3=81=86=E3=81=9E=
+=E3=82=88=E3=82=8D=E3=81=97=E3=81=8F=E3=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=
+=81=9F=E3=81=97=E3=81=BE=E3=81=99=E3=80=82<br><br><br>=EF=BC=BF=EF=BC=BF=EF=
+=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=
+=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF=EF=BC=BF<br><br>=
+=E2=98=86=E3=83=9E=E3=83=BC=E3=82=AD=E3=83=A5=E3=83=AA=E3=83=BC=E3=82=92=E3=
+=82=82=E3=81=A3=E3=81=A8=E7=9F=A5=E3=82=8A=E3=81=9F=E3=81=84=E6=96=B9=E3=81=
+=AF=E2=86=93=E3=81=93=E3=81=A1=E3=82=89=E3=82=92CHECK=EF=BC=81<br>=E3=80=90=
+YouTube=E3=80=91https://www.youtube.com/@mercury_channel/videos<br><br>=E2=
+=98=86=E9=81=B8=E8=80=83=E5=89=8D=E3=81=AE=E7=96=91=E5=95=8F=E3=81=9C=E3=82=
+=93=E3=81=B6=E3=81=BE=E3=82=8B=E3=82=8F=E3=81=8B=E3=82=8A=EF=BC=81=E2=AD=90=
+=E9=81=B8=E8=80=83=E5=89=8D=E7=B7=A8=E2=AD=90<br>https://saas.actibookone.=
+com/content/detail?param=3DeyJjb250ZW50TnVtIjo2NzUzNjN9&amp;detailFlg=3D0&=
+amp;pNo=3D1<br><br>=E2=98=86=E9=81=B8=E8=80=83=E5=89=8D=E3=81=AB=E3=83=9E=E3=
+=83=BC=E3=82=AD=E3=83=A5=E3=83=AA=E3=83=BC=E3=82=927=E5=88=86=E3=81=A7=E3=81=
+=8A=E3=81=95=E3=82=89=E3=81=84=EF=BC=81<br>=E3=80=907=E5=88=86=E7=B4=B9=E4=
+=BB=8B=E3=80=91https://youtu.be/dPT1Q0ZQ3zo?si=3DQUNXUUVIEzYiuG40<br><br>=E2=
+=98=86=E3=81=A9=E3=82=93=E3=81=AA=E5=85=88=E8=BC=A9=E7=A4=BE=E5=93=A1=E3=81=
+=8C=E3=81=84=E3=82=8B=E3=81=8B=E7=9F=A5=E3=82=8A=E3=81=9F=E3=81=84=E6=96=B9=
+=E3=81=AF=E3=81=93=E3=81=A1=E3=82=89=EF=BC=81<br>=E3=80=90=E3=82=AD=E3=83=A3=
+=E3=83=AA=E3=82=A2=E3=82=B9=E3=83=88=E3=83=BC=E3=83=AA=E3=83=BC=E3=80=91ht=
+tps://x.gd/PZifv<br><br>=E2=96=A0 M E R C U R Y =
+=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=96=A0<br><br>=E6=A0=AA=E5=BC=8F=E4=BC=9A=
+=E7=A4=BE=E3=83=9E=E3=83=BC=E3=82=AD=E3=83=A5=E3=83=AA=E3=83=BC =
+=E5=A4=A7=E9=98=AA=E6=94=AF=E5=BA=97=E3=80=80<br><br>=E3=80=92530-0001<br>=
+=E5=A4=A7=E9=98=AA=E5=BA=9C=E5=A4=A7=E9=98=AA=E5=B8=82=E5=8C=97=E5=8C=BA=E6=
+=A2=85=E7=94=B01-1-3 =
+=E5=A4=A7=E9=98=AA=E9=A7=85=E5=89=8D=E7=AC=AC3=E3=83=93=E3=83=AB28=E9=9A=8E=
+<br>TEL=EF=BC=9A0120-999-864=EF=BC=88=E6=8E=A1=E7=94=A8=E9=83=A8=E7=9B=B4=E9=
+=80=9A=E3=83=95=E3=83=AA=E3=83=BC=E3=83=80=E3=82=A4=E3=83=A4=E3=83=AB=EF=BC=
+=89<br>=E3=80=80=E3=80=80 =
+&nbsp;&nbsp;06-6343-9559=EF=BC=88=E4=BB=A3=E8=A1=A8=EF=BC=89<br><br>=E2=96=
+=BC=E6=96=B0=E5=8D=92=E6=8E=A1=E7=94=A8HP<br>http://recruit.mercury-group.=
+co.jp/<br>=E2=96=BC=E5=85=AC=E5=BC=8FYouTube/=E3=83=9E=E3=83=BC=E3=82=AD=E3=
+=83=A5=E3=83=AA=E3=83=BC=E3=83=81=E3=83=A3=E3=83=B3=E3=83=8D=E3=83=AB<br>h=
+ttps://www.YouTube.com/@mercury_channel<br>=E2=96=BCInstagram<br>https://w=
+ww.Instagram.com/mercury_recruitment/<br>=E2=96=BCWantedly<br>https://www.=
+Wantedly.com/companies/company_7022679/stories<br>=E2=96=A0=E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=
+=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=
+=81=E2=96=A0<br><br></div></div></blockquote></div><br></body></html>=
+
+--Apple-Mail=_118CF7DA-7E14-4899-B07D-CD93CB93F4BD--

@@ -1,0 +1,95 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:aa6:d00a:0:b0:32f:2baf:8ecc with SMTP id xr10csp102261lkb;
+        Tue, 7 Apr 2026 16:57:02 -0700 (PDT)
+X-Received: by 2002:a17:903:38d0:b0:2ae:c981:2a29 with SMTP id d9443c01a7336-2b2817ceaeamr193357915ad.2.1775606222517;
+        Tue, 07 Apr 2026 16:57:02 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1775606222; cv=none;
+        d=google.com; s=arc-20240605;
+        b=TM9KU1mrLzg96k3s2NhNFXFKtuSOStSXF+zlpHANtDu7iWuYJCiaQ6uTL2LjewYVbB
+         yx1V/8N7+VH7CLaz2JuPhhObI+Ssp/5vw6dtSds/FHJ1fKoaI1kGIREVs5QXbL3PLyeE
+         pnUnmam14wZgs6y7CCpDAV4y0CDyfI6FJRJQadHa54rj3y0sqx3k3slsh/ZVIq0/9y7A
+         8tdHbGYF1tkMEV2+6LHHBGqHqUOcb6h5VbzfMAxqwULibUusF5Q8mjfTDWhNFT7v4Ojb
+         pol2UuGFEpdLONHTrniXWDVs869/jKEiL8hvmYe34WvMuREn5sC7rK0Gh8uN0iz4yBWP
+         9Akg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=references:mime-version:message-id:subject:cc:to:from:date
+         :dkim-signature;
+        bh=b6gkUtAyC6GpkRa83FuGX0Km3nApUcrV9qpPeQZihzY=;
+        fh=+s6Hz3twO2v+/WWMQqsP7DwIe5hWgjXQso9Nq6cLoDY=;
+        b=YoXHRRuRgKKI6coBEEx8wPuY6Jafyt/MRsLhzCDb3KvTh0KdoHxPyrbFZPHlEbR+MP
+         HFQDGRpx12rTIwA3PNEsfwN/GSsQteKvHfstMdFFykVPEYqgnkEnkI2yELpmW49R1UAZ
+         gmYHHeMjjy4pZEs6fy+04/DOroclnKkcrBezFwzDVV2lO2pTJSm8szzrswHF3b6Ak8GP
+         Sfv/SxD0cE9mNIX7qSD/h5IeejTAz4wtITYR0F43i+0Zel7HNabC90D6Iow4kY3zFeBv
+         X+A0kjwtzq5jKut+G1RJtAtwSH0VaaEDVyOk8+6v4QQOhQ8Po5Ip6CXlg90dmw2Uyey5
+         Vw9g==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=EG1XPQ8z;
+       spf=pass (google.com: domain of fidiasolutions+27@recruit-mg.com designates 210.140.105.20 as permitted sender) smtp.mailfrom=fidiasolutions+27@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Return-Path: <fidiasolutions+27@recruit-mg.com>
+Received: from bmsl002585-01-02.baremetal.jp (bmsl002585-01-02.baremetal.jp. [210.140.105.20])
+        by mx.google.com with ESMTPS id d9443c01a7336-2b274b5fc4bsi359574485ad.179.2026.04.07.16.57.01
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Tue, 07 Apr 2026 16:57:02 -0700 (PDT)
+Received-SPF: pass (google.com: domain of fidiasolutions+27@recruit-mg.com designates 210.140.105.20 as permitted sender) client-ip=210.140.105.20;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=EG1XPQ8z;
+       spf=pass (google.com: domain of fidiasolutions+27@recruit-mg.com designates 210.140.105.20 as permitted sender) smtp.mailfrom=fidiasolutions+27@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Received: from 151-15-168-192.baremail.local.15.168.192.in-addr.arpa (HELO) (192.168.15.151)
+  by sl002585-01 with ESMTP; Wed, 08 Apr 2026 08:57:00 +0900
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=recruit-mg.com;
+	s=recruit-mg.com.202401; t=1775606220;
+	bh=b6gkUtAyC6GpkRa83FuGX0Km3nApUcrV9qpPeQZihzY=;
+	h=From:To:Content-Type:Subject:Date:MIME-Version:Message-ID;
+	b=EG1XPQ8zZHf5h/ZZ+m9bPtKq0ei37oHNkT+ummVelP7piJz5UdE8BOIwHNOe91dh9
+	 wygl1mJ6k3sLrNhXFVxwK0fQYJUqZj5l5hMAOrgsmoCkVDpVPLPhbcCchj9iHQOLs/
+	 EqWkgufeME1m3UZ2clWtDN80/GSDEKHW/7x6YvNmgYogEIFTF6a5EQqGB68s93Phda
+	 xlhM6gf0JXWlheeeO6rcIuhPfX1rXzPK6AkHQwOwuSz4egov9gyMY1Ngr6lTiyjIy7
+	 ZR2BtJIMSAjO14w3shX76JPgwoYUlcJJYNihli7irbaW5mbqbTGGmS83Tsqluev1PQ
+	 pKHJJfCWi7e+A==
+Received: from localhost.local (ec2-52-69-130-14.ap-northeast-1.compute.amazonaws.com [52.69.130.14])
+	by sv587 (Postfix) with ESMTPA id DB2A7C33C3B6;
+	Wed,  8 Apr 2026 08:57:00 +0900 (JST)
+Date: Wed, 08 Apr 2026 08:57:00 +0900
+From: "FIDIA =?UTF-8?B?5qCq5byP5Lya56S+IOaWsOWNkuaOoeeUqOaLheW9kw==?=" <fidiasolutions+27@recruit-mg.com>
+To: raysya.biz@gmail.com
+Cc: raysyadesu@gmail.com
+Subject: =?UTF-8?B?44CQ6YeN6KaB44CR5pys5pel44Gu5Y+C5YqgVVJM44Gr44Gk44GE44GmL0ZJ?=
+ =?UTF-8?B?RElBIFNPTFVUSU9OU+agquW8j+S8muekviDliIbpioU=?=
+Message-ID: <69d599ccc89a4@recruit-mg.com>
+X-Priority: 2 (High)
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+References: <#23427520@recruit-mg.com>
+X-SE-HID: sl002585-01.1775606220017117.192.168.15.151.sl002585
+
+ＳＨＥＬＩＮＧＺＨＡＯ様
+
+おはようございます！
+本日のWEB説明会を担当させていただく分銅（ぶんどう）です！
+
+参加前は「どんな会社だろう？」「どんな人が担当するの？」とドキドキや不安があるかと思います。
+ですが！今日は就職活動が楽しみになる『
+ワクワクが止まらない説明会』にしてみせます！
+わたしたちに任せてください！
+
+素敵な120分を過ごせることを楽しみにしておりますね＾＾
+お時間になりましたら、下記URLよりご入室をお願いいたします！
+
+■参加URL
+URL：https://us02web.zoom.us/j/7694163690?pwd=Y1BZczcyY2dNeG1LRmVxeERPbVZudz09
+ミーティングID: 769 416 3690
+パスワード：8989
+
+※トラブルなどで参加が遅れる場合は、0120-485-080あてにご相談ください！
+
+本日はどうぞよろしくお願いいたします！
+
+FIDIA SOLUTIONS株式会社
+新卒採用担当　分銅
+Tel:0120-485-080

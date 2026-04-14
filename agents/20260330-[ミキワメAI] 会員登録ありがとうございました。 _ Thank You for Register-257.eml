@@ -1,0 +1,122 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a9a:5c46:0:b0:32f:2baf:8ecc with SMTP id g6csp1106477lko;
+        Sun, 29 Mar 2026 21:51:35 -0700 (PDT)
+X-Received: by 2002:a05:6a21:a914:b0:39b:b768:964a with SMTP id adf61e73a8af0-39c87b63330mr7970734637.33.1774846295417;
+        Sun, 29 Mar 2026 21:51:35 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1774846295; cv=none;
+        d=google.com; s=arc-20240605;
+        b=lMj2Ve0EIXrO2vRz/A7n0paPr/kbMLuhPBHp4n88SbeFwZBfsp/vnRBhij3cQh49Bb
+         kbo+6SwfTLneVXuVPLXaMPElfgFbyAJiwBsY24gYzrzBN3fjP96cncBYMVL8hSljWqJ5
+         uxTiBytSrsi7euVSbQSJbglf+rj5fHVypAuDRTSChj4M9zMzTNUh1eZthg2hhKp7Mp6N
+         LwdIiVkSLH14b3kko5Q1lh8cn76nTgmXGy4i3n7xIHfcfdAQ/HKAmqk4nlP4dB0lqtaN
+         I4wgannCL4LESW4liUhPt85DWVgfFd1c3y6C+aIGO4RBUgzODJyn1iAMLd3g9l0koPz3
+         F5lw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=feedback-id:message-id:content-transfer-encoding:mime-version
+         :subject:to:from:date:dkim-signature:dkim-signature;
+        bh=kBu9l/JtLYKStXFoU8MnHTvHJYC5wvs5YrP5PZklST4=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=eNk3W2cYJeY+1htkYi9uVAMFYXbNOLTwzf6+NtfI+Oc2T4BciJJtaJj9v+D3MNXYtU
+         ACYp/x8IePxiJhQeULQmAJ5I7O8bBOohLTfoRGuR6t3sNmh7H21H+rboVsCX9xljysUh
+         klrpVN3+h7ag8QOvSekz1q7vYrzM/j6Z6qo5MOrZv6hGz27rOWSo8TOOVQvZcIFHNaoz
+         kyd6QdMAYsmCniEvO4CXf29fZ6PciYBrn0movJzAzgumX631yM4LelHuWyXj7Pyry0W1
+         0x7sB+aQcwImrL93UHbWZjyv6qmFTrpoWrhJHNTjEqGyiiboKVH5+juuaD5UV4RkzE/v
+         jG5A==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@mikiwame.com header.s=icfln3wfdkv66qko6hlb6jbv7n6tdg4k header.b=eyW0CyBK;
+       dkim=pass header.i=@amazonses.com header.s=suwteswkahkjx5z3rgaujjw4zqymtlt2 header.b=fjVoBsrC;
+       spf=pass (google.com: domain of 0106019d3d1537bc-4b9a2921-154d-48b6-aec3-be8de16b2db4-000000@mail.mikiwame.com designates 23.251.234.59 as permitted sender) smtp.mailfrom=0106019d3d1537bc-4b9a2921-154d-48b6-aec3-be8de16b2db4-000000@mail.mikiwame.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=mikiwame.com
+Return-Path: <0106019d3d1537bc-4b9a2921-154d-48b6-aec3-be8de16b2db4-000000@mail.mikiwame.com>
+Received: from e234-59.smtp-out.ap-northeast-1.amazonses.com (e234-59.smtp-out.ap-northeast-1.amazonses.com. [23.251.234.59])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c769182d3dbsi10855383a12.320.2026.03.29.21.51.34
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Sun, 29 Mar 2026 21:51:35 -0700 (PDT)
+Received-SPF: pass (google.com: domain of 0106019d3d1537bc-4b9a2921-154d-48b6-aec3-be8de16b2db4-000000@mail.mikiwame.com designates 23.251.234.59 as permitted sender) client-ip=23.251.234.59;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@mikiwame.com header.s=icfln3wfdkv66qko6hlb6jbv7n6tdg4k header.b=eyW0CyBK;
+       dkim=pass header.i=@amazonses.com header.s=suwteswkahkjx5z3rgaujjw4zqymtlt2 header.b=fjVoBsrC;
+       spf=pass (google.com: domain of 0106019d3d1537bc-4b9a2921-154d-48b6-aec3-be8de16b2db4-000000@mail.mikiwame.com designates 23.251.234.59 as permitted sender) smtp.mailfrom=0106019d3d1537bc-4b9a2921-154d-48b6-aec3-be8de16b2db4-000000@mail.mikiwame.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=mikiwame.com
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple;
+	s=icfln3wfdkv66qko6hlb6jbv7n6tdg4k; d=mikiwame.com; t=1774846294;
+	h=Date:From:To:Subject:MIME-Version:Content-Type:Content-Transfer-Encoding:Message-ID;
+	bh=kBu9l/JtLYKStXFoU8MnHTvHJYC5wvs5YrP5PZklST4=;
+	b=eyW0CyBKf14RJTb/cUoI1fZcSwPXNBOqWCnOswS65W6E/EIBOq9a+JNVGRtCYPni
+	iqqkeHF3vQIx4ectXuH3/tUC2a39btajdwk8YoOeJ1X5N0GowctiTITTC7A+awYr7Is
+	LoNBPI9+DJvzqG6cwMm+MS681kqoDpClIBQHTpCEIPIknxz61jxMECU81t938u9ZU2p
+	qRAD2Woid/4e/R6mzFwe6qDLe7Rrp5kIpqUfo4CzRuZ+SgKwySElCs+PpSttYJGcOuq
+	ZFtz7HGxq8d5oXnU9BHhgvIP65Yis0KEqAL/drMUsklNiB3CwvEoN/RKZucmCwztQ9Q
+	fKdF7AnkQQ==
+DKIM-Signature: v=1; a=rsa-sha256; q=dns/txt; c=relaxed/simple;
+	s=suwteswkahkjx5z3rgaujjw4zqymtlt2; d=amazonses.com; t=1774846294;
+	h=Date:From:To:Subject:MIME-Version:Content-Type:Content-Transfer-Encoding:Message-ID:Feedback-ID;
+	bh=kBu9l/JtLYKStXFoU8MnHTvHJYC5wvs5YrP5PZklST4=;
+	b=fjVoBsrC8x+b1JJc8p45N1BkIYxrKsOVoxJepTu52JOHz66a/ymJQCEe/ONSTPWE
+	XcvYLfM40JcA3bxv+ZxwawJZnwTdGwPkiJXPPlsmK1swsmsHYB5EtzrK4sTEiG4s44L
+	GTMPWhKVApgbOHmGMLs4BYsdUeJAyzuUv92ILd2Y=
+Date: Mon, 30 Mar 2026 04:51:33 +0000
+From: =?UTF-8?Q?=E3=83=9F=E3=82=AD=E3=83=AF=E3=83=A1AI=E4=BA=8B=E5=8B=99=E5=B1=80?= <no-reply@mikiwame.com>
+To: raysya.biz@gmail.com
+Subject: =?UTF-8?Q?[=E3=83=9F=E3=82=AD=E3=83=AF=E3=83=A1A?=
+ =?UTF-8?Q?I]_=E4=BC=9A=E5=93=A1=E7=99=BB=E9=8C=B2?=
+ =?UTF-8?Q?=E3=81=82=E3=82=8A=E3=81=8C=E3=81=A8=E3=81=86=E3=81=94?=
+ =?UTF-8?Q?=E3=81=96=E3=81=84=E3=81=BE=E3=81=97=E3=81=9F=E3=80=82_?=
+ =?UTF-8?Q?/_Thank_You_for_Registering?=
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Message-ID: <0106019d3d1537bc-4b9a2921-154d-48b6-aec3-be8de16b2db4-000000@ap-northeast-1.amazonses.com>
+Feedback-ID: ::1.ap-northeast-1.1wtxS4p7X/az+Cc6pK/TK9Gf1qEPKMPmhUaUdydT9t8=:AmazonSES
+X-SES-Outgoing: 2026.03.30-23.251.234.59
+
+=E4=BD=98 =E4=BB=A4=E9=87=97 =E6=A7=98<br><br>=E3=81=93=E3=82=93=E3=81=AB=
+=E3=81=A1=E3=81=AF=E3=80=82=E3=83=9F=E3=82=AD=E3=83=AF=E3=83=A1AI=E4=BA=8B=
+=E5=8B=99=E5=B1=80=E3=81=A7=E3=81=99=E3=80=82<br><br>=E3=83=9F=E3=82=AD=E3=
+=83=AF=E3=83=A1AI=E3=81=AE=E4=BC=9A=E5=93=A1=E7=99=BB=E9=8C=B2=E3=81=8C=E5=
+=AE=8C=E4=BA=86=E3=81=97=E3=81=BE=E3=81=97=E3=81=9F=E3=80=82<br>=E3=83=9E=
+=E3=82=A4=E3=83=9A=E3=83=BC=E3=82=B8=E3=81=AB=E3=83=AD=E3=82=B0=E3=82=A4=E3=
+=83=B3=E5=BE=8C=E3=80=81=E3=81=94=E5=8F=97=E6=A4=9C=E3=82=92=E3=81=8A=E9=A1=
+=98=E3=81=84=E3=81=97=E3=81=BE=E3=81=99=E3=80=82<br><br>=E3=80=90=E3=83=9E=
+=E3=82=A4=E3=83=9A=E3=83=BC=E3=82=B8=E6=83=85=E5=A0=B1=E3=80=91<br>=E3=83=
+=BB=E3=83=AD=E3=82=B0=E3=82=A4=E3=83=B3URL=EF=BC=9A<br>https://app.mikiwame=
+.com/<br>=E3=83=BB=E3=83=A1=E3=83=BC=E3=83=AB=E3=82=A2=E3=83=89=E3=83=AC=E3=
+=82=B9=EF=BC=9Araysya.biz@gmail.com<br><br>=E2=80=BB=E6=9C=AC=E3=83=A1=E3=
+=83=BC=E3=83=AB=E3=81=AB=E3=81=AF=E3=81=94=E8=BF=94=E4=BF=A1=E3=81=A7=E3=81=
+=8D=E3=81=BE=E3=81=9B=E3=82=93=E3=80=82<br><br>=E2=80=BB=E6=9C=AC=E3=83=A1=
+=E3=83=BC=E3=83=AB=E3=81=AE=E5=86=85=E5=AE=B9=E3=81=AB=E3=81=A4=E3=81=84=E3=
+=81=A6=E5=BF=83=E5=BD=93=E3=81=9F=E3=82=8A=E3=81=8C=E3=81=AA=E3=81=84=E5=A0=
+=B4=E5=90=88=E3=81=AF=E4=B8=8B=E8=A8=98URL=E3=82=88=E3=82=8A=E3=81=8A=E5=95=
+=8F=E3=81=84=E5=90=88=E3=82=8F=E3=81=9B=E3=81=8F=E3=81=A0=E3=81=95=E3=81=84=
+=E3=80=82<br><br>&lt;=E3=81=8A=E5=95=8F=E3=81=84=E5=90=88=E3=82=8F=E3=81=9B=
+=E3=83=95=E3=82=A9=E3=83=BC=E3=83=A0URL&gt;<br>https://mikiwame.zendesk.com=
+/hc/ja/requests/new<br><br>=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81 English version =E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=
+<br><br>Dear =E4=BD=98 =E4=BB=A4=E9=87=97,<br><br>Hello. This is the MIKIWA=
+ME AI Administration Office.<br><br>Your MIKIWAME AI membership registratio=
+n is now complete.<br>Please log in to your My Page and proceed with taking=
+ the test.<br><br>[My Page Information]<br>=E3=83=BBLogin URL:<br>https://a=
+pp.mikiwame.com/<br>=E3=83=BBEmail address: raysya.biz@gmail.com<br><br>* P=
+lease note that you cannot reply directly to this email.<br><br>* If you ha=
+ve no recollection of the content of this email, please contact us using th=
+e URL below.<br><br>&lt;Inquiry Form URL&gt;<br>https://mikiwame.zendesk.co=
+m/hc/ja/requests/new<br/><br/>=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=
+=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81<br/>=E2=96=A0=E7=
+=99=BA=E8=A1=8C<br/>=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=83=AA=E3=83=BC=
+=E3=83=87=E3=82=A3=E3=83=B3=E3=82=B0=E3=83=9E=E3=83=BC=E3=82=AF<br/>=E3=80=
+=92105-0001<br/>=E6=9D=B1=E4=BA=AC=E9=83=BD=E6=B8=AF=E5=8C=BA=E8=99=8E=E3=
+=83=8E=E9=96=803-8-21 =E8=99=8E=E3=83=8E=E9=96=8033=E6=A3=AE=E3=83=93=E3=83=
+=AB 10=E9=9A=8E<br/><br/>=E2=96=A0=E3=82=B5=E3=83=BC=E3=83=93=E3=82=B9=E3=
+=81=AB=E9=96=A2=E3=81=99=E3=82=8B=E3=81=8A=E5=95=8F=E3=81=84=E5=90=88=E3=82=
+=8F=E3=81=9B<br/>https://mikiwame.zendesk.com/hc/ja<br/>=E2=94=81=E2=94=81=
+=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=
+=E2=94=81<br/>

@@ -1,0 +1,82 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:308a:b0:2c1:698d:21c4 with SMTP id 10csp1426577lkc;
+        Fri, 30 May 2025 18:02:52 -0700 (PDT)
+X-Google-Smtp-Source: AGHT+IHDqbflyZj8cvftJs8F6Fj0gKNMBS+GdKRwH8ag3+5hr+ofT76yoJkI2ZA4Cga0MKOXAQ09
+X-Received: by 2002:a17:90b:17cd:b0:2fa:1e56:5d82 with SMTP id 98e67ed59e1d1-3124646c98bmr6548513a91.17.1748653372578;
+        Fri, 30 May 2025 18:02:52 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1748653372; cv=none;
+        d=google.com; s=arc-20240605;
+        b=NW/CWpEpnjLF99SFSsN5gJxDXssu6iLRKAwtfBXtxmFYxD/0Q47BvS1XuSPLd+xpj8
+         RSHcS0sn3CwsmSQL8WoGMXR6MmkW0Aem0T/2cY8yVQDrrsm32pVWmiOqJ8qr3jfagQz2
+         Mw6OsWSWISRZoyKhkb7N4eESclHMmNOY/b0+nJqLnlwL7VBMxLJqlERhTNj3iyZRBHF6
+         3LpNZUIYEb7GAZ95PLbeBNIu7XbXbWl66PZE2BZFjNsPR3TENW38mpvEs42h38nDnZsv
+         2bJwhnLX8H2ebXscfMWtH4moYS//n9iLvRiMBk8tj9g2OBtfv+dq3MTKvazUcQp9QOd8
+         YP6A==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=references:mime-version:message-id:subject:to:from:date
+         :dkim-signature;
+        bh=J7XE3B+qjZozGaA0mQxqIGV9o7dF5p5HizC2ggAjlTQ=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=I7HjIqh08yVrumHaivhhaR008lyBdh57Ul1/G1pJezMfJ0BRg5RgULEC0AeUJz91M0
+         BSuoVw3B4wUYY8lTFIyfuSuiZGy+s1fWjOYorE8TiwhV9IvKRXCMYc+kjHLIxk13yTNi
+         WOi6AiME/vv8FbBJAFVC9EyVU/2x4q46Emmjwueefr8QlEv7mvUodKFuKKwx47MR6GHK
+         OQrSYkCo6X8YmApIuo9hOno6d+ZfV+/7U7Dfo/fQYqwNuNTbnoVT0i9thPQ0xkMt6nfZ
+         /H/CQEVnnpyqDOXaNYywvDrn3OSqBp6EobEN6EuQ2R0XLscs+yxzqjDGA40ueY8M5hWj
+         QJ5Q==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=1WDQiYuf;
+       spf=pass (google.com: domain of cyberbuzz+27@recruit-mg.com designates 210.140.182.188 as permitted sender) smtp.mailfrom=cyberbuzz+27@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Return-Path: <cyberbuzz+27@recruit-mg.com>
+Received: from bm-send10-06.baremetal.jp (bm-send10-06.baremetal.jp. [210.140.182.188])
+        by mx.google.com with ESMTPS id 98e67ed59e1d1-3123b54778fsi4464990a91.86.2025.05.30.18.02.51
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Fri, 30 May 2025 18:02:52 -0700 (PDT)
+Received-SPF: pass (google.com: domain of cyberbuzz+27@recruit-mg.com designates 210.140.182.188 as permitted sender) client-ip=210.140.182.188;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=1WDQiYuf;
+       spf=pass (google.com: domain of cyberbuzz+27@recruit-mg.com designates 210.140.182.188 as permitted sender) smtp.mailfrom=cyberbuzz+27@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Received: from 71-10-168-192.baremail.local.10.168.192.in-addr.arpa (HELO) (192.168.10.71)
+  by send11 with ESMTP; Sat, 31 May 2025 10:02:50 +0900
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=recruit-mg.com;
+	s=recruit-mg.com.202401; t=1748653370;
+	bh=J7XE3B+qjZozGaA0mQxqIGV9o7dF5p5HizC2ggAjlTQ=;
+	h=From:To:Content-Type:Subject:Date:MIME-Version:Message-ID;
+	b=1WDQiYufsNfSWVCc6NY2kOGxyjUPjVIJi58hLDOfyC6nOPY1Kv6zMLjEUkIXqyxP2
+	 tA8kqtkfrix50cXRMv12K69mj1RWu8PwCQubBgtTgcQbg4h8yHAVovVmkG6aJYiqA/
+	 7S2IKG2MjmCfJ9YpNvu++M4FpyT4P+qpmXlfUG9cqKCiN6jNQuyFv78OigcHatXvIs
+	 dwI+y2tZghMpetyKMZYIUbsrDIHlHNU0qCKdXmpMtS1Ynb5Mh2x9BHxjGrRCFhoKrC
+	 MHUOT9DKsJ2xtQQ8bXiz8H4zg8tCvbUaSsUOSk3JsGsKZCu9JZ7uWT8P2r+1WLMMFw
+	 cA05C+VXZpsXw==
+Received: from localhost.local (recruit-mg.com [52.193.208.196])
+	by cp587 (Postfix) with ESMTPA id 832BEA000C229
+	for <raysya.biz@gmail.com>; Sat, 31 May 2025 10:02:50 +0900 (JST)
+Date: Sat, 31 May 2025 10:02:50 +0900
+From: "=?UTF-8?B?44K144Kk44OQ44O844O744OQ44K65o6h55So44OB44O844Og?=" <cyberbuzz+27@recruit-mg.com>
+To: raysya.biz@gmail.com
+Subject: =?UTF-8?B?6YG46ICD57WQ5p6c44Gu44GU6YCj57Wh?=
+Message-ID: <683a553a75f48@recruit-mg.com>
+X-Priority: 2 (High)
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+References: <#1150434@recruit-mg.com>
+X-SE-HID: send11.1748653370976490.192.168.10.71.sl002585
+
+佘令钊様
+
+このたびは、当社の27卒新卒採用選考にご応募いただき、厚く御礼申し上げます。
+厳正な審査の結果、大変残念ではありますが、佘さんを次の選考にご案内できかねる結果となりました。
+
+貴重なお時間を割いて選考にご参加いただいたにも関わらず、ご期待に添えぬ結果となり誠に申し訳ございません。
+また、詳細の選考理由につきましては開示を控えさせていただいておりますので、併せてご了承ください。
+
+末筆となりますが、当社にご応募いただきましたことを改めて感謝申し上げますと共に、
+佘さんの今後のご活躍を祈念申し上げます。
+
+-----------------------------
+株式会社サイバー・バズ 採用担当

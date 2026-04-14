@@ -1,0 +1,1691 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:4d4b:b0:2b5:909b:c8ed with SMTP id cz11csp812450lkb;
+        Fri, 2 May 2025 05:04:34 -0700 (PDT)
+X-Google-Smtp-Source: AGHT+IEAenKDjlBUrLn1NML89g8ASbmAl3+m9GQa7jDlaSpkZhChYwbnvXLaV2HNKyfufEg7V5zm
+X-Received: by 2002:a05:622a:2445:b0:47a:eade:95d3 with SMTP id d75a77b69052e-48c32db29a0mr46808731cf.33.1746187474045;
+        Fri, 02 May 2025 05:04:34 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1746187474; cv=none;
+        d=google.com; s=arc-20240605;
+        b=g6J4iDA6bas6D5hQmNHkSuXKvTdxbYKyxsGOfACdwVWR55c4L2bMiB5Kj+XcMpw9B6
+         5BFSLlQjfKXWw/6LS9a5DKo5wmiTxiAVdBQqcI7Ed/VnpI7c4EbHgLl/2CjWAiETf0gf
+         NZ3XHXIaFEKtUFI/lXUiQpTjLeNh9N1wkooIhO4ChMGSYqcu6JpUVluVQ86oxM+0jKyp
+         8IoWTTGVSoWJjjaMZOwFurA7aDq82oEjYIEeSkCklZsSD5c8CRpee9X406bqDFkxfOi+
+         9H/X0FqHhTHS3vsyPv0OXYOgdBD2HLLl1fc2Hivlg/2tg4fCk9UgsabNPYKpqFFcCmKm
+         SzrA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:mime-version:from:date
+         :content-transfer-encoding:dkim-signature:dkim-signature;
+        bh=N13J6ZhisPREqywE8ceQWlJ2X9XWu9ywjwpkYoUNnB0=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=Asv9dyXx2aCNRuN9DVyOhw1oIpn+XJwo+VMXQUHnQ2u/gyEfwRQVgBzYlFqMvV0iGw
+         xdygTNEC100K0Bkhj/2WuRg+hgLYNpLKREQ/zzR8+ra9m9AZz+bZ9ley4LcT3fXECm6v
+         bBaGujE+V3yMid1uMxfsZ+I4NCdd5il6kZuOATH7yxMYQtLVBZGQscR8U7qMjBhVFmvf
+         xZDUxWjuMcj+1sb8SwNHhYouNNaTUOrTGNbePuIBn4QjvBBPZ186mvG2fFcESDRvcIEZ
+         TUsRAf28tq1XMhnW10JgAQyRzFgJEWaoLNw62ZXmAb3NZ0TM04pU5ajC0QJ8GSMoCDUX
+         zKtA==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@zoom.us header.s=sg header.b=kped2z88;
+       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b=NZ3HAc1O;
+       spf=pass (google.com: domain of bounces+21079814-faad-raysya.biz=gmail.com@bounce-sg.zoom.us designates 149.72.59.154 as permitted sender) smtp.mailfrom="bounces+21079814-faad-raysya.biz=gmail.com@bounce-sg.zoom.us";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=zoom.us
+Return-Path: <bounces+21079814-faad-raysya.biz=gmail.com@bounce-sg.zoom.us>
+Received: from o13.sg.zoom.us (o13.sg.zoom.us. [149.72.59.154])
+        by mx.google.com with ESMTPS id d75a77b69052e-48b966cc303si28586661cf.171.2025.05.02.05.04.33
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Fri, 02 May 2025 05:04:34 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounces+21079814-faad-raysya.biz=gmail.com@bounce-sg.zoom.us designates 149.72.59.154 as permitted sender) client-ip=149.72.59.154;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@zoom.us header.s=sg header.b=kped2z88;
+       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b=NZ3HAc1O;
+       spf=pass (google.com: domain of bounces+21079814-faad-raysya.biz=gmail.com@bounce-sg.zoom.us designates 149.72.59.154 as permitted sender) smtp.mailfrom="bounces+21079814-faad-raysya.biz=gmail.com@bounce-sg.zoom.us";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=zoom.us
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=zoom.us;
+	h=content-transfer-encoding:content-type:from:mime-version:subject:to:
+	cc:content-type:feedback-id:from:subject:to;
+	s=sg; bh=N13J6ZhisPREqywE8ceQWlJ2X9XWu9ywjwpkYoUNnB0=;
+	b=kped2z88BMR9prBe1R8u2rGnVLFEb1z4UzHADp/rwb2K8TbBhuvzMVFuWGn4AKMr6gsu
+	FBj8oIn1STUJ8KlJux8289iC5In+vz0XekLM8zXTonRLpJ4E+ckndQGsq2CUkdrVv6XyF7
+	fX/B8j2N6VAYjRKdg5OxyUXt2fBMpAb453NOa1da+T2HChUrrxf9Zt/IAHLCLdHXzD/fhV
+	RL0BoxZWnjecbU3LAgoqWhFKjs2ZERItmFEwtuCFCh+ADz690WVJV58OkNABcxaNB/f6pU
+	p834PjB2g/aSfjpIMfTonWjm7jpdQOmjmzqIyPseDvQkBsz5vL175bx7Y0m1kHZw==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sendgrid.info;
+	h=content-transfer-encoding:content-type:from:mime-version:subject:to:
+	cc:content-type:feedback-id:from:subject:to;
+	s=smtpapi; bh=N13J6ZhisPREqywE8ceQWlJ2X9XWu9ywjwpkYoUNnB0=;
+	b=NZ3HAc1OLWrUopHOnePnsT77FhW5f1DcBupWzcu9sp4GkxI1kq5pMahveWX1uAQCpniP
+	ed2KVMgEify3n1GRHPXNNIT8LUmLLkn1qgpEtLmLNZlrSL8IEqXlRZcqsuNNIyGry3K4gV
+	BX7LL2BNpD357cCSO5mATQlblnECsjYKg=
+Received: by recvd-69cb857b8b-cx6d2 with SMTP id recvd-69cb857b8b-cx6d2-1-6814B4D0-B
+	2025-05-02 12:04:32.076482273 +0000 UTC m=+2037154.798646668
+Received: from MjEwNzk4MTQ (unknown)
+	by geopod-ismtpd-19 (SG) with HTTP
+	id bUaGKtXSQnayUHe7U-PeYQ
+	Fri, 02 May 2025 12:04:32.063 +0000 (UTC)
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=utf-8
+Date: Fri, 02 May 2025 12:04:32 +0000 (UTC)
+From: Zoom <teamzoom@zoom.us>
+Mime-Version: 1.0
+Message-ID: <bUaGKtXSQnayUHe7U-PeYQ@geopod-ismtpd-19>
+Subject: =?UTF-8?B?5byA5aeL5L2/55SoIFpvb23vvIE=?=
+X-SG-EID: 
+ =?us-ascii?Q?u001=2EV=2FCrMu5=2F7JiV4gIYr+InI2jxCF89mgnCFgm8FN+txmZ2t8Ki+Wijkopki?=
+ =?us-ascii?Q?U1PBaSjT=2FXnR6MBuw4EUTalbB81Hz8+NL0uh+r7?=
+ =?us-ascii?Q?o6LKRrvl9csTARiXv1wFIZH=2FjEZicDXyHmxbRjP?=
+ =?us-ascii?Q?+u38naf+cbo1FS8N29+7FIaNOTiGxfWOhV6i+s4?=
+ =?us-ascii?Q?ExzQ3ItF23yaNDbUQDAoIC+SLQ+dZWANWa5jt1o?=
+ =?us-ascii?Q?Ba2DsJw6F1kGQtWsFrdgb8=3D?=
+X-SG-ID: 
+ =?us-ascii?Q?u001=2ESdBcvi+Evd=2FbQef8eZF3BorsravvwlxWXo9CMRSr+j70zOxcxhHJv0GpX?=
+ =?us-ascii?Q?W5ajH6rUH4bd4nFZ9e716qB3Q9=2Fn1f8goRRN3XI?=
+ =?us-ascii?Q?AI6+UbMHI3dxz532INPNAWpfqL3vfILGtO4D9yt?=
+ =?us-ascii?Q?mBPE30K7SnQc9tkCru3YQi+6mdxsgOSe5GGDkxI?=
+ =?us-ascii?Q?BBdVsFM2fjSIj1ZgNGNiaXBhbjnWAvuDRCYgVxt?=
+ =?us-ascii?Q?x6K9gVMPg3Vclg97dIwaZ6+SmEPJ4JxHC1sV4vq?=
+ =?us-ascii?Q?tN=2FgrQguDMYFN3o7NE4TkANioJ4qkC53se=2F3rr2?=
+ =?us-ascii?Q?0RG+dB8zkc5GAA5acMk02mbE8Kp5YKAJY78v7wp?=
+ =?us-ascii?Q?Kx3W2PakTgGybJy8sY=2F3YGAia8p6fE4oJet8=2Fv4?=
+ =?us-ascii?Q?CBJzQTqLXI7vLI0cVOG2oOZi77ir+xDlfeMmgRR?=
+ =?us-ascii?Q?H1bJR+JbyIub++gdCWWmtK3e6sHs0XmksQxdSxy?=
+ =?us-ascii?Q?phcef8VdbkqAngdVufsY4MCXwR+Wqow2XADz0zu?=
+ =?us-ascii?Q?0Wr=2FN8rlLGDjqldkrKV1EEzTQFFBOL73S4Meev+?=
+ =?us-ascii?Q?RGGdjhfb8Hu6ovkk0+qGVeQPN210vnLL+UjIWhu?=
+ =?us-ascii?Q?teUChNq8JqD8+W1uqqHAybPm0RQ0RRTFGqSaKha?=
+ =?us-ascii?Q?mKpK=2FWMpQI+XHqpo=3D?=
+To: raysya.biz@gmail.com
+X-Entity-ID: u001.dAnWe7mjdBSEmBsC+Qr/og==
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.=
+w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns=3D"http://www.w3.org/1999/xhtml" xmlns:v=3D"urn:schemas-microso=
+ft-com:vml" xmlns:o=3D"urn:schemas-microsoft-com:office:office">
+<head>
+    <meta http-equiv=3D"Content-Type" content=3D"text/html charset=3DUTF-8"=
+ />
+    <!--[if !mso]><!-->
+    <meta http-equiv=3D"X-UA-Compatible" content=3D"IE=3Dedge" />
+    <!--<![endif]-->
+    <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=
+=3D1.0" />
+    <meta content=3D"telephone=3Dno" name=3D"format-detection">
+    <link rel=3D"icon" type=3D"image/x-icon" href=3D"https://click.zoom.us/=
+zm-favicon">
+    <title>Zoom</title>
+    <style type=3D"text/css">
+        html {
+            width: 100%;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            -webkit-text-size-adjust: none;
+            -ms-text-size-adjust: none;
+        }
+
+        img {
+            border: 0;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        .ReadMsgBody {
+            width: 100%;
+        }
+
+        .ExternalClass {
+            width: 100%;
+        }
+
+        .ExternalClass,
+        .ExternalClass p,
+        .ExternalClass span,
+        .ExternalClass font,
+        .ExternalClass td,
+        .ExternalClass div {
+            line-height: 100%;
+        }
+
+        .MsoNormal {
+            font-family: Arial, sans-serif !important;
+        }
+
+        a[x-apple-data-detectors] {
+            color: inherit !important;
+            text-decoration: none !important;
+            font-size: inherit !important;
+            font-family: inherit !important;
+            font-weight: inherit !important;
+            line-height: inherit !important;
+        }
+
+        #MessageViewBody a {
+            color: inherit !important;
+            text-decoration: none !important;
+            font-size: inherit !important;
+            font-family: inherit !important;
+            font-weight: inherit !important;
+            line-height: inherit !important;
+        }
+
+        u #footerlinks a {
+            color: inherit !important;
+            text-decoration: none !important;
+            font-size: inherit !important;
+            font-family: inherit !important;
+            font-weight: inherit !important;
+            line-height: inherit !important;
+        }
+
+        .dir-left {
+            direction: ltr !important;
+        }
+
+        .dir-right {
+            direction: rtl !important;
+        }
+
+        .d-inline{
+            display: inline-block !important;
+        }
+
+        .border-radius{
+            border-radius: 20px !important;
+        }
+
+        .border-radius-small{
+            border-radius: 10px !important;
+        }
+
+        .border-radius-cta{
+            border-radius: 100px !important;
+        }
+
+        .border-radius-top{
+            border-radius: 20px 20px 0 0 !important;
+        }
+
+        .border-radius-bottom{
+            border-radius: 0 0 20px 20px !important;
+        }
+
+        .border-radius-top-right{
+            border-radius: 0 20px 0 0 !important;
+        }
+
+        .desktop-only{
+            display: block !important;
+            font-size: inherit !important;
+            line-height: inherit !important;
+            height: auto !important;
+        }
+
+        .mobile-only{
+            display: none !important;
+            height: 0px !important;
+        }
+
+        @media screen and (max-width:650px) {
+
+            #hero-text {
+                font-size: 70px !important;
+            }
+
+            .content-container {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 100% !important;
+                padding-left: 30px !important;
+                padding-right: 30px !important;
+                box-sizing: border-box
+            }
+
+            .text-center{
+                text-align: center !important;
+            }
+
+            .full-width-image {
+                width: 100% !important
+            }
+
+            .mob-100 {
+                width: 100% !important;
+                min-width: 100% !important
+            }
+
+            .mob-50 {
+                width: 50% !important;
+                min-width: 50% !important
+            }
+
+            .mob-block {
+                display: block !important
+            }
+
+            .mob-cell {
+                display: table-cell !important
+            }
+
+            .mob-inline {
+                display: inline-block !important
+            }
+
+            .mob-table {
+                width: 100% !important;
+                display: table !important
+            }
+
+            .mob-hide {
+                display: none !important
+            }
+
+            .mob-left {
+                text-align: left !important
+            }
+
+            .mob-center {
+                text-align: center !important
+            }
+
+            .mob-right {
+                text-align: right !important
+            }
+
+            .mx-auto {
+                margin: 0 auto !important
+            }
+
+            .mw-auto{
+                max-width: 10000px !important;
+            }
+
+            .mob-content-pad {
+                padding: 40px !important
+            }
+
+            .m-0{
+                margin: 0 !important;
+            }
+
+            .p-0 {
+                padding: 0 !important
+            }
+
+            .px-0 {
+                padding-left: 0 !important;
+                padding-right: 0 !important
+            }
+
+            .px-10 {
+                padding-left: 10px !important;
+                padding-right: 10px !important
+            }
+
+            .px-20 {
+                padding-left: 20px !important;
+                padding-right: 20px !important
+            }
+
+            .px-15 {
+                padding-left: 15px !important;
+                padding-right: 15px !important
+            }
+
+            .px-25 {
+                padding-left: 25px !important;
+                padding-right: 25px !important
+            }
+
+            .px-30 {
+                padding-left: 30px !important;
+                padding-right: 30px !important
+            }
+
+            .px-40 {
+                padding-left: 40px !important;
+                padding-right: 40px !important
+            }
+
+            .pt-0 {
+                padding-top: 0 !important
+            }
+
+            .pt-2 {
+                padding-top: 2px !important
+            }
+
+            .pt-10 {
+                padding-top: 10px !important
+            }
+
+            .pt-15 {
+                padding-top: 15px !important
+            }
+
+            .pt-20 {
+                padding-top: 20px !important
+            }
+
+            .pt-25 {
+                padding-top: 25px !important
+            }
+
+            .pt-30 {
+                padding-top: 30px !important
+            }
+
+            .pt-35 {
+                padding-top: 35px !important
+            }
+
+            .pt-40 {
+                padding-top: 40px !important
+            }
+
+            .py-0 {
+                padding-top: 0 !important;
+                padding-bottom: 0 !important
+            }
+
+            .py-5 {
+                padding-top: 5px !important;
+                padding-bottom: 5px !important
+            }
+
+            .py-10 {
+                padding-top: 10px !important;
+                padding-bottom: 10px !important
+            }
+
+            .py-20 {
+                padding-top: 20px !important;
+                padding-bottom: 20px !important
+            }
+
+            .py-30 {
+                padding-top: 30px !important;
+                padding-bottom: 30px !important
+            }
+
+            .py-40 {
+                padding-top: 40px !important;
+                padding-bottom: 40px !important
+            }
+
+            .pb-0 {
+                padding-bottom: 0 !important
+            }
+
+            .pb-10 {
+                padding-bottom: 10px !important
+            }
+
+            .pb-20 {
+                padding-bottom: 20px !important
+            }
+
+            .pb-30 {
+                padding-bottom: 30px !important
+            }
+
+            .pb-40 {
+                padding-bottom: 40px !important
+            }
+
+            .pl-10{
+                padding-left: 10px !important;
+            }
+
+            .pl-20{
+                padding-left: 20px !important;
+            }
+
+            .pl-30{
+                padding-left: 30px !important;
+            }
+
+            .pl-40{
+                padding-left: 40px !important;
+            }
+
+            .pr-0{
+                padding-right: 0px !important;
+            }
+
+            .pr-10{
+                padding-right: 10px !important;
+            }
+
+            .pr-20{
+                padding-right: 20px !important;
+            }
+
+            .pr-30{
+                padding-right: 30px !important;
+            }
+
+            .pr-40{
+                padding-right: 40px !important;
+            }
+
+            ul {
+                list-style-position: inside;
+            }
+
+            table{
+                border-collapse: separate !important;
+            }
+
+            .auto-height{
+                height: auto !important;
+                max-height: 1000px !important;
+            }
+
+            .bg-none{
+                background: none !important;
+            }
+
+            .mob-title{
+                font-size: 26px !important;
+                line-height: 32px !important;
+            }
+
+            .mob-reset-height{
+                font-size: 25px !important;
+                line-height: 25px !important;
+                height: 25px !important;
+            }
+
+            .release-width{
+                width: auto !important;
+                max-width: auto !important;
+                min-width: auto !important;
+            }
+
+            .bg-pos{
+                background-size: cover;
+                background-repeat: no-repeat;
+            }
+
+            .banner-image{
+                display: none !important;
+            }
+
+            .banner-image-wrap{
+                height: 55px;
+                border-radius: 20px;
+                background-image: url('https://click.zoom.us/zoom-header-ba=
+nner');
+                background-repeat: no-repeat;
+                background-size: cover;
+                background-position: center;
+            }
+
+            .shrink-icon{
+                width: 60px !important;
+                min-width: 60px !important;
+            }
+
+            .shrink-icon img{
+                height: 35px !important;
+                max-height: 35px !important;
+            }
+
+            .br-mob{
+                border-radius: 20px !important;
+            }
+
+            .mobile-background-color{
+                background-color: #0B5CFF !important;
+                border-radius: 20px !important;
+            }
+
+            .border-box{
+                box-sizing: border-box !important;
+            }
+
+            .h-10{
+                height: 10px !important;
+                font-size: 10px !important;
+                line-height: 10px !important;
+            }
+
+            .desktop-only{
+                display: none !important;
+                font-size: 0px !important;
+                line-height: 0px !important;
+                height: 0px !important;
+            }
+
+            .mobile-only{
+                display: block !important;
+                font-size: inherit !important;
+                line-height: inherit !important;
+                height: auto !important;
+            }
+        }
+    </style>
+    <!--[if (gte mso 9)|(IE)]><style type=3D"text/css">table {border-collap=
+se: collapse !important;}</style><![endif]-->
+    <!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:Pixel=
+sPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+
+</head>
+
+<body style=3D"Margin:0;min-width:100%;background-color:#F2F2F4;margin-top:=
+0;margin-bottom:0;margin-right:0;margin-left:0;padding:0;width:100%;-webkit=
+-text-size-adjust:none;-ms-text-size-adjust:none;">
+<table bgcolor=3D"#F2F2F4" width=3D"100%" cellpadding=3D"0" cellspacing=3D"=
+0" border=3D"0" style=3D"border-collapse: collapse; width: 100%; font-famil=
+y: Inter, 'Helvetica Neue', Arial, sans-serif; background-color:#F2F2F4;tex=
+t-align: center;">
+    <tr>
+        <td style=3D"padding: 0; text-align: center;" align=3D"center"><cen=
+ter class=3D"wrapper" style=3D"width:100%;table-layout:fixed;-webkit-text-s=
+ize-adjust:100%;-ms-text-size-adjust:100%;background-color:#F2F2F4;backgrou=
+nd-image:none;background-repeat:repeat;background-position:top left;backgro=
+und-attachment:scroll;">
+                <div class=3D"webkit" style=3D"max-width:650px;">
+                    <!--[if (gte mso 9)|(IE)]><table width=3D"650" align=3D=
+"center" style=3D"border-collapse: collapse;border-spacing:0;font-family:Ar=
+ial, sans-serif;color:#000000;width: 650px;"><tr><td width=3D"650" style=3D=
+"padding:0;width: 650px;"><![endif]-->
+                    <table border=3D"0" align=3D"center" cellpadding=3D"0" =
+cellspacing=3D"0" bgcolor=3D"#F2F2F4" class=3D"outer" style=3D"border-colla=
+pse: collapse;border-spacing:0;font-family:Arial, sans-serif;color:#000000;=
+Margin:0 auto;width:100%;max-width:650px;">
+                        <!-- =3D=3D=3D Start Spacer =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td style=3D"padding: 0;font-size: 20px; line-h=
+eight: 20px; height:20px;" class=3D"mob-reset-height" bgcolor=3D"#F2F2F4"> =
+</td>
+                        </tr>
+                        <!-- =3D=3D=3D End Spacer =3D=3D=3D -->
+                        <!-- =3D=3D=3D Start Pre-Header =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td align=3D"center" valign=3D"top" style=3D"bo=
+x-sizing: border-box; padding: 0; display: none; font-size:12px; font-famil=
+y: Arial, sans-serif; font-weight: 400; line-height:16px; color: #000000; t=
+ext-align: center;mso-hide: all;" class=3D"mob-hide" bgcolor=3D"#F2F2F4"><d=
+iv style=3D"padding: 5px; mso-hide: all;">
+                                    <div style=3D"display: none; font-famil=
+y: 'Open Sans', Arial, Helvetica, sans-serif; font-size: 1px; line-height: =
+1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hid=
+e: all;">=E4=B8=8B=E8=BD=BD=E3=80=81=E6=B5=8B=E8=AF=95=E3=80=81=E4=B8=BB=E6=
+=8C=81=E4=BC=9A=E8=AE=AE - =E6=82=A8=E7=9A=84 Zoom =E4=B9=8B=E6=97=85=E5=B0=
+=B1=E6=AD=A4=E5=BC=80=E5=A7=8B=E3=80=82</div>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Pre-Header =3D=3D=3D -->
+                        <!-- =3D=3D=3D Start Pre-Header Whitespace (Do not =
+edit) =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td style=3D"padding: 0;display: none; max-heig=
+ht: 0px; overflow: hidden; mso-hide: all;" bgcolor=3D"#F2F2F4"><div style=
+=3D"display: none; max-height: 0px; overflow: hidden; mso-hide: all;">
+                                    =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =
+=CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=
+=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=
+=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =
+=EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=
+=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=
+=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =
+=E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C=
+   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=
+=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=
+=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =
+=E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=
+=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =
+=CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=
+=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=
+=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =
+=EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=
+=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=
+=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =
+=E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C=
+   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=
+=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=
+=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =
+=E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=
+=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF =
+=CD=8F =E2=80=8C   =E2=80=87 =EF=BB=BF</div>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Pre-Header Whitespace (Do not ed=
+it) =3D=3D=3D -->
+                        <!-- =3D=3D=3D Start Single Logo + Text CTA =3D=3D=
+=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td style=3D"padding: 0;" class=3D"px-40 pb-20"=
+><!-- =3D=3D=3D Start Here For Dynamic Content =3D=3D=3D --><table width=3D=
+"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" style=3D"border-col=
+lapse: collapse;" class=3D"mob-center">
+                                    <tr>
+                                        <th class=3D"mob-100 mob-table mob-=
+center px-0 py-0" width=3D"135" style=3D"width: 135px; max-width: 135px; pa=
+dding: 0 0 0px 25px; font-weight: 400; text-align: left;"><table width=3D"1=
+10" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" style=3D"width: 110px;=
+ min-width: 110px; border-collapse: collapse;" class=3D"mob-100 mob-table m=
+ob-center">
+                                                <tr>
+                                                    <td style=3D"box-sizing=
+: border-box; font-weight: 400; text-align: left;" class=3D"mob-center"><!-=
+- =3D=3D=3D Link =3D=3D=3D --> <a href=3D"https://zoom.us/" target=3D"_blan=
+k"> <!-- =3D=3D=3D Image =3D=3D=3D --> <img src=3D"https://click.zoom.us/zo=
+om-email-logo-blue" width=3D"110" alt=3D"Zoom" style=3D"border-width:0;-ms-=
+interpolation-mode:bicubic;width:110px;max-width:110px;height:auto;display:=
+inline-block;margin: 0 auto;" /> </a></td>
+                                                </tr>
+                                            </table>
+                                        </th>
+                                        <th width=3D"490" style=3D"width: 4=
+90px; max-width: 490px; vertical-align: top; box-sizing: border-box; font-f=
+amily: Montserrat, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; f=
+ont-size:14px; line-height:20px; color: #999999; text-align: right; padding=
+: 3px 25px 20px 0;" class=3D"mob-100 mob-table mob-center px-0 pb-0 pt-10" =
+valign=3D"top"><table width=3D"465" cellspacing=3D"0" cellpadding=3D"0" bor=
+der=3D"0" style=3D"width: 465px; min-width: 465px; border-collapse: collaps=
+e;" class=3D"mob-100 mob-table mob-center">
+                                                <!-- =3D=3D=3D [Row] Text C=
+TA =3D=3D=3D -->
+                                                <tr>
+                                                    <td style=3D"font-famil=
+y: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-size:=
+16px; line-height:24px; color: #0B5CFF; text-align: right; padding: 0;" cla=
+ss=3D"mob-100 mob-table mob-center"><!-- =3D=3D=3D Link =3D=3D=3D --></td>
+                                                </tr>
+                                            </table>
+                                        </th>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Single Logo + Text CTA =3D=3D=3D=
+ -->
+
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td bgcolor=3D"#F2F2F4" class=3D"px-15"><!-- =
+=3D=3D=3D Start Here For Dynamic Content =3D=3D=3D --><table width=3D"100%"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0" style=3D"border-collapse:=
+ collapse;">
+                                    <tbody>
+                                    <!-- =3D=3D=3D Header Image =3D=3D=3D -=
+->
+                                    <tr>
+                                        <td style=3D"font-family: Montserra=
+t, 'Helvetica Neue', Arial, sans-serif; text-align: left; padding: 0;"><!--=
+ =3D=3D=3D Link =3D=3D=3D --> <a href=3D"https://zoom.us/meeting/schedule" =
+target=3D"_blank"> <!-- =3D=3D=3D Image =3D=3D=3D --> <img alt=3D"=E4=B8=80=
+=E4=BD=8D=E5=A5=B3=E5=A3=AB=E5=9C=A8=E5=8A=9E=E5=85=AC=E6=A1=8C=E5=89=8D=E4=
+=BD=BF=E7=94=A8 Zoom Meetings =E7=9A=84=E5=90=8C=E6=97=B6=E5=9C=A8=E7=BA=B8=
+=E4=B8=8A=E5=81=9A=E7=AC=94=E8=AE=B0" border=3D"0" src=3D"https://click.zoo=
+m.us/l/84442/2024-03-04/c5bkjy/84442/1709535106VqZFaiMk/Zoom_Meeting_9_1300=
+x688.png" width=3D"650" class=3D"full-width-image border-radius-top" style=
+=3D"border-width:0;-ms-interpolation-mode:bicubic;width:100%;max-width:650p=
+x;height:auto;display:block;border-radius: 20px 20px 0px 0px;" /> </a></td>
+                                    </tr>
+
+
+                                    <tr>
+                                        <td bgcolor=3D"#ffffff" style=3D"fo=
+nt-family: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 400; co=
+lor:#ffffff; padding: 15px 25px 25px 25px; text-align: left; border-radius:=
+ 0px 0px 20px 20px; background-color: #ffffff;" class=3D"px-25 border-radiu=
+s-bottom"><table cellpadding=3D"0" cellspacing=3D"0" border=3D"0" style=3D"=
+border-collapse: collapse; display: inline-block; font-family: Inter, 'Helv=
+etica Neue', Arial, sans-serif;">
+                                                <tbody>
+                                                <!-- =3D=3D=3D [Row] Title =
+=3D=3D=3D -->
+                                                <tr>
+                                                    <td style=3D"font-famil=
+y: Montserrat, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-=
+size:32px; line-height:38px; color: #10134A; text-align: center; padding: 1=
+0px 0;" class=3D"mob-title">=E5=BC=80=E5=A7=8B=E4=BD=BF=E7=94=A8 Zoom=EF=BC=
+=81</td>
+                                                </tr>
+                                                <!-- =3D=3D=3D [Row] Option=
+al Sub-title =3D=3D=3D -->
+                                                <!-- <tr>
+                                                    <td style=3D"font-famil=
+y: Montserrat, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-=
+size:20px; line-height:24px; color: #10134A; text-align: left; padding: 10p=
+x 0;">
+                                                        Lorem ipsum
+                                                    </td>
+                                                </tr> -->
+
+                                                <!-- =3D=3D=3D [Row] Body t=
+ext =3D=3D=3D -->
+                                                <tr>
+                                                    <td style=3D"font-famil=
+y: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 400; font-size:=
+16px; line-height:24px; color: #10134A; text-align: center;padding: 10px 0;=
+">=E4=BD=BF=E7=94=A8 Zoom =E7=9A=84=E7=BB=9F=E4=B8=80=E9=80=9A=E4=BF=A1=E5=
+=92=8C=E5=8D=8F=E4=BD=9C=E5=B7=A5=E5=85=B7=E6=8F=90=E9=AB=98=E6=82=A8=E7=9A=
+=84=E5=B7=A5=E4=BD=9C=E6=95=88=E7=8E=87=E3=80=82 =E6=8E=A2=E7=B4=A2 Meeting=
+s=E3=80=81Team Chat=E3=80=81Whiteboard =E7=AD=89=EF=BC=8C=E6=94=B9=E8=BF=9B=
+=E6=82=A8=E7=9A=84=E5=B7=A5=E4=BD=9C=E6=96=B9=E5=BC=8F=E3=80=82 =E4=BB=8A=
+=E5=A4=A9=E5=B0=B1=E5=BC=80=E5=A7=8B=E7=AC=AC=E4=B8=80=E6=AC=A1=E4=BC=9A=E8=
+=AE=AE=E5=90=A7=EF=BC=81</td>
+                                                </tr>
+
+                                                <!-- =3D=3D=3D [Row] CTA =
+=3D=3D=3D -->
+                                                <tr>
+                                                    <td style=3D"font-famil=
+y: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 400; text-align=
+: center; padding: 20px 0;"><table cellpadding=3D"0" cellspacing=3D"0" bord=
+er=3D"0" style=3D"border-collapse: collapse; display: inline-block;font-fam=
+ily: Inter, 'Helvetica Neue', Arial, sans-serif;">
+                                                            <tbody>
+                                                            <tr>
+                                                                <td align=
+=3D"center" style=3D"padding: 10px 30px 12px 30px; background-color: #0B5CF=
+F; font-family: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 60=
+0; font-size: 16px; line-height: 15px; color: #ffffff; text-align: center; =
+border-radius: 100px;" class=3D"border-radius-cta" bgcolor=3D"#0B5CFF"><!--=
+ =3D=3D=3D Link =3D=3D=3D --> <a href=3D"https://zoom.us/meeting/schedule" =
+target=3D"_blank" style=3D"font-size: 16px; line-height: 16px; color: #ffff=
+ff; text-decoration: none; font-weight: 600; font-family: Inter, 'Helvetica=
+ Neue', Arial, sans-serif;">=E5=BC=80=E5=A7=8B=E4=BC=9A=E8=AE=AE</a></td>
+                                                            </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Body Text 6 (White BG) =3D=3D=3D=
+ -->
+
+                        <!-- =3D=3D=3D Start Spacer =3D=3D=3D -->
+                        <!--[if !mso]><!---->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td style=3D"padding: 0;font-size: 20px; line-h=
+eight: 20px; height:20px;" bgcolor=3D"#F2F2F4"> </td>
+                        </tr>
+                        <!--[endif]-->
+                        <!-- =3D=3D=3D End Spacer =3D=3D=3D -->
+
+
+
+
+
+                        <!-- =3D=3D=3D Start Image Left / Text Right (White=
+ BG) =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td bgcolor=3D"#F2F2F4" class=3D"px-15"><!-- =
+=3D=3D=3D Start Here For Dynamic Content =3D=3D=3D --><table width=3D"100%"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0" style=3D"border-collapse:=
+ collapse;">
+                                    <tbody>
+                                    <tr>
+                                        <td bgcolor=3D"#ffffff" style=3D"pa=
+dding: 10px 25px; border-radius: 20px; background-color: #ffffff;" class=3D=
+"one-column border-radius pb-10"><table border=3D"0" cellpadding=3D"0" cell=
+spacing=3D"0" width=3D"100%" style=3D"border-collapse: collapse;">
+                                                <tbody>
+                                                <!-- =3D=3D=3D [Row] Title =
+=3D=3D=3D -->
+                                                <!-- <tr>
+                                                    <td style=3D"font-famil=
+y: Montserrat, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-=
+size:32px; line-height:38px; color: #10134A; text-align: left; padding: 10p=
+x 0;" class=3D"mob-title">
+                                                        Lorem ipsum dolor s=
+it amet consectetur adipisicing elit
+                                                    </td>
+                                                </tr> -->
+                                                <!-- =3D=3D=3D [Row] Image =
+/ Text Content Row =3D=3D=3D -->
+
+
+
+
+                                                <!-- =3D=3D=3D [Row] Text /=
+ Image Content Row =3D=3D=3D -->
+                                                <tr>
+                                                    <td style=3D"padding: 0=
+;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"border-=
+collapse: collapse;direction: ltr;" dir=3D"ltr" class=3D"dir-ltr mob-100 mo=
+b-table">
+                                                            <tr>
+                                                                <td style=
+=3D"padding: 0;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" st=
+yle=3D"border-collapse: collapse;direction: rtl;" dir=3D"rtl" class=3D"dir-=
+rtl mob-100 mob-table">
+                                                                        <tr=
+>
+                                                                           =
+ <!-- =3D=3D=3D Image column =3D=3D=3D -->
+                                                                           =
+ <th width=3D"220" style=3D"width: 220px; min-width: 220px; vertical-align:=
+ top;direction: ltr;" dir=3D"ltr" class=3D"dir-ltr mob-100 mob-table" valig=
+n=3D"top"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"=
+220" style=3D"border-collapse: collapse;width: 220px;" class=3D"mob-100 mob=
+-table" align=3D"center">
+                                                                           =
+         <tbody>
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"padding: 15px 0; text-align: center; display: inl=
+ine-block; box-sizing: border-box; width:220px; max-width:220px;" width=3D"=
+220" class=3D"pt-10 pb-20 mob-100 mw-auto" align=3D"center"><!-- =3D=3D=3D =
+Link =3D=3D=3D --> <a href=3D"https://zoom.us/zh-cn/download" target=3D"_bl=
+ank"> <!-- =3D=3D=3D Image =3D=3D=3D --> <img alt=3D"=E4=B8=8B=E8=BD=BD Zoo=
+m Workplace =E5=BA=94=E7=94=A8=E7=9A=84=E8=89=BA=E6=9C=AF=E6=8F=92=E5=9B=BE=
+" src=3D"https://click.zoom.us/l/84442/2024-03-04/c5bkk8/84442/1709535480OL=
+TPhqoM/zm_ill_download_zoom.png" width=3D"220" class=3D"mx-auto mw-auto mob=
+-100 border-radius-small" style=3D"border-width:0;-ms-interpolation-mode:bi=
+cubic;width:220px;max-width:220px;margin:0 auto;height:auto;display:block;b=
+order-radius:20px;"> </a></td>
+                                                                           =
+         </tr>
+                                                                           =
+         </tbody>
+                                                                           =
+     </table>
+                                                                           =
+     <!-- =3D=3D=3D Spacer =3D=3D=3D -->
+                                                                           =
+     <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%"=
+ style=3D"border-collapse: collapse;">
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"padding: 0px; font-size: 1px; line-height: 1px; h=
+eight: 1px;"> </td>
+                                                                           =
+         </tr>
+                                                                           =
+     </table>
+                                                                           =
+ </th>
+                                                                           =
+ <!-- =3D=3D=3D Spacer =3D=3D=3D -->
+                                                                           =
+ <th style=3D"width: 35px; vertical-align: middle;" valign=3D"middle" width=
+=3D"35" class=3D"mob-hide"><table style=3D"border-collapse: collapse;width:=
+ 35px;" width=3D"35" border=3D"0" cellspacing=3D"0" cellpadding=3D"0" align=
+=3D"right">
+                                                                           =
+         <tbody>
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"padding:0;font-size: 10px; line-height: 10px; hei=
+ght: 10px;"> </td>
+                                                                           =
+         </tr>
+                                                                           =
+         </tbody>
+                                                                           =
+     </table>
+                                                                           =
+ </th>
+                                                                           =
+ <!-- =3D=3D=3D Text Column =3D=3D=3D -->
+                                                                           =
+ <th width=3D"345" style=3D"width: 345px; min-width: 345px; vertical-align:=
+ middle;direction: ltr; padding: 15px 0;" dir=3D"ltr" class=3D"dir-ltr mob-=
+100 mob-table pt-0 pb-30" valign=3D"middle"><table border=3D"0" cellpadding=
+=3D"0" cellspacing=3D"0" width=3D"345" style=3D"border-collapse: collapse;w=
+idth: 345px; min-width: 345px; vertical-align: middle; text-align: left;" c=
+lass=3D"mob-100 mob-table" valign=3D"middle">
+                                                                           =
+         <tbody>
+
+                                                                           =
+         <!-- =3D=3D=3D Title =3D=3D=3D -->
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"font-family: Montserrat, 'Helvetica Neue', Arial,=
+ sans-serif; font-weight: 600; font-size:20px; line-height:24px; color: #10=
+134A; text-align: left; padding: 8px 0;">1. =E4=B8=8B=E8=BD=BD Zoom Workpla=
+ce =E5=BA=94=E7=94=A8</td>
+                                                                           =
+         </tr>
+                                                                           =
+         <!-- =3D=3D=3D Body text =3D=3D=3D -->
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"font-family: Inter, 'Helvetica Neue', Arial, sans=
+-serif; font-weight: 400; font-size:16px; line-height:24px; color: #10134A;=
+ text-align: left;padding: 8px 0;">=E7=AB=8B=E5=8D=B3=E8=81=94=E7=B3=BB - =
+=E6=96=B9=E4=BE=BF=E5=BF=AB=E6=8D=B7=EF=BC=81 =E6=82=A8=E5=8F=AF=E4=BB=A5=
+=E4=BD=BF=E7=94=A8=E9=AB=98=E8=B4=A8=E9=87=8F=E7=9A=84=E8=A7=86=E9=A2=91=E4=
+=BC=9A=E8=AE=AE=E5=92=8C=E6=97=A0=E7=BC=9D=E5=8D=8F=E4=BD=9C=E5=B7=A5=E5=85=
+=B7=E3=80=82</td>
+                                                                           =
+         </tr>
+                                                                           =
+         <!-- =3D=3D=3D CTA =3D=3D=3D -->
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"font-family: Inter, 'Helvetica Neue', Arial, sans=
+-serif; font-weight: 600; font-size:16px; line-height:24px; color: #0B5CFF;=
+ text-align: left; padding: 8px 0 0 0;"><!-- =3D=3D=3D Link =3D=3D=3D --> <=
+a href=3D"https://zoom.us/zh-cn/download" target=3D"_blank" style=3D"font-f=
+amily: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-s=
+ize:16px; line-height:24px; color: #0B5CFF; text-decoration: none;"> =E7=AB=
+=8B=E5=8D=B3=E4=B8=8B=E8=BD=BD <img src=3D"https://click.zoom.us/text-link-=
+arrow" width=3D"22" height=3D"12" style=3D"height:12px; width: 22px; max-wi=
+dth: 22px; max-height: 12px;" alt=3D""> </a></td>
+                                                                           =
+         </tr>
+                                                                           =
+         </tbody>
+                                                                           =
+     </table>
+                                                                           =
+ </th>
+                                                                        </t=
+r>
+                                                                    </table=
+>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+
+
+
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Image Left / Text Right (White B=
+G) =3D=3D=3D -->
+
+                        <!-- =3D=3D=3D Start Spacer =3D=3D=3D -->
+                        <!--[if !mso]><!---->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td style=3D"padding: 0;font-size: 20px; line-h=
+eight: 20px; height:20px;" bgcolor=3D"#F2F2F4"> </td>
+                        </tr>
+                        <!--[endif]-->
+                        <!-- =3D=3D=3D End Spacer =3D=3D=3D -->
+
+                        <!-- =3D=3D=3D Start Image Left / Text Right (White=
+ BG) =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td bgcolor=3D"#F2F2F4" class=3D"px-15"><!-- =
+=3D=3D=3D Start Here For Dynamic Content =3D=3D=3D --><table width=3D"100%"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0" style=3D"border-collapse:=
+ collapse;">
+                                    <tbody>
+                                    <tr>
+                                        <td bgcolor=3D"#ffffff" style=3D"pa=
+dding: 10px 25px; border-radius: 20px; background-color: #ffffff;" class=3D=
+"one-column border-radius pb-10"><table border=3D"0" cellpadding=3D"0" cell=
+spacing=3D"0" width=3D"100%" style=3D"border-collapse: collapse;">
+                                                <tbody>
+                                                <!-- =3D=3D=3D [Row] Title =
+=3D=3D=3D -->
+                                                <!-- <tr>
+                                                    <td style=3D"font-famil=
+y: Montserrat, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-=
+size:32px; line-height:38px; color: #10134A; text-align: left; padding: 10p=
+x 0;" class=3D"mob-title">
+                                                        Lorem ipsum dolor s=
+it amet consectetur adipisicing elit
+                                                    </td>
+                                                </tr> -->
+                                                <!-- =3D=3D=3D [Row] Image =
+/ Text Content Row =3D=3D=3D -->
+
+                                                <!-- =3D=3D=3D [Row] Image =
+/ Text Content Row =3D=3D=3D -->
+                                                <tr>
+                                                    <td style=3D"padding: 0=
+;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"border-=
+collapse: collapse;direction: ltr;" dir=3D"ltr" class=3D"dir-ltr mob-100 mo=
+b-table">
+                                                            <tr>
+                                                                <!-- =3D=3D=
+=3D Image column =3D=3D=3D -->
+                                                                <th width=
+=3D"220" style=3D"width: 210px; min-width: 220px; vertical-align: top;" cla=
+ss=3D"mob-100 mob-table" valign=3D"top"><table border=3D"0" cellpadding=3D"=
+0" cellspacing=3D"0" width=3D"220" style=3D"border-collapse: collapse;width=
+: 220px; vertical-align: top;" class=3D"mob-100 mob-table" align=3D"center"=
+>
+                                                                        <tb=
+ody>
+                                                                        <tr=
+>
+                                                                           =
+ <td style=3D"padding: 15px 0; text-align: center; display: inline-block; b=
+ox-sizing: border-box; width:220px; max-width:220px; vertical-align: top;" =
+valign=3D"top" width=3D"220" class=3D"pt-10 pb-20 mob-100" align=3D"center"=
+><!-- =3D=3D=3D Link =3D=3D=3D --> <a href=3D"https://zoom.us/zh-cn/test" t=
+arget=3D"_blank"> <!-- =3D=3D=3D Image =3D=3D=3D --> <img alt=3D"=E9=BA=A6=
+=E5=85=8B=E9=A3=8E=E9=9F=B3=E9=87=8F=E8=AF=BB=E6=95=B0=E5=92=8C=E4=B8=80=E5=
+=90=8D=E7=94=B7=E5=AD=90=E7=9A=84=E7=BD=91=E7=BB=9C=E6=91=84=E5=83=8F=E5=A4=
+=B4=E8=A7=86=E5=9B=BE=E7=9A=84=E8=89=BA=E6=9C=AF=E6=8F=92=E5=9B=BE" src=3D"=
+https://click.zoom.us/l/84442/2024-03-04/c5bkk5/84442/17095354800qB5nOzu/zm=
+_ill_test_meeting.png" width=3D"220" class=3D"mx-auto mw-auto mob-100 borde=
+r-radius-small" style=3D"border-width:0;-ms-interpolation-mode:bicubic;widt=
+h:220px;max-width:220px;margin:0 auto;height:auto;display:block;border-radi=
+us:20px;"> </a></td>
+                                                                        </t=
+r>
+                                                                        </t=
+body>
+                                                                    </table=
+>
+                                                                    <!-- =
+=3D=3D=3D Spacer =3D=3D=3D -->
+                                                                    <table =
+border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"bo=
+rder-collapse: collapse;">
+                                                                        <tr=
+>
+                                                                           =
+ <td style=3D"padding: 0px; font-size: 1px; line-height: 1px; height: 1px;"=
+> </td>
+                                                                        </t=
+r>
+                                                                    </table=
+>
+                                                                </th>
+                                                                <!-- =3D=3D=
+=3D Spacer =3D=3D=3D -->
+                                                                <th style=
+=3D"width: 35px; vertical-align: middle;" valign=3D"middle" width=3D"35" cl=
+ass=3D"mob-hide"><table style=3D"border-collapse: collapse;width: 35px;" wi=
+dth=3D"35" border=3D"0" cellspacing=3D"0" cellpadding=3D"0" align=3D"right"=
+>
+                                                                        <tb=
+ody>
+                                                                        <tr=
+>
+                                                                           =
+ <td style=3D"padding:0;font-size: 10px; line-height: 10px; height: 10px;">=
+ </td>
+                                                                        </t=
+r>
+                                                                        </t=
+body>
+                                                                    </table=
+>
+                                                                </th>
+                                                                <!-- =3D=3D=
+=3D Text Column =3D=3D=3D -->
+                                                                <th width=
+=3D"345" style=3D"width: 355px; min-width: 345px; vertical-align: middle; p=
+adding: 15px 0;" class=3D"mob-100 mob-table pt-0 pb-30" valign=3D"middle"><=
+table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"345" style=
+=3D"border-collapse: collapse;width: 345px; min-width: 345px; vertical-alig=
+n: middle; text-align: left;" class=3D"mob-100 mob-table" valign=3D"middle"=
+>
+                                                                        <tb=
+ody>
+
+                                                                        <!-=
+- =3D=3D=3D Title =3D=3D=3D -->
+                                                                        <tr=
+>
+                                                                           =
+ <td style=3D"font-family: Montserrat, 'Helvetica Neue', Arial, sans-serif;=
+ font-weight: 600; font-size:20px; line-height:24px; color: #10134A; text-a=
+lign: left; padding: 8px 0;">2. =E6=B5=8B=E8=AF=95=E6=82=A8=E7=9A=84=E9=9F=
+=B3=E9=A2=91=E5=92=8C=E8=A7=86=E9=A2=91</td>
+                                                                        </t=
+r>
+                                                                        <!-=
+- =3D=3D=3D Body text =3D=3D=3D -->
+                                                                        <tr=
+>
+                                                                           =
+ <td style=3D"font-family: Inter, 'Helvetica Neue', Arial, sans-serif; font=
+-weight: 400; font-size:16px; line-height:24px; color: #10134A; text-align:=
+ left;padding: 8px 0;">=E6=82=A8=E6=98=AF=E5=90=A6=E5=B7=B2=E9=9D=99=E9=9F=
+=B3=EF=BC=9F =E6=B5=8B=E8=AF=95=E6=82=A8=E7=9A=84=E9=9F=B3=E9=A2=91=E5=92=
+=8C=E8=A7=86=E9=A2=91=E5=8F=AF=E7=A1=AE=E4=BF=9D=E6=82=A8=E5=9C=A8=E6=AF=8F=
+=E6=AC=A1=E4=BC=9A=E8=AE=AE=E4=B8=8A=E9=83=BD=E8=83=BD=E7=BB=99=E4=BA=BA=E7=
+=95=99=E4=B8=8B=E8=89=AF=E5=A5=BD=E5=8D=B0=E8=B1=A1=E3=80=82</td>
+                                                                        </t=
+r>
+                                                                        <!-=
+- =3D=3D=3D CTA =3D=3D=3D -->
+                                                                        <tr=
+>
+                                                                           =
+ <td style=3D"font-family: Inter, 'Helvetica Neue', Arial, sans-serif; font=
+-weight: 600; font-size:16px; line-height:24px; color: #0B5CFF; text-align:=
+ left; padding: 8px 0 0 0;"><!-- =3D=3D=3D Link =3D=3D=3D --> <a href=3D"ht=
+tps://zoom.us/zh-cn/test" target=3D"_blank" style=3D"font-family: Inter, 'H=
+elvetica Neue', Arial, sans-serif; font-weight: 600; font-size:16px; line-h=
+eight:24px; color: #0B5CFF; text-decoration: none;"> =E5=88=9B=E5=BB=BA=E6=
+=B5=8B=E8=AF=95=E4=BC=9A=E8=AE=AE <img src=3D"https://click.zoom.us/text-li=
+nk-arrow" width=3D"22" height=3D"12" style=3D"height:12px; width: 22px; max=
+-width: 22px; max-height: 12px;" alt=3D""> </a></td>
+                                                                        </t=
+r>
+                                                                        </t=
+body>
+                                                                    </table=
+>
+                                                                </th>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                <!-- =3D=3D=3D Start Spacer=
+ =3D=3D=3D -->
+
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Image Left / Text Right (White B=
+G) =3D=3D=3D -->
+
+                        <!-- =3D=3D=3D Start Spacer =3D=3D=3D -->
+                        <!--[if !mso]><!---->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td style=3D"padding: 0;font-size: 20px; line-h=
+eight: 20px; height:20px;" bgcolor=3D"#F2F2F4"> </td>
+                        </tr>
+                        <!--[endif]-->
+                        <!-- =3D=3D=3D End Spacer =3D=3D=3D -->
+
+                        <!-- =3D=3D=3D Start Image Left / Text Right (White=
+ BG) =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td bgcolor=3D"#F2F2F4" class=3D"px-15"><!-- =
+=3D=3D=3D Start Here For Dynamic Content =3D=3D=3D --><table width=3D"100%"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0" style=3D"border-collapse:=
+ collapse;">
+                                    <tbody>
+                                    <tr>
+                                        <td bgcolor=3D"#ffffff" style=3D"pa=
+dding: 10px 25px; border-radius: 20px; background-color: #ffffff;" class=3D=
+"one-column border-radius pb-10"><table border=3D"0" cellpadding=3D"0" cell=
+spacing=3D"0" width=3D"100%" style=3D"border-collapse: collapse;">
+                                                <tbody>
+                                                <!-- =3D=3D=3D [Row] Title =
+=3D=3D=3D -->
+                                                <!-- <tr>
+                                                    <td style=3D"font-famil=
+y: Montserrat, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-=
+size:32px; line-height:38px; color: #10134A; text-align: left; padding: 10p=
+x 0;" class=3D"mob-title">
+                                                        Lorem ipsum dolor s=
+it amet consectetur adipisicing elit
+                                                    </td>
+                                                </tr> -->
+                                                <!-- =3D=3D=3D [Row] Image =
+/ Text Content Row =3D=3D=3D -->
+
+
+
+
+                                                <!-- =3D=3D=3D [Row] Text /=
+ Image Content Row =3D=3D=3D -->
+                                                <tr>
+                                                    <td style=3D"padding: 0=
+;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"border-=
+collapse: collapse;direction: ltr;" dir=3D"ltr" class=3D"dir-ltr mob-100 mo=
+b-table">
+                                                            <tr>
+                                                                <td style=
+=3D"padding: 0;"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" st=
+yle=3D"border-collapse: collapse;direction: rtl;" dir=3D"rtl" class=3D"dir-=
+rtl mob-100 mob-table">
+                                                                        <tr=
+>
+                                                                           =
+ <!-- =3D=3D=3D Image column =3D=3D=3D -->
+                                                                           =
+ <th width=3D"220" style=3D"width: 220px; min-width: 220px; vertical-align:=
+ top;direction: ltr;" dir=3D"ltr" class=3D"dir-ltr mob-100 mob-table" valig=
+n=3D"top"><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"=
+220" style=3D"border-collapse: collapse;width: 220px;" class=3D"mob-100 mob=
+-table" align=3D"center">
+                                                                           =
+         <tbody>
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"padding: 15px 0; text-align: center; display: inl=
+ine-block; box-sizing: border-box; width:220px; max-width:220px;" width=3D"=
+220" class=3D"pt-10 pb-20 mob-100 mw-auto" align=3D"center"><!-- =3D=3D=3D =
+Link =3D=3D=3D --> <a href=3D"https://support.zoom.com/hc/zh/article?id=3Dz=
+m_kb&sysparm_article=3DKB0065164&sysparm_language=3Dzh" target=3D"_blank"> =
+<!-- =3D=3D=3D Image =3D=3D=3D --> <img alt=3D"=E6=9F=90=E4=BA=BA=E5=9C=A8=
+=E4=B8=BB=E6=8C=81 Zoom =E4=BC=9A=E8=AE=AE=E6=97=B6=E5=90=91=E7=AC=94=E8=AE=
+=B0=E6=9C=AC=E7=94=B5=E8=84=91=E6=8C=A5=E6=89=8B=E8=87=B4=E6=84=8F=E7=9A=84=
+=E8=89=BA=E6=9C=AF=E6=8F=92=E5=9B=BE" src=3D"https://click.zoom.us/l/84442/=
+2024-03-04/c5bkkc/84442/1709535481tfH5IbtN/zm_ill_host_meeting.png" width=
+=3D"220" class=3D"mx-auto mw-auto mob-100 border-radius-small" style=3D"bor=
+der-width:0;-ms-interpolation-mode:bicubic;width:220px;max-width:220px;marg=
+in:0 auto;height:auto;display:block;border-radius:20px;"> </a></td>
+                                                                           =
+         </tr>
+                                                                           =
+         </tbody>
+                                                                           =
+     </table>
+                                                                           =
+     <!-- =3D=3D=3D Spacer =3D=3D=3D -->
+                                                                           =
+     <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%"=
+ style=3D"border-collapse: collapse;">
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"padding: 0px; font-size: 1px; line-height: 1px; h=
+eight: 1px;"> </td>
+                                                                           =
+         </tr>
+                                                                           =
+     </table>
+                                                                           =
+ </th>
+                                                                           =
+ <!-- =3D=3D=3D Spacer =3D=3D=3D -->
+                                                                           =
+ <th style=3D"width: 35px; vertical-align: middle;" valign=3D"middle" width=
+=3D"35" class=3D"mob-hide"><table style=3D"border-collapse: collapse;width:=
+ 35px;" width=3D"35" border=3D"0" cellspacing=3D"0" cellpadding=3D"0" align=
+=3D"right">
+                                                                           =
+         <tbody>
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"padding:0;font-size: 10px; line-height: 10px; hei=
+ght: 10px;"> </td>
+                                                                           =
+         </tr>
+                                                                           =
+         </tbody>
+                                                                           =
+     </table>
+                                                                           =
+ </th>
+                                                                           =
+ <!-- =3D=3D=3D Text Column =3D=3D=3D -->
+                                                                           =
+ <th width=3D"345" style=3D"width: 345px; min-width: 345px; vertical-align:=
+ middle;direction: ltr; padding: 15px 0;" dir=3D"ltr" class=3D"dir-ltr mob-=
+100 mob-table pt-0 pb-30" valign=3D"middle"><table border=3D"0" cellpadding=
+=3D"0" cellspacing=3D"0" width=3D"345" style=3D"border-collapse: collapse;w=
+idth: 345px; min-width: 345px; vertical-align: middle; text-align: left;" c=
+lass=3D"mob-100 mob-table" valign=3D"middle">
+                                                                           =
+         <tbody>
+
+                                                                           =
+         <!-- =3D=3D=3D Title =3D=3D=3D -->
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"font-family: Montserrat, 'Helvetica Neue', Arial,=
+ sans-serif; font-weight: 600; font-size:20px; line-height:24px; color: #10=
+134A; text-align: left; padding: 8px 0;">3. =E4=B8=BB=E6=8C=81=E6=82=A8=E7=
+=9A=84=E7=AC=AC=E4=B8=80=E6=AC=A1=E4=BC=9A=E8=AE=AE</td>
+                                                                           =
+         </tr>
+                                                                           =
+         <!-- =3D=3D=3D Body text =3D=3D=3D -->
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"font-family: Inter, 'Helvetica Neue', Arial, sans=
+-serif; font-weight: 400; font-size:16px; line-height:24px; color: #10134A;=
+ text-align: left;padding: 8px 0;">=E7=8E=87=E5=85=88=E8=A1=8C=E5=8A=A8=EF=
+=BC=81 =E7=82=B9=E5=87=BB=E5=BC=80=E5=A7=8B=E6=82=A8=E7=9A=84=E7=AC=AC=E4=
+=B8=80=E6=AC=A1=E4=BC=9A=E8=AE=AE=EF=BC=8C=E4=BA=86=E8=A7=A3=E5=BB=BA=E7=AB=
+=8B=E8=81=94=E7=B3=BB=E3=80=81=E5=BC=80=E5=B1=95=E5=8D=8F=E4=BD=9C=E5=92=8C=
+=E6=94=B9=E5=8F=98=E5=B7=A5=E4=BD=9C=E6=96=B9=E5=BC=8F=E6=9C=89=E5=A4=9A=E4=
+=B9=88=E5=AE=B9=E6=98=93=E3=80=82</td>
+                                                                           =
+         </tr>
+                                                                           =
+         <!-- =3D=3D=3D CTA =3D=3D=3D -->
+                                                                           =
+         <tr>
+                                                                           =
+             <td style=3D"font-family: Inter, 'Helvetica Neue', Arial, sans=
+-serif; font-weight: 600; font-size:16px; line-height:24px; color: #0B5CFF;=
+ text-align: left; padding: 8px 0 0 0;"><!-- =3D=3D=3D Link =3D=3D=3D --> <=
+a href=3D"https://support.zoom.com/hc/zh/article?id=3Dzm_kb&sysparm_article=
+=3DKB0065164&sysparm_language=3Dzh" target=3D"_blank" style=3D"font-family:=
+ Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-size:16=
+px; line-height:24px; color: #0B5CFF; text-decoration: none;"> =E4=BA=86=E8=
+=A7=A3=E5=A6=82=E4=BD=95=E4=B8=BB=E6=8C=81=E4=BC=9A=E8=AE=AE <img src=3D"ht=
+tps://click.zoom.us/text-link-arrow" width=3D"22" height=3D"12" style=3D"he=
+ight:12px; width: 22px; max-width: 22px; max-height: 12px;" alt=3D""> </a><=
+/td>
+                                                                           =
+         </tr>
+                                                                           =
+         </tbody>
+                                                                           =
+     </table>
+                                                                           =
+ </th>
+                                                                        </t=
+r>
+                                                                    </table=
+>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+
+
+
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Image Left / Text Right (White B=
+G) =3D=3D=3D -->
+
+
+
+
+
+
+                        <!-- =3D=3D=3D Start Spacer =3D=3D=3D -->
+                        <!--[if !mso]><!---->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td style=3D"padding: 0;font-size: 20px; line-h=
+eight: 20px; height:20px;" bgcolor=3D"#F2F2F4"> </td>
+                        </tr>
+                        <!--[endif]-->
+                        <!-- =3D=3D=3D End Spacer =3D=3D=3D -->
+
+
+                        <!-- =3D=3D=3D Start Social 1 (Bloom) =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td bgcolor=3D"#F2F2F4" class=3D"px-15"><!-- =
+=3D=3D=3D Start Here For Dynamic Content =3D=3D=3D --><table width=3D"100%"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0" style=3D"border-collapse:=
+ collapse;">
+                                    <tbody>
+                                    <tr>
+                                        <td bgcolor=3D"#0B5CFF" style=3D"fo=
+nt-family: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 400; co=
+lor:#ffffff; padding: 15px 25px; text-align: left; border-radius: 20px; bac=
+kground-color: #0B5CFF;" class=3D"px-25 border-radius"><table cellpadding=
+=3D"0" cellspacing=3D"0" border=3D"0" style=3D"border-collapse: collapse; d=
+isplay: inline-block; font-family: Inter, 'Helvetica Neue', Arial, sans-ser=
+if;">
+                                                <tbody>
+                                                <!-- =3D=3D=3D [Row] Social=
+ =3D=3D=3D -->
+                                                <tr>
+                                                    <td width=3D"600" style=
+=3D"width: 600px; min-width: 600px; vertical-align: top; box-sizing: border=
+-box; padding: 0;" class=3D"mob-100 mob-table" valign=3D"top"><table border=
+=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"600" style=3D"border-co=
+llapse: collapse;width: 600px; min-width: 600px; vertical-align: top; text-=
+align: left;" class=3D"mob-100 mob-table" valign=3D"top">
+                                                            <tbody>
+                                                            <tr>
+                                                                <!-- =3D=3D=
+=3D Column 1 =3D=3D=3D -->
+                                                                <th width=
+=3D"370" style=3D"font-weight: 400; width: 370px; min-width: 370px; vertica=
+l-align: top; box-sizing: border-box;text-align: center; padding: 0;" align=
+=3D"center" class=3D"mob-100 mob-table" valign=3D"top"><table border=3D"0" =
+cellpadding=3D"0" cellspacing=3D"0" width=3D"370" style=3D"width: 370px; mi=
+n-width: 370px; vertical-align: top; text-align: center;" align=3D"center" =
+class=3D"mob-100 mob-table" valign=3D"top">
+                                                                        <tr=
+>
+                                                                           =
+ <!-- =3D=3D=3D Text =3D=3D=3D -->
+                                                                           =
+ <td style=3D"vertical-align: top; box-sizing: border-box; font-family: Mon=
+tserrat, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-size:2=
+0px; line-height:23px; color: #ffffff; text-align: left; padding: 6px 0 0 0=
+;" valign=3D"top" class=3D"pt-0">=E5=85=B3=E6=B3=A8=E6=88=91=E4=BB=AC=E7=9A=
+=84=E7=A4=BE=E4=BA=A4=E8=B4=A6=E5=8F=B7</td>
+                                                                        </t=
+r>
+                                                                    </table=
+>
+                                                                </th>
+                                                                <!-- =3D=3D=
+=3D Spacer =3D=3D=3D -->
+                                                                <th style=
+=3D"border-collapse: collapse;width: 30px; vertical-align: top;padding: 0;b=
+order:none;" width=3D"30" class=3D"mob-hide" valign=3D"top"><table style=3D=
+"border-collapse: collapse;width: 30px;" width=3D"30" border=3D"0" cellspac=
+ing=3D"0" cellpadding=3D"0" align=3D"center">
+                                                                        <tb=
+ody>
+                                                                        <tr=
+>
+                                                                           =
+ <td style=3D"padding: 0;font-size: 10px; line-height: 10px; height:10px;">=
+ </td>
+                                                                        </t=
+r>
+                                                                        </t=
+body>
+                                                                    </table=
+>
+                                                                </th>
+                                                                <!-- =3D=3D=
+=3D Column 2 =3D=3D=3D -->
+                                                                <th width=
+=3D"200" style=3D"font-weight: 400; width: 200px; min-width: 200px; vertica=
+l-align: top; box-sizing: border-box;text-align: right; padding: 0;" align=
+=3D"center" class=3D"mob-100 mob-table mob-left" valign=3D"top"><table bord=
+er=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"200" style=3D"width: =
+200px; min-width: 200px; vertical-align: top; text-align: right;" align=3D"=
+center" class=3D"mob-100 mob-table mob-left" valign=3D"top">
+                                                                        <tr=
+>
+                                                                           =
+ <!-- =3D=3D=3D Social Images =3D=3D=3D -->
+                                                                           =
+ <td style=3D"vertical-align: top; box-sizing: border-box; font-family: Mon=
+tserrat, 'Helvetica Neue', Arial, sans-serif; font-weight: 600; font-size:2=
+0px; line-height:14px; color: #0B5CFF; text-align: right; padding: 0;" vali=
+gn=3D"top" class=3D"mob-left pt-15"><a href=3D"https://twitter.com/zoom" ta=
+rget=3D"_blank" style=3D"text-decoration: none;"><img src=3D"https://click.=
+zoom.us/social-twitter-circle-white" height=3D"35" alt=3D"Twitter" style=3D=
+"border-width:0;-ms-interpolation-mode:bicubic;height:35px;max-height:35px!=
+important;width:auto;display:inline-block;margin: 0 auto;" /></a><a href=3D=
+"https://www.linkedin.com/company/zoom/" target=3D"_blank" style=3D"text-de=
+coration: none;"><img src=3D"https://click.zoom.us/social-linkedin-circle-w=
+hite" height=3D"35" alt=3D"LinkedIn" style=3D"border-width:0;-ms-interpolat=
+ion-mode:bicubic;height:35px;max-height:35px!important;width:auto;display:i=
+nline-block;margin: 0 auto;" /></a><a href=3D"https://www.instagram.com/zoo=
+m/" target=3D"_blank" style=3D"text-decoration: none;"><img src=3D"https://=
+click.zoom.us/social-instagram-circle-white" height=3D"35" alt=3D"Instagram=
+" style=3D"border-width:0;-ms-interpolation-mode:bicubic;height:35px;max-he=
+ight:35px!important;width:auto;display:inline-block;margin: 0 auto;" /></a>=
+<a href=3D"https://www.zoom.com/zh-cn/blog/" target=3D"_blank" style=3D"tex=
+t-decoration: none;"><img src=3D"https://click.zoom.us/social-blog-circle-w=
+hite" height=3D"35" alt=3D"=E5=8D=9A=E5=AE=A2" style=3D"border-width:0;-ms-=
+interpolation-mode:bicubic;height:35px;max-height:35px!important;width:auto=
+;display:inline-block;margin: 0 auto;" /></a></td>
+                                                                        </t=
+r>
+                                                                    </table=
+>
+                                                                </th>
+                                                            </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Social 1 (Bloom) =3D=3D=3D -->
+                        <!-- =3D=3D=3D Start Spacer =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td style=3D"padding: 0;font-size: 20px; line-h=
+eight: 20px; height:20px;" bgcolor=3D"#F2F2F4"> </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Spacer =3D=3D=3D -->
+                        <!-- =3D=3D=3D Start Footer 1 =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td bgcolor=3D"#F2F2F4" class=3D"px-15"><!-- =
+=3D=3D=3D Start Here For Dynamic Content =3D=3D=3D --><table width=3D"100%"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0" style=3D"border-collapse:=
+ collapse;">
+                                    <tbody>
+                                    <tr>
+                                        <td bgcolor=3D"#F2F2F4" style=3D"fo=
+nt-family: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 400; co=
+lor:#B6B6C2; padding: 15px 25px 0 25px; text-align: center;background-color=
+: #F2F2F4;" class=3D"pt-10 mob-left"><table cellpadding=3D"0" cellspacing=
+=3D"0" border=3D"0" style=3D"border-collapse: collapse; display: inline-blo=
+ck; font-family: Inter, 'Helvetica Neue', Arial, sans-serif;" class=3D"mob-=
+left">
+                                                <tbody>
+                                                <!-- =3D=3D=3D Footer text =
+=3D=3D=3D -->
+                                                <tr>
+                                                    <td style=3D"font-famil=
+y: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 400; font-size:=
+13px; line-height:18px; color: #B6B6C2; text-align: center;padding: 0;" cla=
+ss=3D"mob-left" id=3D"footerlinks">=E8=AE=BF=E9=97=AE <a href=3D"https://zo=
+om.us/" target=3D"_blank" style=3D"color:#B6B6C2; text-decoration: underlin=
+e;">zoom.us</a><br /><a href=3D"=E7=94=B5=E8=AF=9D=EF=BC=9A18887999666" tar=
+get=3D"blank" style=3D"color: #B6B6C2; text-decoration: none;">1-888-799-96=
+66</a><br /><a href=3D"https://maps.app.goo.gl/DcvegDXGZPGQN2X16" target=3D=
+"blank" style=3D"color: #B6B6C2; text-decoration: none;">55 Almaden Blvd., =
+San Jose, CA 95113</a><br />=C2=A9 2025 Zoom - =E4=BF=9D=E7=95=99=E6=89=80=
+=E6=9C=89=E6=9D=83=E5=88=A9=E3=80=82</td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Footer 1 =3D=3D=3D -->
+                        <!-- =3D=3D=3D Start Footer 2 =3D=3D=3D -->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td bgcolor=3D"#F2F2F4" class=3D"px-15"><!-- =
+=3D=3D=3D Start Here For Dynamic Content =3D=3D=3D --><table width=3D"100%"=
+ cellspacing=3D"0" cellpadding=3D"0" border=3D"0" style=3D"border-collapse:=
+ collapse;">
+                                    <tbody>
+                                    <tr>
+                                        <td bgcolor=3D"#F2F2F4" style=3D"fo=
+nt-family: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 400; co=
+lor:#B6B6C2; padding: 15px 25px 25px 25px; text-align: center;background-co=
+lor: #F2F2F4;" class=3D"pt-10 mob-left"><table cellpadding=3D"0" cellspacin=
+g=3D"0" border=3D"0" style=3D"border-collapse: collapse; display: inline-bl=
+ock; font-family: Inter, 'Helvetica Neue', Arial, sans-serif;" class=3D"mob=
+-left">
+                                                <tbody>
+                                                <!-- =3D=3D=3D Footer text =
+=3D=3D=3D -->
+                                                <tr>
+                                                    <td style=3D"font-famil=
+y: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 400; font-size:=
+13px; line-height: 18px; color: #B6B6C2; text-align: center;padding: 0;" cl=
+ass=3D"mob-left">=E6=82=A8=E6=94=B6=E5=88=B0=E6=AD=A4=E7=94=B5=E5=AD=90=E9=
+=82=AE=E4=BB=B6=E6=98=AF=E5=9B=A0=E4=B8=BA=E6=82=A8=E6=B3=A8=E5=86=8C=E4=BA=
+=86 Zoom =E8=B4=A6=E6=88=B7=E3=80=82 =E6=82=A8=E5=8F=AF=E4=BB=A5=E9=9A=8F=
+=E6=97=B6<a href=3D"https://us05web.zoom.us/update-preferences?code=3D81QgX=
+JwRPbolWS9DR6qkdWtPz0gT7Mzv5uyGXNZo-BU.AG.E-QC8bnAIw4NMDbLdvFeRWG4VZ4IOu0yu=
+5xEhCDCVqy_FOs7wDUnud-JcGYKGAdpBBbjevCoOWBNOjyN-ssWVOWpHbkK2_xypYt8DhqpSoSa=
+A-0dy3Db4hTpxj1Qe7ITd03ryGq-xrEaSovOqKMITYzLuPlJZTG2bLNQB2RgWDSvRxTeMzAMf_q=
+F6WJLNU17GDc9YzkkKUkLObUUULGGoxqP.vzZCGPs4HkfTVYIo6QMMpw.PMZbpYK3krB83Mgr" =
+style=3D"color:#B6B6C2; text-decoration: underline;">=E6=9B=B4=E6=96=B0=E6=
+=82=A8=E7=9A=84=E5=81=8F=E5=A5=BD=E8=AE=BE=E7=BD=AE</a>=E3=80=82 =E5=A6=82=
+=E6=9E=9C=E6=82=A8=E4=B8=8D=E5=B8=8C=E6=9C=9B=E5=86=8D=E6=94=B6=E5=88=B0=E6=
+=88=91=E4=BB=AC=E7=9A=84=E7=94=B5=E5=AD=90=E9=82=AE=E4=BB=B6=EF=BC=8C=E8=AF=
+=B7<a href=3D"https://us05web.zoom.us/unsubscribe/u?code=3DAY5ebiMKbqRSY9PP=
+3897BC-zasepL4lKTpM0jLGrFBo.AG.8SR313Qo60BXXnOJplJODaDo6OurM0cC41CO1hNOgy4k=
+fNm5fwb8plJU7sdDi6TPCZud5lyAun2gl7OT1Vre4G6rvkG_40QIGrBQ_nBSTFOH754JWbqYnU6=
+aTDMraIaS-OYaOn_YT3TrLHGhV89XDXN8CwZ6CTo1O-urlxJYgF5OP_NHwmDiylVJzsIU1i3xxk=
+NKx7RfdEUVaVCuxzEjGVmh.FgQf6UgY6u6vacdCDkYDAg.oDiOu3yQ9YQeCug8" style=3D"co=
+lor:#B6B6C2; text-decoration: underline;">=E5=8F=96=E6=B6=88=E8=AE=A2=E9=98=
+=85</a>=E3=80=82</td>
+                                                </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        <!-- =3D=3D=3D End Footer 2 =3D=3D=3D -->
+                        <!-- =3D=3D=3D Start Spacer =3D=3D=3D -->
+                        <!--[if !mso]><!---->
+                        <tr bgcolor=3D"#F2F2F4">
+                            <td style=3D"padding: 0;font-size: 20px; line-h=
+eight: 20px; height:20px;" bgcolor=3D"#F2F2F4"> </td>
+                        </tr>
+                        <!--[endif]-->
+                        <!-- =3D=3D=3D End Spacer =3D=3D=3D -->
+                    </table>
+                    <!--[if (gte mso 9)|(IE)]></td></tr></table><![endif]--=
+>
+                </div>
+            </center>
+        </td>
+    </tr>
+</table>
+<!-- =3D=3D=3D Start Pixel to force mobile =3D=3D=3D -->
+<table cellpadding=3D"0" cellspacing=3D"0" border=3D"0" class=3D"mob-hide" =
+style=3D"width: 650px; border-collapse: collapse;"
+       width=3D"650" align=3D"center">
+    <tr>
+        <td height=3D"1" class=3D"mob-hide" style=3D"min-width:650px; font-=
+size:0px;line-height:0px;"><img height=3D"1" width=3D"650" src=3D"https://c=
+lick.zoom.us/partner-placeholder" style=3D"width: 650px; min-width: 650px; =
+height: 1px; text-decoration: none; border: none; -ms-interpolation-mode: b=
+icubic;" /></td>
+    </tr>
+</table>
+<!-- =3D=3D=3D End Pixel to force mobile =3D=3D=3D -->
+</body>
+
+</html>

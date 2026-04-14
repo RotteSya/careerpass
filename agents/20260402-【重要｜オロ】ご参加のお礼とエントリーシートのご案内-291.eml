@@ -1,0 +1,435 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:aa6:d00a:0:b0:32f:2baf:8ecc with SMTP id xr10csp592072lkb;
+        Wed, 1 Apr 2026 20:51:53 -0700 (PDT)
+X-Received: by 2002:a05:620a:414f:b0:8cd:75d5:5456 with SMTP id af79cd13be357-8d1b5c58547mr973779785a.66.1775101913010;
+        Wed, 01 Apr 2026 20:51:53 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1775101913; cv=none;
+        d=google.com; s=arc-20240605;
+        b=KSaANdTe8X5WZqZ9mdzuByar/MiILZ0ezmQcg7zaVsgxcthBY+/2tgoNYvlvY1wiSN
+         cARStkPcyrTERFst95qZOD9omrsDm7IXyHgB/IzUlIXQxXqDosRuDxjbQBWIY48/HpgV
+         +E8kyeblVPkX+z1FpgJycho4N5JyeJ2EQPCS3E2i9P5N2UCaGwL88DoVD0Ybgg7Zd0Jy
+         8GDKV8nvgniGrtgl2ChVlxKuvdNkATWxm5xAA+wfNYbf1Wpg4Hc+VzXwuADx9jTUo8l/
+         RzMO2+Je/A+t5FbfLPbl9rYaCR/0Vx8rSLgH91u6UwFEr2RkbVYa0wQVXIF9/QcW/jIM
+         7vJg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=message-id:sender:reply-to:to:from:subject:mime-version:date
+         :dkim-signature:dkim-signature;
+        bh=zvoSj3+MY1tILPwdYC5h0A4Sq1jikppuUvCqWNJQVHM=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=UyIUPGZ7uEICT+RNzXXS5WyqqluuvufLfJwmi0PboSF87MFeTwKBZ/loBKw6SoyhZI
+         wwGdWFTysrcuuupQ+S6y5yxs/BfVPL8HQwJHS1TUaIAk1ITSkhYvIW8YiVK6o/FG9Z/x
+         o8m1Yhv8DUPwBOorwURb1VUCp8U+b9RfX0+A0RtPjYFrFAr8y8RQvFXL6lphbv+MrfFq
+         eDaTY94PTrRlFnqOmpMxTi+horPFUPXULLP4PVrkIUxS3+XUy0lkpzE5nA8RfVeQ3hmk
+         5MLblWXt0e2o7XZ/Bk36L/7ZvUpxR2VMv+5VRCWQ72/SJhyvD3tCbGK/uJinb0iwUmWR
+         Q/MQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@n-ats.hrmos.co header.s=smtp header.b=nWdHHmnX;
+       dkim=pass header.i=@mailgun.org header.s=mg header.b=tSBLuBzL;
+       spf=pass (google.com: domain of bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co designates 69.72.40.241 as permitted sender) smtp.mailfrom="bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co";
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hrmos.co
+Return-Path: <bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co>
+Received: from v5241.v5c112201.use4.send.mailgun.net (v5241.v5c112201.use4.send.mailgun.net. [69.72.40.241])
+        by mx.google.com with UTF8SMTPS id af79cd13be357-8d2a98ee397si221579085a.400.2026.04.01.20.51.52
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Wed, 01 Apr 2026 20:51:52 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co designates 69.72.40.241 as permitted sender) client-ip=69.72.40.241;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@n-ats.hrmos.co header.s=smtp header.b=nWdHHmnX;
+       dkim=pass header.i=@mailgun.org header.s=mg header.b=tSBLuBzL;
+       spf=pass (google.com: domain of bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co designates 69.72.40.241 as permitted sender) smtp.mailfrom="bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co";
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hrmos.co
+DKIM-Signature: a=rsa-sha256; v=1; c=relaxed/relaxed; d=n-ats.hrmos.co; q=dns/txt; s=smtp; t=1775101912; x=1775109112;
+ h=Message-Id: Sender: Sender: Reply-To: To: To: From: From: Subject: Subject: Content-Type: Mime-Version: Date: X-Feedback-Id;
+ bh=zvoSj3+MY1tILPwdYC5h0A4Sq1jikppuUvCqWNJQVHM=;
+ b=nWdHHmnXwSSYYJklrVRWPFFq9awcZr0Xsr6OtigoHXq2EGA2kFhhso5bDSn6319AunJNttW598islwCZw4IGz5hNv5prE+2Z/fsCkxVAzJfRaq3Lojvj1KEy2LvmHAaI0Otud9kHOWq106/KT/hjAqFEUsdEbKlvP1TKjaLEuAg=
+DKIM-Signature: a=rsa-sha256; v=1; c=relaxed/relaxed; d=mailgun.org; q=dns/txt; s=mg; t=1775101912; x=1775109112;
+ h=Message-Id: Sender: Sender: Reply-To: To: To: From: From: Subject: Subject: Content-Type: Mime-Version: Date: X-Feedback-Id;
+ bh=zvoSj3+MY1tILPwdYC5h0A4Sq1jikppuUvCqWNJQVHM=;
+ b=tSBLuBzLOJgm6NxYPDtSiU47ocgZW6G55SYBAmF5FwMAe22bZUTXhFGRVyXNHM4f5NyXZzpd5Tlrl0/Cjo2XqP+Zo1hRwJeFLRJaMVJ0DRsLIK9mUn9ph12ade5sgsU3b3W6rmYad3zTBRqadmMr6YfbRYPW0acVPdbz9CDN3+c=
+X-Mailgun-Sid: WyI1Y2Y5OCIsInJheXN5YS5iaXpAZ21haWwuY29tIiwiYjhmN2RkIl0=
+X-Feedback-Id: postmaster@n-ats.hrmos.co:RECRUITER_TO_CANDIDATE:5dbbd54f30ff9141c1da641e:mailgun
+Received: by af8bda91a2bf66abf66f673a98aeeaca1e03cd4da116a10aacbaf44414de73ea with HTTP
+ id 69cde7d830bb068c5b32fbdb; Thu, 02 Apr 2026 03:51:52 GMT
+X-Mailgun-Sending-Ip: 69.72.40.241
+Date: Thu, 02 Apr 2026 03:51:52 +0000
+Mime-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="5a80b64490ca0243e054b9dacb283a11523a0ade8361045f33a81976a6ab"
+Subject: =?UTF-8?b?44CQ6YeN6KaB772c44Kq44Ot44CR44GU5Y+C5Yqg44Gu44GK56S844Go44Ko?=
+ =?UTF-8?b?44Oz44OI44Oq44O844K344O844OI44Gu44GU5qGI5YaF?=
+From: =?utf-8?b?5qCq5byP5Lya56S+44Kq44OtIOaOoeeUqOaLheW9kw==?=
+ <2245720181511430144.candidate@orocoltd.n-ats.hrmos.co>
+To: raysya.biz@gmail.com
+X-Mailgun-Tag: RECRUITER_TO_CANDIDATE
+X-Mailgun-Drop-Message: false
+Reply-To: 2245720181511430144.candidate@orocoltd.n-ats.hrmos.co
+Sender: 2245720181511430144.candidate@orocoltd.n-ats.hrmos.co
+X-Mailgun-Variables: {"X-CandidateId": "2245720181511430144", "X-CorporateId":
+ "1953397834512146432", "X-Mail-Id": "2245768405016027136", "X-SentMailId":
+ "2245768405016027136"}
+Message-Id: <20260402035152.e6e77327bad5c31c@n-ats.hrmos.co>
+
+--5a80b64490ca0243e054b9dacb283a11523a0ade8361045f33a81976a6ab
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="utf-8"
+
+=EF=BC=B3=EF=BC=A8=EF=BC=A5 =EF=BC=AC=EF=BC=A9=EF=BC=AE=EF=BC=A7=EF=BC=BA=
+=EF=BC=A8=EF=BC=A1=EF=BC=AF=E6=A7=98
+
+=E3=81=93=E3=82=93=E3=81=AB=E3=81=A1=E3=81=AF=EF=BC=81
+=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=AA=E3=83=AD=E3=81=AE=E6=8E=A1=E7=
+=94=A8=E6=8B=85=E5=BD=93=E3=81=A7=E3=81=99=E3=80=82
+
+=E3=81=93=E3=81=AE=E3=81=9F=E3=81=B3=E3=81=AF=E3=82=AA=E3=83=AD=E3=81=AE=E3=
+=82=BB=E3=83=9F=E3=83=8A=E3=83=BC=E3=81=AB=E3=81=94=E5=8F=82=E5=8A=A0=E3=81=
+=84=E3=81=9F=E3=81=A0=E3=81=8D=E3=81=82=E3=82=8A=E3=81=8C=E3=81=A8=E3=81=86=
+=E3=81=94=E3=81=96=E3=81=84=E3=81=BE=E3=81=99=E3=80=82
+
+=E4=B8=8B=E8=A8=98=E3=80=8C=E3=83=95=E3=82=A9=E3=83=BC=E3=83=A0=E3=81=AB=E5=
+=9B=9E=E7=AD=94=E3=81=99=E3=82=8B=E3=80=8D=E3=83=9C=E3=82=BF=E3=83=B3=E3=81=
+=8B=E3=82=89=E3=80=81=E3=82=A2=E3=83=B3=E3=82=B1=E3=83=BC=E3=83=88=E4=BB=98=
+=E3=81=8D=E3=82=A8=E3=83=B3=E3=83=88=E3=83=AA=E3=83=BC=E3=82=B7=E3=83=BC=E3=
+=83=88=E3=81=B8=E3=81=AE=E3=81=94=E5=9B=9E=E7=AD=94=E3=82=92=E3=81=8A=E9=A1=
+=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=81=99=E3=80=82
+=E9=81=B8=E8=80=83=E3=82=92=E5=B8=8C=E6=9C=9B=E3=81=95=E3=82=8C=E3=81=AA=E3=
+=81=84=E6=96=B9=E3=81=AB=E3=81=A4=E3=81=8D=E3=81=BE=E3=81=97=E3=81=A6=E3=81=
+=AF=E3=80=81=E3=82=A2=E3=83=B3=E3=82=B1=E3=83=BC=E3=83=88=E3=81=B8=E3=81=AE=
+=E3=81=94=E5=9B=9E=E7=AD=94=E3=81=AE=E3=81=BF=E3=81=94=E5=8D=94=E5=8A=9B=E3=
+=82=92=E3=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=81=
+=99=E3=80=82
+
+
+=E3=80=90=E3=82=A8=E3=83=B3=E3=82=B8=E3=83=8B=E3=82=A2=E3=82=B3=E3=83=BC=E3=
+=82=B9=E3=82=92=E3=81=94=E5=B8=8C=E6=9C=9B=E3=81=AE=E3=81=BF=E3=81=AA=E3=81=
+=95=E3=81=BE=E3=81=B8=E3=80=91
+=E3=82=A8=E3=83=B3=E3=82=B8=E3=83=8B=E3=82=A2=E3=82=B3=E3=83=BC=E3=82=B9=E3=
+=81=AF=E5=88=A5=E3=81=A7=E3=82=BB=E3=83=9F=E3=83=8A=E3=83=BC=E3=82=92=E9=96=
+=8B=E5=82=AC=E3=81=97=E3=81=A6=E3=81=8A=E3=82=8A=E3=81=BE=E3=81=99=E3=80=82
+=E3=82=A8=E3=83=B3=E3=82=B8=E3=83=8B=E3=82=A2=E3=82=B3=E3=83=BC=E3=82=B9=E3=
+=81=A7=E3=81=AE=E9=81=B8=E8=80=83=E3=82=92=E3=81=94=E5=B8=8C=E6=9C=9B=E3=81=
+=AE=E6=96=B9=E3=81=AF=E3=80=81=E4=B8=8B=E8=A8=98=E3=81=AE=E3=83=AA=E3=83=B3=
+=E3=82=AF=E3=81=8B=E3=82=89=E3=82=BB=E3=83=9F=E3=83=8A=E3=83=BC=E3=81=AB=E3=
+=81=8A=E7=94=B3=E3=81=97=E8=BE=BC=E3=81=BF=E3=81=8F=E3=81=A0=E3=81=95=E3=81=
+=84=E3=80=82
+https://public.n-ats.hrmos.co/orocoltd/events/2167476913585414144
+
+
+=E3=81=94=E4=B8=8D=E6=98=8E=E7=82=B9=E7=AD=89=E3=81=94=E3=81=96=E3=81=84=E3=
+=81=BE=E3=81=97=E3=81=9F=E3=82=89=E3=81=94=E9=80=A3=E7=B5=A1=E3=81=8F=E3=81=
+=A0=E3=81=95=E3=81=84=E3=80=82
+=E3=81=9D=E3=82=8C=E3=81=A7=E3=81=AF=E3=82=88=E3=82=8D=E3=81=97=E3=81=8F=E3=
+=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=81=99=E3=80=
+=82
+
+
+( =C2=BA R =C2=BA  )-----------------------------
+=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=AA=E3=83=AD=EF=BC=88oRo Co.,Ltd.=
+)
+=E4=BA=BA=E4=BA=8B=E6=8E=A1=E7=94=A8=E3=83=81=E3=83=BC=E3=83=A0
+
+=E3=80=92153-0063 =E6=9D=B1=E4=BA=AC=E9=83=BD=E7=9B=AE=E9=BB=92=E5=8C=BA=E7=
+=9B=AE=E9=BB=923-9-1 =E7=9B=AE=E9=BB=92=E9=A0=88=E7=94=B0=E3=83=93=E3=83=AB
+TEL=EF=BC=9A050-5783-5386
+
+=E2=96=A0=E6=96=B0=E5=8D=92=E6=8E=A1=E7=94=A8=E3=82=B5=E3=82=A4=E3=83=88
+=E5=A4=9A=E6=A7=98=E3=81=AA=E8=83=BD=E5=8A=9B=E3=83=BB=E8=8B=A5=E6=89=8B=E4=
+=B8=AD=E5=BF=83=E3=81=A7=E4=BE=A1=E5=80=A4=E3=82=92=E5=89=B5=E3=82=8B
+https://www.oro.com/recruit/
+=E2=96=A0=E3=82=AA=E3=83=AD note
+=E4=BC=81=E6=A5=AD=E3=81=AE=E8=A3=8F=E5=81=B4=E3=83=BB=E7=94=9F=E3=81=AE=E5=
+=A3=B0=E3=82=92=E3=83=81=E3=82=A7=E3=83=83=E3=82=AF
+https://note.mu/oro_official
+-----------------------------( =C2=BA R =C2=BA  )
+
+=E3=83=95=E3=82=A9=E3=83=BC=E3=83=A0=E3=81=AB=E5=9B=9E=E7=AD=94=E3=81=99=E3=
+=82=8B
+https://public.n-ats.hrmos.co/orocoltd/custom-form-answer-requests/20e186b1=
+-ccb4-43bf-b3c4-4816163fe1f9/
+
+--5a80b64490ca0243e054b9dacb283a11523a0ade8361045f33a81976a6ab
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset="utf-8"
+
+<!DOCTYPE html>
+<html xmlns=3D"http://www.w3.org/1999/xhtml">
+    <head>
+        <meta name=3D"viewport" content=3D"width=3Ddevice-width,initial-sca=
+le=3D1.0" />
+        <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Du=
+tf-8" />
+        <style>
+                .sg-mail-container {
+                    margin-top: 40px;
+                }
+
+                .sg-mail-text {
+                    display: block;
+                    padding-bottom: 20px;
+                }
+
+                .sg-mail-info > td > table > tbody > tr > th:first-of-type =
+{
+                    padding: 0 20px 0;
+                }
+
+                .sg-mail-info > td > table > tbody > tr > th {
+                    padding: 20px 20px 0;
+                }
+
+                .sg-mail-info > td > table > tbody > tr > td:first-of-type =
+{
+                    padding: 0 20px 0 0;
+                }
+
+                .sg-mail-info > td > table > tbody > tr > td {
+                    padding: 20px 20px 0 0;
+                }
+
+                @media screen and (max-width: 640px) {
+                .sg-mail-container {
+                    margin-top: 0 !important;
+                }
+
+                .sg-table {
+                    display: block;
+                    font-size: 18px !important;
+                }
+                .sg-table > tbody > tr {
+                    display: block !important;
+                }
+                .sg-table > tbody > tr + tr {
+                    margin-top: 5px !important;
+                }
+                .sg-table > tbody > tr > th,
+                .sg-table > tbody > tr > td {
+                    display: block !important;
+                    width: auto !important;
+                    padding-right: 0 !important;
+                    padding-left: 0 !important;
+                    text-align: left !important;
+                }
+                .sg-table > tbody > tr > td {
+                    padding-top: 5px !important;
+                }
+                .sg-footer {
+                    font-size: 14px !important;
+                }
+                }
+        </style>
+    </head>
+    <body style=3D"margin:0">
+        <table
+        border=3D"0"
+        cellspacing=3D"0"
+        cellpadding=3D"0"
+        width=3D"100%"
+        bgcolor=3D"#F6F6F6"
+        >
+            <tbody>
+                <tr>
+                    <td width=3D"100%" valign=3D"top" align=3D"center" bgco=
+lor=3D"#F6F6F6">
+                        <table
+                        class=3D"sg-mail-container"
+                        border=3D"0"
+                        cellspacing=3D"0"
+                        cellpadding=3D"0"
+                        width=3D"100%"
+                        bgcolor=3D"#FFFFFF"
+                        style=3D"max-width: 750px; min-width: 300px; paddin=
+g: 20px; margin-left: auto; margin-right: auto;"
+                        >
+                            <tbody>
+                                <tr>
+                                    <td width=3D"100%" valign=3D"top" align=
+=3D"center">
+                                        <table
+                                        border=3D"0"
+                                        cellspacing=3D"0"
+                                        cellpadding=3D"0"
+                                        width=3D"100%"
+                                        bgcolor=3D"#FFFFFF"
+                                        style=3D"font-size: 14px"
+                                        class=3D"sg-table"
+                                        >
+                                            <tbody>
+                                               =20
+                                                    <tr class=3D"sg-mail-te=
+xt">
+                                                        <td style=3D"
+                                                            padding: 0 30px=
+;
+                                                        ">
+                                                            <table
+                                                            border=3D"0"
+                                                            cellpadding=3D"=
+0"
+                                                            cellspacing=3D"=
+0"
+                                                            width=3D"100%"
+                                                            valign=3D"middl=
+e"
+                                                            style=3D"margin=
+: 0 auto;"
+                                                            >
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td=
+>
+                                                                           =
+ <pre
+                                                                           =
+ style=3D"font-family: Roboto, RobotoDraft, Helvetica, Arial, sans-serif;"
+                                                                           =
+ >=EF=BC=B3=EF=BC=A8=EF=BC=A5 =EF=BC=AC=EF=BC=A9=EF=BC=AE=EF=BC=A7=EF=BC=BA=
+=EF=BC=A8=EF=BC=A1=EF=BC=AF=E6=A7=98
+
+=E3=81=93=E3=82=93=E3=81=AB=E3=81=A1=E3=81=AF=EF=BC=81
+=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=AA=E3=83=AD=E3=81=AE=E6=8E=A1=E7=
+=94=A8=E6=8B=85=E5=BD=93=E3=81=A7=E3=81=99=E3=80=82
+
+=E3=81=93=E3=81=AE=E3=81=9F=E3=81=B3=E3=81=AF=E3=82=AA=E3=83=AD=E3=81=AE=E3=
+=82=BB=E3=83=9F=E3=83=8A=E3=83=BC=E3=81=AB=E3=81=94=E5=8F=82=E5=8A=A0=E3=81=
+=84=E3=81=9F=E3=81=A0=E3=81=8D=E3=81=82=E3=82=8A=E3=81=8C=E3=81=A8=E3=81=86=
+=E3=81=94=E3=81=96=E3=81=84=E3=81=BE=E3=81=99=E3=80=82
+
+=E4=B8=8B=E8=A8=98=E3=80=8C=E3=83=95=E3=82=A9=E3=83=BC=E3=83=A0=E3=81=AB=E5=
+=9B=9E=E7=AD=94=E3=81=99=E3=82=8B=E3=80=8D=E3=83=9C=E3=82=BF=E3=83=B3=E3=81=
+=8B=E3=82=89=E3=80=81=E3=82=A2=E3=83=B3=E3=82=B1=E3=83=BC=E3=83=88=E4=BB=98=
+=E3=81=8D=E3=82=A8=E3=83=B3=E3=83=88=E3=83=AA=E3=83=BC=E3=82=B7=E3=83=BC=E3=
+=83=88=E3=81=B8=E3=81=AE=E3=81=94=E5=9B=9E=E7=AD=94=E3=82=92=E3=81=8A=E9=A1=
+=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=81=99=E3=80=82
+=E9=81=B8=E8=80=83=E3=82=92=E5=B8=8C=E6=9C=9B=E3=81=95=E3=82=8C=E3=81=AA=E3=
+=81=84=E6=96=B9=E3=81=AB=E3=81=A4=E3=81=8D=E3=81=BE=E3=81=97=E3=81=A6=E3=81=
+=AF=E3=80=81=E3=82=A2=E3=83=B3=E3=82=B1=E3=83=BC=E3=83=88=E3=81=B8=E3=81=AE=
+=E3=81=94=E5=9B=9E=E7=AD=94=E3=81=AE=E3=81=BF=E3=81=94=E5=8D=94=E5=8A=9B=E3=
+=82=92=E3=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=81=
+=99=E3=80=82
+
+
+=E3=80=90=E3=82=A8=E3=83=B3=E3=82=B8=E3=83=8B=E3=82=A2=E3=82=B3=E3=83=BC=E3=
+=82=B9=E3=82=92=E3=81=94=E5=B8=8C=E6=9C=9B=E3=81=AE=E3=81=BF=E3=81=AA=E3=81=
+=95=E3=81=BE=E3=81=B8=E3=80=91
+=E3=82=A8=E3=83=B3=E3=82=B8=E3=83=8B=E3=82=A2=E3=82=B3=E3=83=BC=E3=82=B9=E3=
+=81=AF=E5=88=A5=E3=81=A7=E3=82=BB=E3=83=9F=E3=83=8A=E3=83=BC=E3=82=92=E9=96=
+=8B=E5=82=AC=E3=81=97=E3=81=A6=E3=81=8A=E3=82=8A=E3=81=BE=E3=81=99=E3=80=82
+=E3=82=A8=E3=83=B3=E3=82=B8=E3=83=8B=E3=82=A2=E3=82=B3=E3=83=BC=E3=82=B9=E3=
+=81=A7=E3=81=AE=E9=81=B8=E8=80=83=E3=82=92=E3=81=94=E5=B8=8C=E6=9C=9B=E3=81=
+=AE=E6=96=B9=E3=81=AF=E3=80=81=E4=B8=8B=E8=A8=98=E3=81=AE=E3=83=AA=E3=83=B3=
+=E3=82=AF=E3=81=8B=E3=82=89=E3=82=BB=E3=83=9F=E3=83=8A=E3=83=BC=E3=81=AB=E3=
+=81=8A=E7=94=B3=E3=81=97=E8=BE=BC=E3=81=BF=E3=81=8F=E3=81=A0=E3=81=95=E3=81=
+=84=E3=80=82
+https://public.n-ats.hrmos.co/orocoltd/events/2167476913585414144
+
+
+=E3=81=94=E4=B8=8D=E6=98=8E=E7=82=B9=E7=AD=89=E3=81=94=E3=81=96=E3=81=84=E3=
+=81=BE=E3=81=97=E3=81=9F=E3=82=89=E3=81=94=E9=80=A3=E7=B5=A1=E3=81=8F=E3=81=
+=A0=E3=81=95=E3=81=84=E3=80=82
+=E3=81=9D=E3=82=8C=E3=81=A7=E3=81=AF=E3=82=88=E3=82=8D=E3=81=97=E3=81=8F=E3=
+=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=81=99=E3=80=
+=82
+
+
+( =C2=BA R =C2=BA  )-----------------------------
+=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=AA=E3=83=AD=EF=BC=88oRo Co.,Ltd.=
+)
+=E4=BA=BA=E4=BA=8B=E6=8E=A1=E7=94=A8=E3=83=81=E3=83=BC=E3=83=A0
+
+=E3=80=92153-0063 =E6=9D=B1=E4=BA=AC=E9=83=BD=E7=9B=AE=E9=BB=92=E5=8C=BA=E7=
+=9B=AE=E9=BB=923-9-1 =E7=9B=AE=E9=BB=92=E9=A0=88=E7=94=B0=E3=83=93=E3=83=AB
+TEL=EF=BC=9A050-5783-5386
+
+=E2=96=A0=E6=96=B0=E5=8D=92=E6=8E=A1=E7=94=A8=E3=82=B5=E3=82=A4=E3=83=88
+=E5=A4=9A=E6=A7=98=E3=81=AA=E8=83=BD=E5=8A=9B=E3=83=BB=E8=8B=A5=E6=89=8B=E4=
+=B8=AD=E5=BF=83=E3=81=A7=E4=BE=A1=E5=80=A4=E3=82=92=E5=89=B5=E3=82=8B
+https://www.oro.com/recruit/
+=E2=96=A0=E3=82=AA=E3=83=AD note
+=E4=BC=81=E6=A5=AD=E3=81=AE=E8=A3=8F=E5=81=B4=E3=83=BB=E7=94=9F=E3=81=AE=E5=
+=A3=B0=E3=82=92=E3=83=81=E3=82=A7=E3=83=83=E3=82=AF
+https://note.mu/oro_official
+-----------------------------( =C2=BA R =C2=BA  )</pre>
+                                                                        </t=
+d>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                               =20
+                                               =20
+                                                    <tr>
+                                                        <td style=3D"paddin=
+g: 0 20px 30px;
+                                                            text-align: cen=
+ter;">
+                                                            <table
+                                                            border=3D"0"
+                                                            cellpadding=3D"=
+0"
+                                                            cellspacing=3D"=
+0"
+                                                            width=3D"270"
+                                                            valign=3D"middl=
+e"
+                                                            style=3D"margin=
+: 0 auto;"
+                                                            >
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td
+                                                                        wid=
+th=3D"270"
+                                                                        bgc=
+olor=3D"#005A96"
+                                                                        sty=
+le=3D"padding: 10px 0;
+                                                                           =
+ border-radius: 4px;
+                                                                           =
+ text-align: center;"
+                                                                        >
+                                                                           =
+ <a
+                                                                           =
+ href=3D"https://public.n-ats.hrmos.co/orocoltd/custom-form-answer-requests=
+/20e186b1-ccb4-43bf-b3c4-4816163fe1f9/"
+                                                                           =
+ style=3D"display: inline-block;
+                                                                           =
+     width: 100%;
+                                                                           =
+     color: #FFFFFF;
+                                                                           =
+     text-decoration: none;"
+                                                                           =
+ >=E3=83=95=E3=82=A9=E3=83=BC=E3=83=A0=E3=81=AB=E5=9B=9E=E7=AD=94=E3=81=99=
+=E3=82=8B</a
+                                                                           =
+ >
+                                                                        </t=
+d>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                   =20
+                                               =20
+                                            </tbody>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </body>
+</html>
+
+--5a80b64490ca0243e054b9dacb283a11523a0ade8361045f33a81976a6ab--

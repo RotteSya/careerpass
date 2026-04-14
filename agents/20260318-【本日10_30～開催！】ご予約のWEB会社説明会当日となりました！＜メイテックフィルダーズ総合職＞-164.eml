@@ -1,0 +1,106 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a9a:458d:0:b0:32f:2baf:8ecc with SMTP id m13csp54233lkd;
+        Tue, 17 Mar 2026 17:00:07 -0700 (PDT)
+X-Received: by 2002:a17:903:2345:b0:2b0:531b:b3e6 with SMTP id d9443c01a7336-2b06e2da4e7mr13300945ad.10.1773792007156;
+        Tue, 17 Mar 2026 17:00:07 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1773792007; cv=none;
+        d=google.com; s=arc-20240605;
+        b=NcPjkgWPH6XgSsWjjR/8ok5J+OAq7/kVn4ohtaW7fBmMA8V2O8SI0YDCkGdXBIDrnA
+         ocdUCfOcTyL8tR1eQCyUY6qQzUdtNQJ10kxj8U/58cXdTBeiojHpU/cPVi7BaSalBNB2
+         /sB8Kn5ekZTt6aZAt7WSp8oiJ3ZxHBhNBZTR7IoAmPN3xDlwTT2B3PCYXfs4BKSkIYjZ
+         +Xyat31AU6Nt4NDVCKM1qNaFXb9OPF3hmS/75Y0WkFNfzmBWmxJlFxFx9UmWcpTG6ocx
+         4Ch2R+7j+wVOEQvGqu0h3izRUGFkB+W4EzOyIe8U80M546oneCCqUbxvFUq5IOfgYNfw
+         Vr7w==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:subject:date:to:from:mime-version
+         :message-id:dkim-signature;
+        bh=3mfTudCBgxk/piSR9YPogZOux7vUDq3woxG4HL+8irw=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=VehwzmPT6JyWhcQjQB+KB0zYZizH2KdkhPCjtxlm4rRRDQB83gYnf1DBsfeWhLuA6T
+         xTzysQ05hMk95+1omI8p05nZ3GmJaf4vQT1hDNvMQxMFE4ss1v+wjxM43SHdj8453RT5
+         UJKgW1pqe4nAk5r7mjiJA/E8org8ex9XUl5GHhgnNKUhWH9/muvuekjNrMm8vk7Uj7YD
+         uaGXeQuqpGMDRVvtO+LWCfRny/3BjN5TfBIYqQLvRgAGThQzcwjBcuFlT9f+Ojo5N/yy
+         G4XYZbUVUk2mIQAAoxeBBCVKmT5ceWqOLD2RcpL5lODYmDSOmo3Sx44kHDJFqMK2Hhaj
+         O9Dw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@snar.jp header.s=s1693802379223 header.b=hnQuRtnb;
+       spf=pass (google.com: domain of meitecgr-recruit@snar.jp designates 153.125.134.141 as permitted sender) smtp.mailfrom=meitecgr-recruit@snar.jp;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=snar.jp
+Return-Path: <meitecgr-recruit@snar.jp>
+Received: from mta063.snar.smtps.jp (mta063.snar.smtps.jp. [153.125.134.141])
+        by mx.google.com with ESMTPS id d9443c01a7336-2b06e6562f4si16876615ad.138.2026.03.17.17.00.06
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Tue, 17 Mar 2026 17:00:07 -0700 (PDT)
+Received-SPF: pass (google.com: domain of meitecgr-recruit@snar.jp designates 153.125.134.141 as permitted sender) client-ip=153.125.134.141;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@snar.jp header.s=s1693802379223 header.b=hnQuRtnb;
+       spf=pass (google.com: domain of meitecgr-recruit@snar.jp designates 153.125.134.141 as permitted sender) smtp.mailfrom=meitecgr-recruit@snar.jp;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=snar.jp
+X-Persimmon: [%%^KrdO/c/7m6zZhqI8hqT/Ig==$%%]
+   [%%^XZZNZChRDkyXZMFM2BVzDg==$%%]
+   [%%^1jqEISmcqD/BE2mQI1RVA3sFB1L5VzbMY4tXoAChAL8CcHS4c9Df8fcdq3nhUQHafXHj0d9DkprwBUUprdXA3ALnNd7qe+ntCuXd3zh2QBY=$%%]
+   [%%^LzfiA1B0G3Hf9QaKS+g+bg==$%%]
+   [%%^CUJpz5ZkE+t1kxnrE3z3I5iKGso/NARU2oK2EtQInSAZHJSJTry1ujEFh1kpcxfb$%%]
+   [%%^qh+7WYuCNNIsJPGhs4FBuA==$%%]
+   [%%^77jlwevHuG0Klz5h9IF4kkFZ+e8zZkkn/5ZjlITSyAs=$%%]
+   [%%^bNBrdFP4I9riIHVVPDXh6NsGVA7kidUQb0amFY6a3Ac=$%%]
+   [%%^yJPNeOZ18HY0FNgN1b5AMQ==$%%]
+DKIM-Signature: v=1; a=rsa-sha256;c=relaxed/relaxed;
+   d=snar.jp; s=s1693802379223; t=1773792005;
+   h=message-id:mime-version:from:to:date:subject
+   :content-type:content-transfer-encoding;
+   bh=3mfTudCBgxk/piSR9YPogZOux7vUDq3woxG4HL+8irw=;
+   b=hnQuRtnbHLRQrMHCPNUiDaFnoMeR5M8inlgqoIRPZLnn40Ax+wEKNZ9ugrS6nSCn
+   KHemdceju7M4HPXF/RmKemUozg37S+8NDmcjyriV2503PvZG3Gw8O+nVv1wol1NJ
+   a4KKEHwuE/RWfQ0fz3eVnp/cdmzw9fANC4Bjuk2g8kc=
+Message-Id: <6b6107a0-225d-11f1-b60a-9ca3ba3096ca@mta06.snar.smtps.jp>
+Received: from rddc984062097a by mta06.snar.smtps.jp (without TLS);
+   Wed, 18 Mar 2026 09:00:05 +0900
+MIME-Version: 1.0
+From: =?utf-8?Q?=E3=83=A1=E3=82=A4=E3=83=86=E3=83=83=E3=82=AF=E3=83=95?=
+ =?utf-8?Q?=E3=82=A3=E3=83=AB=E3=83=80=E3=83=BC=E3=82=BA=E6=96=B0=E5?=
+ =?utf-8?Q?=8D=92=E6=8E=A1=E7=94=A8?= <meitecgr-recruit@snar.jp>
+To: raysya.biz@gmail.com
+Date: 18 Mar 2026 00:00:05 +0000
+Subject: =?utf-8?B?44CQ5pys5pelMTA6MzDvvZ7plovlgqzvvIHjgJHjgZTkuojn?=
+ =?utf-8?B?tITjga5XRULkvJrnpL7oqqzmmI7kvJrlvZPml6Xjgajjgarjgorjgb7j?=
+ =?utf-8?B?gZfjgZ/vvIHvvJzjg6HjgqTjg4bjg4Pjgq/jg5XjgqPjg6vjg4Djg7zj?=
+ =?utf-8?B?grrnt4/lkIjogbfvvJ4=?=
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: base64
+
+56uL5ZG96aSo5aSn5a2mCue1jOWWtueuoeeQhueglOeptuenkSAK77yz77yo77yl44CA
+77ys77yp77yu77yn77y677yo77yh77yv44GV44KTCgrjgYrjga/jgojjgYbjgZTjgZbj
+gYTjgb7jgZnvvIEK44Oh44Kk44OG44OD44Kv44OV44Kj44Or44OA44O844K65paw5Y2S
+5o6h55So5ouF5b2T44Gn44GZ44CCCgrjgZTkuojntITjgYTjgZ/jgaDjgYTjgZ/kvJrn
+pL7oqqzmmI7kvJrjgYzmnKzml6UoMjAyNi8wMy8xOCAxMDozMO+9ninjgajjgarjgorj
+gb7jgZnjgIIK5pmC6ZaT44Gr44Gq44KK44G+44GX44Gf44KJ44CB5LiL6KiY44KI44KK
+44GU5Y+C5Yqg44GP44Gg44GV44GE44CCCgo9PT09PT09PT09PT09PT09PT09PT09PT09
+PT09PT09Clsg44GU5Y+C5Yqg5pa55rOVIF0K5LiL6KiY44Oq44Oz44Kv5YWI44Gr44GC
+44KL44CB44CM44Kq44Oz44Op44Kk44Oz44Of44O844OG44Kj44Oz44Kw44KS6ZaL5aeL
+44GZ44KL44CN44GL44KJCldFQuS8muWgtOOBuOOBlOWFpeWupOOBj+OBoOOBleOBhOOA
+ggrigLvlj5fku5jjga7jgZ/jgoE15YiG5YmN44Gr44Gv44GU5YWl5a6k44GP44Gg44GV
+44GE44CCCmh0dHBzOi8vbWVpdGVjZ3ItcmVjcnVpdC5zbmFyLmpwL3YyL2luZGV4LmFz
+cHg/cGFyYW09X1I1a1UtcXcyYmlaeEViTmxpaWV0MWpqR3VuM3pwTFhoYnZfc3NDUXdB
+T3Z2V2pLUm1vZVM0VlRtQW1aRGE3enFsNDdiaWthZWlyVm8tVGFlRmtQWWcKPT09PT09
+PT09PT09PT09PT09PT09PT09PT09PT09PQoK4piF5b2T5pel44Gu6LOH5paZ44Gv5byK
+56S+44Oe44Kk44Oa44O844K444KI44KK44GU56K66KqN44GE44Gf44Gg44GR44G+44GZ
+44CCCuOAkOODnuOCpOODmuODvOOCuFVSTOOAkQrjgIBodHRwczovL21laXRlY2dyLXJl
+Y3J1aXQuc25hci5qcC9sb2dpbi5hc3B4CgrjgJDvvLPvvKjvvKXjgZXjgpPjga5JROOA
+kQrjgIBURjAwMDQ3MDUwCgrjgJDvvLPvvKjvvKXjgZXjgpPjga7jg5Hjgrnjg6/jg7zj
+g4njgJEK44CA44GC44Gq44Gf44Gu6Kit5a6a44GX44Gf44OR44K544Ov44O844OJCgrm
+gKXpgb3jgZTpg73lkIjjgYzmgqrjgY/jgarjgaPjgabjgZfjgb7jgaPjgZ/nrYnjgIEK
+5Yil5pel56iL44KS5biM5pyb44Gu5pa544Gv5LiL6KiY6YCj57Wh5YWI44G+44Gn44GU
+6YCj57Wh44GP44Gg44GV44GE44CCCgrjgZ3jgozjgafjga/jgIHvvLPvvKjvvKXjgZXj
+gpPjga7jgZTlj4LliqDjgYrlvoXjgaHjgZfjgabjgYrjgorjgb7jgZnvvIEKCuKAu+OB
+k+OBoeOCieOBruODoeODvOODq+OBr+mAgeS/oeWwgueUqOOBp+OBmQrigJTigJTigJTi
+gJTigJTigJTigJTigJTigJTigJTigJTigJTigJTigJTigJTigJTigJTigJTigJTigJQK
+44Oh44Kk44OG44OD44Kv44OV44Kj44Or44OA44O844K644CA5paw5Y2S5o6h55So5ouF
+5b2TCgrjgJDjg5Xjg6rjg7zjg4DjgqTjg6Tjg6vjgJEgMDEyMC05MzctNTcwCu+8iOW5
+s+aXpTEw77yaMDDjgJwxN++8mjAwIOKAu+Wcn+aXpeelneelreaXpeOCkumZpOOBj++8
+iQrjgJBFLU1haWzjgJEgcmVjcnVpdEBtLWZpZWxkZXJzLmNvbQ==
+

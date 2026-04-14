@@ -1,0 +1,84 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:25ca:b0:325:95ad:e1f5 with SMTP id v10csp1539271lky;
+        Sun, 8 Feb 2026 20:22:58 -0800 (PST)
+X-Received: by 2002:a05:6a00:21d1:b0:81e:ce07:7f3d with SMTP id d2e1a72fcca58-8244166b9ffmr8418438b3a.31.1770610977787;
+        Sun, 08 Feb 2026 20:22:57 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1770610977; cv=none;
+        d=google.com; s=arc-20240605;
+        b=Z0Ush3hFmdhEG0DySoRKpJjlciDWGy6k1hJYQqEg+alykYtcvBQaUhDmWIliTn0P1z
+         H/ixS/C8tMIPRoc5EMv3n+2uIrhFGYKWgc7d2Fbn9snOl5UYclfSIeD1DtTwerZYgHbf
+         TIBkqQ+IzdIlblu+6+ZNOlmlisCab34T2vszG04onEFuSXEe7RYjeIdIxMUBiUaqtX0E
+         dpMivExZL34JR+eoPaNmdGo4ZkVh9KSmyjVw4Fpnc6Vm212VV/IPHroC6U6U8EzDs8wt
+         j+MgzC3MNVawmCHyUEwO6Hj4F0aezX3Lq6DYzKbyhGre4GYP/lUj3/aiUN/oVKjolp1o
+         erhw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=message-id:mime-version:content-disposition
+         :content-transfer-encoding:date:to:from:subject:dkim-signature
+         :dkim-filter;
+        bh=m7jMc77yz8yRtXKB2mM0f3TEuo9TUWvT/d2pCWlobQ8=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=P6b5SpvwEjV+BFE/E6Ituirw9PELtKQPFGR9OgMNxByWQJFQ6zo3Pb2GCEGAoJoHRg
+         YwgmlHvf5slSI2L8K9HWS7670b4b5WPD0G/THojq2rFB6dhMzA7GlL5wuGEHCROmCk5P
+         k89Sq4+bkLXwab8ZAk1tfM4dEL17A2N6+DcaUUEOH2TQmZpnJqnvx1+e9fSfcg6RXdyb
+         0mo5qol5SyHqylCyc0geKwU+KiO4j6dljvP/W+Y7yEn+R6PAUApvud1wHPUT4qdTcUzP
+         aRnEQMEMeOSZ9+kRGJj2IfYPW6dfQIr+p4eHkU3wXcvoJYGVtdCJ51hCUi6IYVe2VJHs
+         UDCQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@saiyo.jp header.s=20240105 header.b=Xh6OECFS;
+       spf=pass (google.com: domain of softs_recruit@saiyo.jp designates 202.222.81.8 as permitted sender) smtp.mailfrom=softs_recruit@saiyo.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=saiyo.jp
+Return-Path: <softs_recruit@saiyo.jp>
+Received: from smtp01.humanage.co.jp (smtp01.humanage.co.jp. [202.222.81.8])
+        by mx.google.com with ESMTPS id d2e1a72fcca58-82441674709si17788969b3a.55.2026.02.08.20.22.57
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Sun, 08 Feb 2026 20:22:57 -0800 (PST)
+Received-SPF: pass (google.com: domain of softs_recruit@saiyo.jp designates 202.222.81.8 as permitted sender) client-ip=202.222.81.8;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@saiyo.jp header.s=20240105 header.b=Xh6OECFS;
+       spf=pass (google.com: domain of softs_recruit@saiyo.jp designates 202.222.81.8 as permitted sender) smtp.mailfrom=softs_recruit@saiyo.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=saiyo.jp
+Received: from localhost (_gateway [10.13.39.254])
+	by smtp01.humanage.co.jp (Postfix) with ESMTP id 79DD31070013
+	for <raysya.biz@gmail.com>; Mon,  9 Feb 2026 13:22:56 +0900 (JST)
+DKIM-Filter: OpenDKIM Filter v2.11.0 smtp01.humanage.co.jp 79DD31070013
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=saiyo.jp;
+	s=20240105; t=1770610976;
+	bh=m7jMc77yz8yRtXKB2mM0f3TEuo9TUWvT/d2pCWlobQ8=;
+	h=Subject:From:To:Date:From;
+	b=Xh6OECFSaZDopHniVe97zJiwjaNrFgZfbmkIN1b9t4DnzQUA37I/8GJ8fHNp/Ob4N
+	 9hp7CDoDwg7Job0rNF+t+IujUodnI2RCTKzRxbhI+b0JybYzdAEH2f2rnj2Bkvu9or
+	 u31wvAsoApcPwkATHZYEYOYIGWrSeGtJRH/60s1fGJ6vg+kWTyY4mjLjuwaBzgyELT
+	 yat+VFiKboQoXbBxLhzgGv+W0ss/BDXbc0YagVjzdE4kpfHRUXJfjGcdwPhm+c42fk
+	 sYUFwYk0Iu3qOW+P3Sx7Q1Y3hjuRupKbT4QIFxd9aE+hzCJOob1nyinlBGoWD84xiz
+	 2tV7kKPJrP9ZA==
+Subject: =?UTF-8?B?44CQ44K944OV44OI44Km44Kn44Ki44O744K144O844OT44K544CR5Yid5Zue?=
+ =?UTF-8?B?44Ot44Kw44Kk44Oz5omL57aa44GN5a6M5LqG44Gu44GU6YCj57Wh?=
+From: =?UTF-8?B?44K944OV44OI44Km44Kn44Ki44O744K144O844OT44K544CA5o6h55So5ouF?=
+ =?UTF-8?B?5b2T?= <softs_recruit@saiyo.jp>
+To: raysya.biz@gmail.com
+Date: Mon, 09 Feb 2026 13:22:56 +0900
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: base64
+Content-Disposition: inline
+MIME-Version: 1.0
+Message-Id: <20260209042256.79DD31070013@smtp01.humanage.co.jp>
+
+77yz77yo77yl44CA77ys77yp77yu77yn77y677yo77yh77yv44CA5qeYDQoNCuOCveODleOD
+iOOCpuOCp+OCouODu+OCteODvOODk+OCueOAgOaOoeeUqOaLheW9k+OBp+OBmeOAgg0KDQrl
+iJ3lm57jg63jgrDjgqTjg7PmiYvntprjgY3jgYzlrozkuobjgYTjgZ/jgZfjgb7jgZfjgZ/j
+ga7jgafjgZTpgKPntaHjgYTjgZ/jgZfjgb7jgZnjgIINCg0K5LuK5b6M44CB44GC44Gq44Gf
+5bCC55So44Gu44Oa44O844K477yI44Oe44Kk44Oa44O844K477yJ44Gr44Ot44Kw44Kk44Oz
+44GZ44KL44Gr44GC44Gf44KKDQrlv4XopoHjgajjgarjgorjgb7jgZnjga7jgaflpKfliIfj
+gavkv53nrqHjgZfjgabjgYrjgYTjgabjgY/jgaDjgZXjgYTjgIINCuOBvuOBn+OAgeODkeOC
+ueODr+ODvOODieOCguOBguOCj+OBm+OBpuacrOeZu+mMsuOBhOOBn+OBoOOBjeOBvuOBl+OB
+n+WGheWuueOCkuOBiuS9v+OBhOOBj+OBoOOBleOBhOOAgg0K4oC75YWI5pel44GK6YCB44KK
+44GX44G+44GX44Gf44CM5Luu44OR44K544Ov44O844OJ44CN44Gv5L2/55So5LiN5Y+v44Go
+44Gq44KK44G+44GZ44Gu44Gn44GU55WZ5oSP44GP44Gg44GV44GE44CCDQoNCioqKioqKioq
+KioqKioqKioqKioqKioqKioqKioqKioNCuagquW8j+S8muekvuOCveODleODiOOCpuOCp+OC
+ouODu+OCteODvOODk+OCuQ0K5Lq66LKh6YOo44CA5o6h55So5ouF5b2TDQpURUzvvJowNi02
+ODQyLTkyMjgNCk1BSUzvvJpocl9yZWNydWl0QHNvZnRzLmNvLmpwDQoqKioqKioqKioqKioq
+KioqKioqKioqKioqKioqKioqCg==

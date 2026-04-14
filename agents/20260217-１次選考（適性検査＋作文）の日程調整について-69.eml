@@ -1,0 +1,502 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:23c9:b0:325:95ad:e1f5 with SMTP id q9csp2155988lkb;
+        Mon, 16 Feb 2026 22:58:25 -0800 (PST)
+X-Received: by 2002:a05:6a20:d524:b0:38b:ecae:6713 with SMTP id adf61e73a8af0-3946c733510mr12788091637.19.1771311505243;
+        Mon, 16 Feb 2026 22:58:25 -0800 (PST)
+ARC-Seal: i=2; a=rsa-sha256; t=1771311505; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=B+45qFINuIk/1kKsadzu1gjxue63f34RtndBtWUJj9xhuL9cqF4uvxkm0YfX38/usj
+         E2smNLxyCN6YrE2xkEtJjvj5ZlySOSEE8QRagGpo1EyMOj6noyAz2sGqiJpkGZiChJL2
+         67Wvah3r7U1I63BsTn3dsgPx/uzosto6NONx3s5canNt6zzL90B7GimReIpeaB3Pn4Hn
+         q2X4U/3Yjl7CGFy2DetYSstArj0dMid3YPaEtfaBIQ6wSGfHl1qD62YJwQNPWMlN6nfN
+         5QcZpy6yaC4Z4Q9LfzFprRwfv6jAPX0n3YRfV0qqcecbZ/X6Da+152BW6C1MjMk2yWkH
+         ROog==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=cc:to:mime-version:content-language:accept-language:message-id:date
+         :thread-index:thread-topic:subject:from;
+        bh=5URplPlrYfENAU7EP9admQuurijPBgwUXLMzGu8Xh6w=;
+        fh=yyHcLAzbHGv88p6Xs6nkNkxg0ReD+O2+sQh0kXj1OnU=;
+        b=PPSLxlk9f8Fe5j3nX358BNqVhrnC/4/c3/8K1LMXjNrBWiGbw9MhsGSMd/pXDNXUJl
+         /sxhCYJxC4CXp1lN1KJCxAlLzdGc6sxZRVTs4ubCQvwi8ZQ9L20k++H5lk6HyoIRARVi
+         CUaRzjIIpTRi/hzfECMf1s+hzI5OMoDw43wfTLfrtRUk/09drMRGZ5ZQT0oiPo7TLpAn
+         ximHYpBKX/eC5XrD1b2hJYdR6TNvwUaz1RTZvDyNnHmF2U8AM0v9yBI1bN1O3bD10nes
+         LEpKbRjLvObqC1VnIx4vAE/Yba+RROcJhygpg3r6RN2g61ZtBPHdr5zgop87c7b/h2CW
+         F+ug==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       arc=pass (i=1 spf=pass spfdomain=sakura-corp.co.jp dkim=pass dkdomain=sakura-corp.co.jp dmarc=pass fromdomain=sakura-corp.co.jp);
+       spf=pass (google.com: domain of hamaguchi@sakura-corp.co.jp designates 3.115.203.125 as permitted sender) smtp.mailfrom=hamaguchi@sakura-corp.co.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=sakura-corp.co.jp
+Return-Path: <hamaguchi@sakura-corp.co.jp>
+Received: from ps91.spcmail.jp (ps91.spcmail.jp. [3.115.203.125])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c6e53312997si15028569a12.223.2026.02.16.22.58.24
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256);
+        Mon, 16 Feb 2026 22:58:25 -0800 (PST)
+Received-SPF: pass (google.com: domain of hamaguchi@sakura-corp.co.jp designates 3.115.203.125 as permitted sender) client-ip=3.115.203.125;
+Authentication-Results: mx.google.com;
+       arc=pass (i=1 spf=pass spfdomain=sakura-corp.co.jp dkim=pass dkdomain=sakura-corp.co.jp dmarc=pass fromdomain=sakura-corp.co.jp);
+       spf=pass (google.com: domain of hamaguchi@sakura-corp.co.jp designates 3.115.203.125 as permitted sender) smtp.mailfrom=hamaguchi@sakura-corp.co.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=sakura-corp.co.jp
+Received: from ip-10-10-28-85.ap-northeast-1.compute.internal (localhost [127.0.0.1])
+        by ncs92.cs.local (8.18.1/8.17.2) with SMTP id 61H6wNX02097663
+        for <raysya.biz@gmail.com>; Tue, 17 Feb 2026 15:58:23 +0900
+Received: from ip-10-10-32-82.ap-northeast-1.compute.internal (localhost [127.0.0.1])
+	by nmg93.cs.local (Postfix) with SMTP id 4fFVmv6mnczMpshB
+	for <raysya.biz@gmail.com>; Tue, 17 Feb 2026 15:56:47 +0900 (JST)
+Received: from OS0P286CU011.outbound.protection.outlook.com (mail-japanwestazon11020101.outbound.protection.outlook.com [52.101.228.101])
+	by npr93.cs.local (Postfix) with ESMTPS id 4fFVmj4C2Pz3jhrh
+	for <raysya.biz@gmail.com>; Tue, 17 Feb 2026 15:56:37 +0900 (JST)
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=none;
+ b=dz7NzyFSm8cxDB6lXuBdBd3h5esR4oFGc/QLmms9QAMTsfx8fvAMpDBjDD0km38MAxLZjmU+yAaZYFTJaEsK8fIX0u43WfRn+cBFRB/va++/I87/xTWD5VMWEo0gvUra1KXEXb2Cv8leo03dnZLhhmwwTyq9LwfeQ/LpVCCCyDCHgyoSEKBmWdy0yH9V5sH7kyDv0WRTbiqJ0LS/cIB//jHbnhqNTl/I6V0g0GSBUI2NDLGvmroQx8GHE1cTAeV+hjU0i9PDZPS7RX8BuWLTdtJIxo2SfqnxulGB2Y3hPWHJe6faYrvfWt/HhV18bvfuJl05aL98tMLr5pAz2aUNLg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector10001;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=5URplPlrYfENAU7EP9admQuurijPBgwUXLMzGu8Xh6w=;
+ b=NClnAnsYOEWCE7CQwdMf/BptgTLqJOtBmqoU5RLzYQyfojMVAZN/AfHXvDUFn/eAVyvc8n/U6ClpY8Jh84JpIiudUL7Al/2q+9nA9o7Te1Hf3qfJS7IS78uBdckQPP+/DFWT0ckLILPY3I87nQSO5E6XzlqhGW6PIrY7AjWhBGsXVayk7DmdVcXkyYql26q/GJu7ZuCVusjca47IeLPX3oHkt3kh8GJY8oH9QF5x8kN70IuIY6h163jTZU9I2Po7nvS1OrZwaBLpBrwypwV8I4B08cSqhx4jX/vvDX86rn0C/3UMKG73zNUTEWw4H0P9Solnfiq27j6hAPjbPakxmQ==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=sakura-corp.co.jp; dmarc=pass action=none
+ header.from=sakura-corp.co.jp; dkim=pass header.d=sakura-corp.co.jp; arc=none
+Received: from TYRP286MB4325.JPNP286.PROD.OUTLOOK.COM (2603:1096:405:138::12)
+ by TY4P286MB7088.JPNP286.PROD.OUTLOOK.COM (2603:1096:405:344::18) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9611.16; Tue, 17 Feb
+ 2026 06:56:34 +0000
+Received: from TYRP286MB4325.JPNP286.PROD.OUTLOOK.COM
+ ([fe80::50af:667c:c165:af51]) by TYRP286MB4325.JPNP286.PROD.OUTLOOK.COM
+ ([fe80::50af:667c:c165:af51%4]) with mapi id 15.20.9611.013; Tue, 17 Feb 2026
+ 06:56:34 +0000
+From: =?iso-2022-jp?B?GyRCX0A4fRsoQiAbJEI+PEduGyhC?=
+	<hamaguchi@sakura-corp.co.jp>
+Subject:
+ =?iso-2022-jp?B?GyRCIzE8IUEqOU0hSkUsQC04ITo6IVw6bko4IUskTkZ8RHhENEAwGyhC?=
+ =?iso-2022-jp?B?GyRCJEskRCQkJEYbKEI=?=
+Thread-Topic:
+ =?iso-2022-jp?B?GyRCIzE8IUEqOU0hSkUsQC04ITo6IVw6bko4IUskTkZ8RHhENEAwGyhC?=
+ =?iso-2022-jp?B?GyRCJEskRCQkJEYbKEI=?=
+Thread-Index: Adyf2nJbcpxFlXosQ+K0rAPxx9Z6Zw==
+Date: Tue, 17 Feb 2026 06:56:34 +0000
+Message-ID:
+ <TYRP286MB4325D37601CF0F5BB4804845A56DA@TYRP286MB4325.JPNP286.PROD.OUTLOOK.COM>
+Accept-Language: ja-JP, en-US
+Content-Language: ja-JP
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+authentication-results: dkim=none (message not signed)
+ header.d=none;dmarc=none action=none header.from=sakura-corp.co.jp;
+x-ms-publictraffictype: Email
+x-ms-traffictypediagnostic: TYRP286MB4325:EE_|TY4P286MB7088:EE_
+x-ms-office365-filtering-correlation-id: 24280ab8-52a2-436c-e505-08de6df1b04a
+x-ms-exchange-senderadcheck: 1
+x-ms-exchange-antispam-relay: 0
+x-microsoft-antispam:
+ BCL:0;ARA:13230040|1800799024|10070799003|376014|366016|42112799006|14052099004|16092099003|38070700021|8096899003|13003099007;
+x-microsoft-antispam-message-info:
+ =?iso-2022-jp?B?QnFMUmlybEhPSkZQZ3JDZUdjL3lVYmJvNVY3eUlNclZQQmFNNWQ1d0p3?=
+ =?iso-2022-jp?B?R254cld0NWdpdWNRQUJ5c0d0c2I5cUdETlNicTlnTU05bzAxR0k1elNi?=
+ =?iso-2022-jp?B?THlwMmtLelNYODZVT2c2V0xFMVlOaFpzRUkwU3ZiZ1VlQjJTMXNKZ21a?=
+ =?iso-2022-jp?B?ZDkzYkFoMjNJd2VmYXJTQVRFUTN2eWFTbE51UnBvMWcvK0FaVU02Ti9R?=
+ =?iso-2022-jp?B?bkYzYWlLeFVPNGhhc09mM3N5Y1pxZFpFNkNuNndwa2paNFJ0dGU4Vk9K?=
+ =?iso-2022-jp?B?ZjRKbnhrMGE4Y3VnQU1xdmxwUTVMNlIyWCtWamhzMEJoMTZxQ2U5Z3Bm?=
+ =?iso-2022-jp?B?MW9QNmJqeHliWUcvWk1hSXpIMXlyazdFZXlkNFdyMG5QRVVmbzhqa1Zw?=
+ =?iso-2022-jp?B?SHNPVjM1V2NhRDluZS8zOTRZdkE1OUJsVlo2VmtDdnhka0tsRFlKNFZ1?=
+ =?iso-2022-jp?B?cmJQR09hQm4wMGdqbTVxL1hUMXdIeUhMTWt4Nk4yMS9Ca3JQcysyeVlU?=
+ =?iso-2022-jp?B?UkRmQmhpWjBpLzN3T3gxUlBqZG9Qam56ZHBVblBuMHdnWTgrc1A5MkRQ?=
+ =?iso-2022-jp?B?akx4VW94ajZsbkZmSFVSZ2VwdGk2RlNvd3Z3bGdSTkN1SWQxVmM3M2Rq?=
+ =?iso-2022-jp?B?dXVnNDZiSGVRbjk3aVZoaittUjVEOTBhaVV0OW5KSXZEcytYZjhlTVF3?=
+ =?iso-2022-jp?B?L3VCSHdVVDEwNkxIR01YK1BsWWxwbjNPbU05WHRSVklHTytxdUJ3MDJ3?=
+ =?iso-2022-jp?B?U1IzQmhlOTRxVTMybXVqWEV2K0RzTmFsbTJ6VVorVnAyQlNDVG0wbGdX?=
+ =?iso-2022-jp?B?aW0rLzdjazZINTJMUjhUTGVmQlRibXFsZDEvVlA2ZTJxQUlGc3lXK3d3?=
+ =?iso-2022-jp?B?VC8xcm5rZGl3UU1KNmxiQzNWK0JRMERaU1lEblhMQkRKQjFiTnhFdVg2?=
+ =?iso-2022-jp?B?SlFGK3dZWWZrVHI5THZzZk9GZ1dpdHZ6WFNKUWgzNUxuR2RpWjhsVFFr?=
+ =?iso-2022-jp?B?Q3dNU2wxTjJlZzEzYXE0dWt3bDRCTUtsOXFxc0dnM1Y3ekMydzFuNDZo?=
+ =?iso-2022-jp?B?Z1h4U0NnZEJmaTFLZndoNGg5TnJGS3dtR0tJRGlpUVZpNVFZSmc2dHFl?=
+ =?iso-2022-jp?B?c0Z2M3JZQTUxQjJNY2g5b2ZqQnFZUnFNcFJPcDNCUzhnVXJSQVdUcnZw?=
+ =?iso-2022-jp?B?eU1OVTludWlmenVwY05ybVJoa3Zhc0ltVXJsU3BFVHYzT2tnWHpjN0w1?=
+ =?iso-2022-jp?B?WGI3MkdwREZxL0hDTWU3TStqYWp0K2RNZFlxaTg4cWlldEVVeE80dmFw?=
+ =?iso-2022-jp?B?ZTA4YlorZ2pObzl1MFpWYkxWUHZrYUMyOWJFQTNtZWRidDMyenlDSEFM?=
+ =?iso-2022-jp?B?Vi9OVFZkQ0hGLzRjZExqZGpndnZtSXRqRGpMNDNNQmVLUUFmUHVtTFFJ?=
+ =?iso-2022-jp?B?SEJ3WGR3UEpaNDgweHYzRVIxNVVIdldIczNxem1MSldEZVloT3RjNVUv?=
+ =?iso-2022-jp?B?L2txcTJPU0ZwemRSUUtLZURlZWpXa2podk9XY013Y1ptckFIVEM0T3lD?=
+ =?iso-2022-jp?B?TDNLSmlQODlMMDRIWkpoRE8yWmdNRWJVWFd4MHBhREp5QWQ0aUVHN1BM?=
+ =?iso-2022-jp?B?R3kzNnpHdldXOFV6MGtSQUJ3b3ZjYjJSVWZXRHA3VVFjYk9mTDBWaUQ1?=
+ =?iso-2022-jp?B?STNVVFZXK3E5Y1VWdTNCKzR4WTZHb1RobVU2V3QvRHh1Y1JieEw4dVZT?=
+ =?iso-2022-jp?B?bnVNL1FrSE1tQk1YdTl5cWxEMmZFL2ZuMkJveVIzUzNIdy81Q3B0dE0r?=
+ =?iso-2022-jp?B?aHEzSlVocUtGaEVoOGNxSW1mblArT2tRek5hZjF1TGlrcVVKQ2xqbEFv?=
+ =?iso-2022-jp?B?d01QTE9iNlZRcnV3ODMxWUF5Y085UWZ2Z0JnRlN6TWV1RmhESnoyM1dY?=
+ =?iso-2022-jp?B?ZTQwVHA1NW5mbFdZWG1SUStLaGNDSUc4QlMvUDcxNitBOHlyVkpmZmZP?=
+ =?iso-2022-jp?B?M0d0ZEFvK0R6Rzlxc1Q3LytYMDdBVWp4WS8ySFZSTWVHZWlTUnpuQ001?=
+ =?iso-2022-jp?B?L1lGOFQ3TmNNQkR0VThQY3RZQVJ3YnZZNUU2WXVST2Z6d2d0YkpobnV2?=
+ =?iso-2022-jp?B?dkYzOVFkZk5xTnBmNGVPTzNXd0ZzWVZsR2xGRDRJMXo2TmdZWUlEWEUy?=
+ =?iso-2022-jp?B?NEdCK25mRTR0SUxLM0l4S3U4TGlueVRSV3ViZTY2TXZ5UlRJN0taRzBO?=
+ =?iso-2022-jp?B?TkZXazRtc1Vqc2JTUlpuUFhUcU85OXc4VWV1WDdXMmZ3ZXF1eVJIb1Zt?=
+ =?iso-2022-jp?B?a05kLw==?=
+x-forefront-antispam-report:
+ CIP:255.255.255.255;CTRY:;LANG:ja;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:TYRP286MB4325.JPNP286.PROD.OUTLOOK.COM;PTR:;CAT:NONE;SFS:(13230040)(1800799024)(10070799003)(376014)(366016)(42112799006)(14052099004)(16092099003)(38070700021)(8096899003)(13003099007);DIR:OUT;SFP:1102;
+x-ms-exchange-antispam-messagedata-chunkcount: 2
+x-ms-exchange-antispam-messagedata-0:
+ =?iso-2022-jp?B?Wlk3djZFSy9zZGtVSWVLZmRvZFBwcS84UEZ0U0dkRlV1Uk9BMHVCVnJh?=
+ =?iso-2022-jp?B?OXdHQ1RFVks4RlVWWXk3b3I2dFZWb0NtdytwNzdpVXJlM2g1N3pCK2xt?=
+ =?iso-2022-jp?B?MHZYZXVqYm8zVDhLbmRsSUp5UHN1Sm1vVHptMWNpTE1TOE1rKzNSZzlH?=
+ =?iso-2022-jp?B?bTdmUDNJQkdiQXp2U1Z1QWZKYUs3aG5CZVhGVG5wdUNsTHNyUGZpakhM?=
+ =?iso-2022-jp?B?Ukw5WUhCL2Rtb1RsZUNyeG8rUzJVYXc0QjZMZUJGUGlzS0w4UDRQWDRy?=
+ =?iso-2022-jp?B?V1FnZk1VZ2d6MWtTWExIUWZsUXp3V1lwRk9JenpzUHRNSS9RUlVOQUtN?=
+ =?iso-2022-jp?B?K2dkM1kzYUVESkp6akhuS3BtM0xnaENJRzJEOXF1ZE10T0RMTXRSSkpv?=
+ =?iso-2022-jp?B?NmpJQTBWeThHMlN4ZXhLUVdBMklyODRrdFVjVVNaMHlHdnVtYzBYVThm?=
+ =?iso-2022-jp?B?LzVoMlpuaTBrVCswWEVXSkE2MHZKK0kzc2JOK3RaODJpM29TSzVjb2l1?=
+ =?iso-2022-jp?B?S1JrNVNFU28rZWNkbllqZ1NuNng5UEJtdDhBb2hERFJKWGxXR3Y4K1J0?=
+ =?iso-2022-jp?B?ellTNzQ3aVBXc0xLdjRDWVBwR2NZOUtjUkl3dXpPRkcwRVMxZWh6TnJN?=
+ =?iso-2022-jp?B?VldqcEhXbHlsZE9uMlVpVnYyOHh3SVNRT1B4bENMSHRIOVFRRjg2Nytt?=
+ =?iso-2022-jp?B?a2NVMDNHdi9taGU4OTBvWUZ5d09DaTBCY1dtLzhjOU8xaHVMa0pON2xw?=
+ =?iso-2022-jp?B?ZlJYNXE1blZHSlorZExNNkcyaFB2Qzd2Z1kwN2hKUk42cGxGbnVzOWpM?=
+ =?iso-2022-jp?B?cEJiMkU2UHY0OWRJS3VPUHpmSmIvSlRSMGQwa1Vvc0NKc3hGc3BYVmt0?=
+ =?iso-2022-jp?B?V25mZUlBbVlBcUt5a2FrcjR5Vm1YSGs1dkFmcHpDSjEvMnczVUxXbzl4?=
+ =?iso-2022-jp?B?S0tqejJOWUlEbWg2b1JPNURYOWhPVGM2MlY0Mk5lYncrTHRlZVV3K051?=
+ =?iso-2022-jp?B?cmhKT0ZESmVEdWRMbFRuWm53cmVCUnp5VHRVb1R6a3dybFhvbEVNaEFV?=
+ =?iso-2022-jp?B?TXBhSUxtQnBzelJHeHFFbmIzTGxWdnEvRHVyRWwvcko5QWcrTVhjcUZE?=
+ =?iso-2022-jp?B?SEU1a0kyS1UrVlVoV1ZkUEtzZitjSTNrZnZRWlcwMGd2dDJFTjNZbnox?=
+ =?iso-2022-jp?B?UW5qSWZWRFVybnRJb1BzaW1JOW9VOXM1OEdJSlp3SEc1aVI5Z2VPcjFo?=
+ =?iso-2022-jp?B?dWlUKzF4cmR2dDNNQmN6ejJuWjZTZW55Z2VFa3JVVnlZcElLWHNXeERO?=
+ =?iso-2022-jp?B?V3VtenRxNjh0WjQxTHB1TUpFSHRBK0crMTM4Q0VSaFdxSmc0ajdONzJ6?=
+ =?iso-2022-jp?B?QkdPdFRTcE5mcVR4aTJadmtVcElNZEN3M3lhNkFmTnJRejRuUzJxejdn?=
+ =?iso-2022-jp?B?RHVIcmFvYW1oSkZXTWFLTG1CanY5YnJXYllpSGtxSkFiUmFQa0t0V1Va?=
+ =?iso-2022-jp?B?S3YwTk5zZjZ6UTlKYkY2Q1ZwemFJY2JOSkROYW1meGFveEJOcVpCRkpQ?=
+ =?iso-2022-jp?B?dVR6UXJDYU9xakVxV3k4TEpNWmdOTktHNnpJQmhSTFU5WWZudmFYajlN?=
+ =?iso-2022-jp?B?RHowbjlFU2xrOHdCTnlBVHA0TmgxU3BGKzZpSkdGZmY1RkJnQ0JqKzNp?=
+ =?iso-2022-jp?B?RDlHVjIrMU9GSUhicmFIYW9MVEp1STlqalgxbWZJT2poU1VkZ1p2S1NU?=
+ =?iso-2022-jp?B?QVBETUNPamlETy9CekhpTnlaQ29WZVFtWERDRmV5eWFPaTJ2OG5vUFJX?=
+ =?iso-2022-jp?B?R2dHRHlKbFVzNzdvNDZVY3hCVFcvU2FEM1haMnVnakRNN2N5SmZyQjhk?=
+ =?iso-2022-jp?B?VHJ3bUJ1MUU2Q2xobEVVTDQvbGdjNnpSRXBGMzg0ZGM1cGJyUDZNY0JF?=
+ =?iso-2022-jp?B?d3duL29iSmJNZlpybTdHTmt2QXVoYnlGNC80cUdFSHo4YWJFUHRnLzdU?=
+ =?iso-2022-jp?B?RVhHbTlzRFJPUkpBOUxQaGRrR2czRlFrWTJWTSsrMEFMS0Z6ZnE4UWFB?=
+ =?iso-2022-jp?B?ZjFBRUxZTFdEK3JkUkNCdWpUVmdnSXd1S2hVZGlLVnZnYWR0eDM3aW51?=
+ =?iso-2022-jp?B?UkpHSE1UTWYvSnBvQVJTQmFYL2FMVy84KzRnM1hUSGZUcHZXb3hMTUdn?=
+ =?iso-2022-jp?B?Y2Yza2tuZkpaUTJDeU1qQUMreW1uMThjN1lWeFhFZ3A5OFE4dHJzN1Vv?=
+ =?iso-2022-jp?B?VzRpRmVtWW50ei8vaGZKeFZXb010VlAzRFI0VTVFT0pwbGMwcHdVTk9i?=
+ =?iso-2022-jp?B?K3M0RndCWUlLa3VzSGp3VWc4ZzJPeHJhM0FpMVJHcmUrWC9IS0lQa09l?=
+ =?iso-2022-jp?B?KzcvU3dQbmZUdjFuQnd6NEJGY3NLOUpmeDJWT3ZYSi9Lc2VVajVKWEFX?=
+ =?iso-2022-jp?B?bktTUTBnTmxURGVHYmJrNkVYZWphTlJMUDVuYlphSnNjamgvVVc0aTA5?=
+ =?iso-2022-jp?B?K1ZzMXI5RUJjVW9LMUlCaXJaMGdRYmVSa0NYMzBTTzgzWjA5K1FQTnJJ?=
+ =?iso-2022-jp?B?cHZGQmhYcHBxeElpV21ITGZWbnpzcW9PbEtEcVVIenhJbHQ3?=
+x-ms-exchange-antispam-messagedata-1: dW0BdNtVHNNKqQ==
+Content-Type: multipart/alternative;
+	boundary="_000_TYRP286MB4325D37601CF0F5BB4804845A56DATYRP286MB4325JPNP_"
+MIME-Version: 1.0
+X-MS-Exchange-AntiSpam-ExternalHop-MessageData-ChunkCount: 1
+X-MS-Exchange-AntiSpam-ExternalHop-MessageData-0:
+	NsFSithyDwsKlsA5l395dLJZM784N2rUthlIums+B2RFGBflgoR5tlkxOm7SbdeoUYszKqqPdcF4L8Q01PEF9MM77lBGKPlaTSyQk/U/OnuPQOTrzciof/aTOfpmR6LAo3yYZABULJKuB8uI+x7nleO/H4qX8STSUxXbZlUfZSCRJE4iCZyY8+i5SLhTXGvj0HAk5zIhn8HfU1tgDMPxefaDS+4pp9DUwqhIX2DZCDO70lMm4IH9omk2A0idkoL5IkSpZ00+9eKOewTBhySGTrMzeQkMh/ydJTld4iswo8igS/GIcsYl67OV3q4NZYiPoNeTY4KIM0J2cdWlosGVMV8SCgPmt/jnB8J5kOOBlZ1n0ubGowmP5VX+gdTlGMfgGliUsS06btgxz7BTLDhntFzX/GFbvwX3gx/s4xDqvpEWANovcBR5OeJc37fFP+6pLg3VpBMAJN0x20GSKcBHhtFC7kJxyFQ3IEBHB81VCBemO11QzAnRuzCbRz69Quq1POIv6CpdMzs+RdTUwbQLp9TmjIVi+hFvJXWmEMIolxb5xEmOdf0qwD7LNAu+QXNXtBAzYNeWfNxRsAq3xrLvK3RLuTbh5Er8Dr38D9V/SfDSxbiZDzZy7Il+VuU0bHVXU/+IW3nw51i5nBIsBhnjGTmjx1qGntBoiLRa97aCfFhMJRHpv62dRVfq9KGDpF9iTIZi4rYEF/t80lEB/WLqCpnr/NAxv2C7mggrMpmepMi096/QaSo3huw3LN7LUYM0b1g09b9tTKOXfR13hxdx4w==
+X-OriginatorOrg: sakura-corp.co.jp
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-AuthSource: TYRP286MB4325.JPNP286.PROD.OUTLOOK.COM
+X-MS-Exchange-CrossTenant-Network-Message-Id: 24280ab8-52a2-436c-e505-08de6df1b04a
+X-MS-Exchange-CrossTenant-originalarrivaltime: 17 Feb 2026 06:56:34.5359
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Hosted
+X-MS-Exchange-CrossTenant-id: d949ce7b-b7ea-4295-a7eb-11ca3ae68152
+X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
+X-MS-Exchange-CrossTenant-userprincipalname: QQYo/3We8sFHlHpqrXs+JfU+QPgLANa6Lv82gpKaHQPi9ocy0dDN8iYKNfdi/gH8HqCDgOkGyle/eC/3U42arE6hG6E8I4/Ua3a9AvowQiY=
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: TY4P286MB7088
+X-CC-Mail-RelayStamp:CC/Mail Relayed
+X-CC-Mail-RelayStamp: CC/Mail EncServer Relayed
+To: "raysya.biz@gmail.com" <raysya.biz@gmail.com>
+Cc: =?iso-2022-jp?B?GyRCQj9FRBsoQiAbJEJJcD9NGyhC?= <tada@sakura-corp.co.jp>,
+        =?iso-2022-jp?B?GyRCS1xFRDszGyhCIBskQjhnGyhC?= <hondayama@sakura-corp.co.jp>,
+        =?iso-2022-jp?B?GyRCTFpFRBsoQiAbJEJCdkxpGyhC?= <kida@sakura-corp.co.jp>,
+        =?iso-2022-jp?B?GyRCMGY+ZRsoQiAbJEIxVzBsGyhC?= <m-inoue@sakura-corp.co.jp>
+
+--_000_TYRP286MB4325D37601CF0F5BB4804845A56DATYRP286MB4325JPNP_
+Content-Type: text/plain; charset="iso-2022-jp"
+Content-Transfer-Encoding: quoted-printable
+
+=1B$BN)L?4[Bg3X=1B(B =1B$B%7%c=1B(B =1B$B%l%$%7%g%&$5$^=1B(B
+
+
+=1B$B$3$s$K$A$O!#$5$/$i%3!<%]%l!<%7%g%s:NMQC4Ev$N_@8}$G$9!#=1B(B
+
+
+
+=1B$BK\F|$O5.=3DE$J$*;~4V$r$$$?$@$-$^$7$F!"$"$j$,$H$&$4$6$$$^$7$?!#=1B(B
+
+=1B$BJ@<R$NF~<R;n83$r<u$1$F$$$?$@$1$k$H$$$&;v$G!"$H$F$b4r$7$/;W$C$F$$$^$9!#=
+=1B(B
+
+=1B$B%7%c=1B(B =1B$B%l%$%7%g%&MM$KJ@<R$NL%NO$r46$8$F$$$?$@$1$^$7$?$i!"9,$$$=
+G$9!#=1B(B
+
+
+
+=1B$B"#A*9MF|8uJdF|=1B(B
+
+=1B$B!!!&#2#0#2#6G/#0#27n#2#4F|!J2P!K#1#4;~3+;O=1B(B
+
+=1B$B!!!&#2#0#2#6G/#0#27n#2#5F|!J?e!K#1#4;~3+;O=1B(B
+
+=1B$B!!!&#2#0#2#6G/#0#37n#0#5F|!JLZ!K#1#0;~3+;O=1B(B
+
+=1B$B!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!=1B(B =1B$B#1#4;~3+;O=1B(B
+
+=1B$B!!!&#2#0#2#6G/#0#37n#0#6F|!J6b!K#1#4;~3+;O=1B(B
+
+
+
+=1B$B"#>l=3Dj=1B(B
+
+=1B$B!!CfG7Eg%@%$%S%k#1#03,!J=3D;=3Dj!'Bg:e;TKL6hCfG7Eg=1B(B3-3-23=1B$B!K=
+=1B(B
+
+
+
+=1B$B"#;}$AJ*=1B(B
+
+=1B$BI.5-MQ6q=1B(B
+
+
+
+=1B$B"#;n83FbMF=1B(B
+
+=1B$B!!-!E,@-8!::!":nJ8=1B(B
+
+=1B$B!!!!!&#2;~4VDxEY=1B(B
+
+
+
+=1B$B8uJdF|$r3NG'$7$F$$$?$@$-!";22C2DG=3D$G$"$l$P!"F|Dx$K$D$$$F$*CN$i$;$/$@=
+$5$$!#=1B(B
+
+=1B$B>e5-$NF|Dx$G$N;22C$,Fq$7$$>l9g$O!"2~$a$FD4@0$5$;$F$$$?$@$-$^$9!#=1B(B
+
+
+
+=1B$B2?B4$h$m$7$/$*4j$$?=3D$7>e$2$^$9!#=1B(B
+
+
+
+=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B=
+(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=
+=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$=
+B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/
+
+=1B$B3t<02q<R$5$/$i%3!<%]%l!<%7%g%s=1B(B
+
+=1B$B%7%9%F%`;v6HIt=1B(B =1B$B4X@>%j!<%8%g%s=1B(B =1B$B4X@>%j!<%8%g%s-6=1B(=
+B
+
+=1B$B_@8}!!><Gn=1B(B
+
+=1B$B")=1B(B530-6110 =1B$BBg:e;TKL6hCfG7Eg#3CzL\#3HV#2#39fCfG7Eg%@%$%S%k#1#=
+03,=1B(B
+
+TEL=1B$B!'=1B(B06=1B$B!>=1B(B6690=1B$B!>=1B(B8218=1B$B!!=1B(B/=1B$B!!=1B(BF=
+AX=1B$B!'=1B(B06=1B$B!>=1B(B6690=1B$B!>=1B(B8499
+
+Mail=1B$B!'=1B(Bhamaguchi@sakura-corp.co.jp<mailto:hamaguchi@sakura-corp.co=
+.jp>
+
+URL=1B$B!'=1B(Bhttps://www.sakura-corp.co.jp/
+
+=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B=
+(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=
+=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/=1B$=
+B!2=1B(B/=1B$B!2=1B(B/=1B$B!2=1B(B/
+
+
+--_000_TYRP286MB4325D37601CF0F5BB4804845A56DATYRP286MB4325JPNP_
+Content-Type: text/html; charset="iso-2022-jp"
+Content-Transfer-Encoding: quoted-printable
+
+<html xmlns:o=3D"urn:schemas-microsoft-com:office:office" xmlns:w=3D"urn:sc=
+hemas-microsoft-com:office:word" xmlns:m=3D"http://schemas.microsoft.com/of=
+fice/2004/12/omml" xmlns=3D"http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Diso-2022-=
+jp">
+<meta name=3D"Generator" content=3D"Microsoft Word 15 (filtered medium)">
+<style><!--
+/* Font Definitions */
+@font-face
+	{font-family:"=1B$B#M#S=1B(B =1B$BL@D+=1B(B";
+	panose-1:2 2 6 9 4 2 5 8 3 4;}
+@font-face
+	{font-family:"Cambria Math";
+	panose-1:2 4 5 3 5 4 6 3 2 4;}
+@font-face
+	{font-family:=1B$B^b%4%7%C%/=1B(B;
+	panose-1:2 11 4 0 0 0 0 0 0 0;}
+@font-face
+	{font-family:"=1B$B#M#S=1B(B =1B$B#P%4%7%C%/=1B(B";
+	panose-1:2 11 6 0 7 2 5 8 2 4;}
+@font-face
+	{font-family:"\@=1B$B^b%4%7%C%/=1B(B";
+	panose-1:2 11 4 0 0 0 0 0 0 0;}
+@font-face
+	{font-family:"\@=1B$B#M#S=1B(B =1B$B#P%4%7%C%/=1B(B";}
+@font-face
+	{font-family:"\@=1B$B#M#S=1B(B =1B$BL@D+=1B(B";
+	panose-1:2 2 6 9 4 2 5 8 3 4;}
+/* Style Definitions */
+p.MsoNormal, li.MsoNormal, div.MsoNormal
+	{margin:0mm;
+	text-align:justify;
+	text-justify:inter-ideograph;
+	font-size:10.5pt;
+	font-family:=1B$B^b%4%7%C%/=1B(B;}
+a:link, span.MsoHyperlink
+	{mso-style-priority:99;
+	color:#467886;
+	text-decoration:underline;}
+p.MsoPlainText, li.MsoPlainText, div.MsoPlainText
+	{mso-style-priority:99;
+	mso-style-link:"=1B$B=3Dq<0$J$7=1B(B \(=1B$BJ8;z=1B(B\)";
+	margin:0mm;
+	font-size:10.0pt;
+	font-family:"=1B$B#M#S=1B(B =1B$B#P%4%7%C%/=1B(B";}
+span.17
+	{mso-style-type:personal-compose;
+	font-family:"=1B$B#M#S=1B(B =1B$B#P%4%7%C%/=1B(B";
+	color:windowtext;
+	font-weight:normal;
+	font-style:normal;}
+span.a
+	{mso-style-name:"=1B$B=3Dq<0$J$7=1B(B \(=1B$BJ8;z=1B(B\)";
+	mso-style-priority:99;
+	mso-style-link:=1B$B=3Dq<0$J$7=1B(B;
+	font-family:"=1B$B#M#S=1B(B =1B$B#P%4%7%C%/=1B(B";
+	mso-ligatures:none;}
+.MsoChpDefault
+	{mso-style-type:export-only;
+	font-size:11.0pt;}
+/* Page Definitions */
+@page WordSection1
+	{size:612.0pt 792.0pt;
+	margin:99.25pt 30.0mm 30.0mm 30.0mm;}
+div.WordSection1
+	{page:WordSection1;}
+--></style>
+</head>
+<body lang=3D"JA" link=3D"#467886" vlink=3D"#96607D" style=3D"word-wrap:bre=
+ak-word;text-justify-trim:punctuation">
+<div class=3D"WordSection1">
+<p class=3D"MsoNormal"><span style=3D"font-size:10.0pt;font-family:&quot;=
+=1B$B#M#S=1B(B =1B$B#P%4%7%C%/=1B(B&quot;">=1B$BN)L?4[Bg3X=1B(B =1B$B%7%c=
+=1B(B =1B$B%l%$%7%g%&$5$^=1B(B<span lang=3D"EN-US"><o:p></o:p></span></span=
+></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:10.0pt;font-=
+family:&quot;=1B$B#M#S=1B(B =1B$B#P%4%7%C%/=1B(B&quot;"><o:p>&nbsp;</o:p></=
+span></p>
+<p class=3D"MsoPlainText">=1B$B$3$s$K$A$O!#$5$/$i%3!<%]%l!<%7%g%s:NMQC4Ev$N=
+_@8}$G$9!#=1B(B<span lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoPlainText">=1B$BK\F|$O5.=3DE$J$*;~4V$r$$$?$@$-$^$7$F!"$"$j$,=
+$H$&$4$6$$$^$7$?!#=1B(B<span lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$BJ@<R$NF~<R;n83$r<u$1$F$$$?$@$1$k$H$$$&;v$G!"=
+$H$F$b4r$7$/;W$C$F$$$^$9!#=1B(B<span lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B%7%c=1B(B =1B$B%l%$%7%g%&MM$KJ@<R$NL%NO$r46$=
+8$F$$$?$@$1$^$7$?$i!"9,$$$G$9!#=1B(B<span lang=3D"EN-US"><o:p></o:p></span>=
+</p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B"#A*9MF|8uJdF|=1B(B<span lang=3D"EN-US"><o:p=
+></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B!!!&#2#0#2#6G/#0#27n#2#4F|!J2P!K#1#4;~3+;O=
+=1B(B<span lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B!!!&#2#0#2#6G/#0#27n#2#5F|!J?e!K#1#4;~3+;O=
+=1B(B<span lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B!!!&#2#0#2#6G/#0#37n#0#5F|!JLZ!K#1#0;~3+;O=
+=1B(B<span lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!=1B(B =1B$=
+B#1#4;~3+;O=1B(B<span lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B!!!&#2#0#2#6G/#0#37n#0#6F|!J6b!K#1#4;~3+;O=
+=1B(B<span lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B"#>l=3Dj=1B(B<span lang=3D"EN-US"><o:p></o:p=
+></span></p>
+<p class=3D"MsoPlainText">=1B$B!!CfG7Eg%@%$%S%k#1#03,!J=3D;=3Dj!'Bg:e;TKL6h=
+CfG7Eg=1B(B<span lang=3D"EN-US">3-3-23</span>=1B$B!K=1B(B<span lang=3D"EN-U=
+S"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B"#;}$AJ*=1B(B<span lang=3D"EN-US"><o:p></o:p=
+></span></p>
+<p class=3D"MsoPlainText">=1B$BI.5-MQ6q=1B(B<span lang=3D"EN-US"><o:p></o:p=
+></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B"#;n83FbMF=1B(B<span lang=3D"EN-US"><o:p></o=
+:p></span></p>
+<p class=3D"MsoPlainText">=1B$B!!-!E,@-8!::!":nJ8=1B(B<span lang=3D"EN-US">=
+<o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B!!!!!&#2;~4VDxEY=1B(B<span lang=3D"EN-US"><o=
+:p></o:p></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B8uJdF|$r3NG'$7$F$$$?$@$-!";22C2DG=3D$G$"$l$P=
+!"F|Dx$K$D$$$F$*CN$i$;$/$@$5$$!#=1B(B<span lang=3D"EN-US"><o:p></o:p></span=
+></p>
+<p class=3D"MsoPlainText">=1B$B>e5-$NF|Dx$G$N;22C$,Fq$7$$>l9g$O!"2~$a$FD4@0=
+$5$;$F$$$?$@$-$^$9!#=1B(B<span lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B2?B4$h$m$7$/$*4j$$?=3D$7>e$2$^$9!#=1B(B<span=
+ lang=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US"><o:p>&nbsp;</o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=
+=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=
+=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/=
+</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"E=
+N-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span la=
+ng=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<=
+span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!=
+2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span=
+>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">=
+/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"=
+EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span l=
+ang=3D"EN-US">/<o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B3t<02q<R$5$/$i%3!<%]%l!<%7%g%s=1B(B<span lan=
+g=3D"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B%7%9%F%`;v6HIt=1B(B =1B$B4X@>%j!<%8%g%s=1B(B=
+ =1B$B4X@>%j!<%8%g%s=1B(B<span style=3D"font-family:&quot;=1B$B#M#S=1B(B =
+=1B$BL@D+=1B(B&quot;,serif">=1B$B-6=1B(B</span><span lang=3D"EN-US"><o:p></=
+o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B_@8}!!><Gn=1B(B<span lang=3D"EN-US"><o:p></o=
+:p></span></p>
+<p class=3D"MsoPlainText">=1B$B")=1B(B<span lang=3D"EN-US">530-6110 </span>=
+=1B$BBg:e;TKL6hCfG7Eg#3CzL\#3HV#2#39fCfG7Eg%@%$%S%k#1#03,=1B(B<span lang=3D=
+"EN-US"><o:p></o:p></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US">TEL</span>=1B$B!'=1B(B<span =
+lang=3D"EN-US">06</span><span lang=3D"EN-US" style=3D"font-family:&quot;Cam=
+bria Math&quot;,serif">=1B$B!>=1B(B</span><span lang=3D"EN-US">6690</span><=
+span lang=3D"EN-US" style=3D"font-family:&quot;Cambria Math&quot;,serif">=
+=1B$B!>=1B(B</span><span lang=3D"EN-US">8218</span>=1B$B!!=1B(B<span lang=
+=3D"EN-US">/</span>=1B$B!!=1B(B<span lang=3D"EN-US">FAX</span>=1B$B!'=1B(B<=
+span lang=3D"EN-US">06</span><span lang=3D"EN-US" style=3D"font-family:&quo=
+t;Cambria Math&quot;,serif">=1B$B!>=1B(B</span><span lang=3D"EN-US">6690</s=
+pan><span lang=3D"EN-US" style=3D"font-family:&quot;Cambria Math&quot;,seri=
+f">=1B$B!>=1B(B</span><span lang=3D"EN-US">8499
+<o:p></o:p></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US">Mail</span>=1B$B!'=1B(B<span=
+ lang=3D"EN-US"><a href=3D"mailto:hamaguchi@sakura-corp.co.jp">hamaguchi@sa=
+kura-corp.co.jp</a>
+<o:p></o:p></span></p>
+<p class=3D"MsoPlainText"><span lang=3D"EN-US">URL</span>=1B$B!'=1B(B<span =
+lang=3D"EN-US"><a href=3D"https://www.sakura-corp.co.jp/">https://www.sakur=
+a-corp.co.jp/</a><o:p></o:p></span></p>
+<p class=3D"MsoPlainText">=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=
+=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=
+=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/=
+</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"E=
+N-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span la=
+ng=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<=
+span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!=
+2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span=
+>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">=
+/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span lang=3D"=
+EN-US">/</span>=1B$B!2=1B(B<span lang=3D"EN-US">/</span>=1B$B!2=1B(B<span l=
+ang=3D"EN-US">/<o:p></o:p></span></p>
+<p class=3D"MsoNormal"><span lang=3D"EN-US" style=3D"font-size:10.0pt;font-=
+family:&quot;=1B$B#M#S=1B(B =1B$B#P%4%7%C%/=1B(B&quot;"><o:p>&nbsp;</o:p></=
+span></p>
+</div>
+</body>
+</html>
+
+--_000_TYRP286MB4325D37601CF0F5BB4804845A56DATYRP286MB4325JPNP_--
+
+
+

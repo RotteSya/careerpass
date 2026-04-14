@@ -1,0 +1,99 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:4189:b0:32f:2baf:8ecc with SMTP id xu9csp668047lkb;
+        Mon, 23 Mar 2026 00:50:34 -0700 (PDT)
+X-Received: by 2002:a17:902:d541:b0:2b0:5cb3:e4bc with SMTP id d9443c01a7336-2b0826f6b0dmr107838905ad.16.1774252234401;
+        Mon, 23 Mar 2026 00:50:34 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1774252234; cv=none;
+        d=google.com; s=arc-20240605;
+        b=R1N/fnkyYnEgGkR0yfm45ELwfQ3KKE+JAXRAQeh0dkWyPusKZosAM5+jQMiSYu0pep
+         vRlUPiB2QmlJ1VHVICQbNxkYpR03fgrKB46KQf8Hhxv1shoWpIFbLqv6sebdwx0ige7O
+         maj0YFzQVJNamCKYybsb1HHpUkwUOBuEqUWAX1aDDg2kL8S2ducugddP73+wkm3j5zep
+         FOjq+v3psNF6UPD/xJH21dnrW76dCGi762ktYBx9oV9Z+dzuEdfIErZW4nQXTroRo3Iu
+         /8/Yf2UDU4JV17iSzxdX0vVQEvOyvTzDixz00fpEBFoLBzd3c7icBDELIUWWsjGUU93h
+         mUrw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:mime-version:subject:to:from:date
+         :message-id:dkim-signature;
+        bh=Av3RPne6O/8cz+k3E6ldgVcOpi0EfRW9H5Qbc8kZb9E=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=fGD5Eck9qWq4+Q2UcrGaNDazykQdbZANBeyh8zczyrYtD6UV+C9MAVohzz8RwfjICU
+         br4261B6g6sTjBQvg7TDmHcBWGuqeOKgkMXPbtdautmNO4c+GF5vNNAA3QGIh2+EBr8X
+         NNzEiZdEC1sb0WnzkqrT2loDSDH2/Dsi4ZbNVssbNVPRzB7e5HINZfKkkyN/K90BibTy
+         ZnANO3/Mc6CRHIVcSOmB2AV1AjuCPZSgOzErpjouf88L/5PqtO3cCoDIJdAxq4/4MaUW
+         sU0Hf1eTgnSszG8h62D8tJjyzdGT2HZY3jt8janMSOC8UKvXiyM6UlZa2VtmsKieSNf0
+         YHhw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@e2r.jp header.s=20231218 header.b=PSq27fS5;
+       spf=pass (google.com: domain of panasonic2027@e2r.jp designates 61.121.214.123 as permitted sender) smtp.mailfrom=panasonic2027@e2r.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=e2r.jp
+Return-Path: <panasonic2027@e2r.jp>
+Received: from mail22.e2r.jp (e2r.jp. [61.121.214.123])
+        by mx.google.com with ESMTPS id d9443c01a7336-2b08350a331si147460855ad.1.2026.03.23.00.50.33
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Mon, 23 Mar 2026 00:50:34 -0700 (PDT)
+Received-SPF: pass (google.com: domain of panasonic2027@e2r.jp designates 61.121.214.123 as permitted sender) client-ip=61.121.214.123;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@e2r.jp header.s=20231218 header.b=PSq27fS5;
+       spf=pass (google.com: domain of panasonic2027@e2r.jp designates 61.121.214.123 as permitted sender) smtp.mailfrom=panasonic2027@e2r.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=e2r.jp
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=e2r.jp; s=20231218;
+	t=1774252038; bh=Av3RPne6O/8cz+k3E6ldgVcOpi0EfRW9H5Qbc8kZb9E=;
+	h=Date:From:To:Subject:From;
+	b=PSq27fS5x+sH1gyBFtZNfG2o3Ak/TDY/dQcoKn6j1oi/fmdOdY0cAs5QsJX4T5QC4
+	 2reN7QUd2I2aIz50ZgA9Bxf2Gi9GTPwylPlVL9o6BVgZ0kT1IWEn/bHKLZgmDVFZX9
+	 Qe6yoa5T9FzW5SSS9CbJbOlADiXtt6if3udUeIjhG3uu7kmIjX0Rejy8d+VDb5o8nh
+	 NZvIkU+6ob30gkz35NkFER3tonSIPVTnmVfwQGvnXRq7hfIb50Zpvv7GQC6af5R/U/
+	 3Uj8+gThl4tCZs3P6Bj93tpuERoUDMqkiYX9twmIv6zQK2XhxesMIu+LuOffh327k/
+	 uFvBgNdXaFf4g==
+Received: from mail21.e2r.jp (recmail21 [10.100.98.21])
+	by mail22.e2r.jp (Postfix) with ESMTP id 183AE2A81325
+	for <raysya.biz@gmail.com>; Mon, 23 Mar 2026 16:47:18 +0900 (JST)
+Received: from recmail21 (recmail21 [127.0.0.1])
+	by mail21.e2r.jp (Postfix) with ESMTP id 0CFF3216C3E2
+	for <raysya.biz@gmail.com>; Mon, 23 Mar 2026 16:47:18 +0900 (JST)
+Message-ID: <32011732.1774252038051.JavaMail.bea@recmail21>
+Date: Mon, 23 Mar 2026 16:47:18 +0900 (JST)
+From: 
+	=?ISO-2022-JP?B?GyRCJVElSiU9JUslQyUvJTAlayE8JVchITpOTVFDNEV2GyhC?= <panasonic2027@e2r.jp>
+To: raysya.biz@gmail.com
+Subject: =?ISO-2022-JP?B?GyRCIVo7dkwzN08/JjxvO1ZLPjxUOH4kMSFbNEQ2LRsoQg==?=
+ =?ISO-2022-JP?B?GyRCPyYkQyRGJEkkcyRKO0U7diEpJTslXyVKITwkchsoQg==?=
+ =?ISO-2022-JP?B?GyRCREwkOCRGNEQ2LSRYJE48aEFIJHJNfTJyJDckaBsoQg==?=
+ =?ISO-2022-JP?B?GyRCJCYhKiFKJVElSiU9JUslQyUvJTAlayE8JVchSxsoQg==?=
+Mime-Version: 1.0
+Content-Type: text/plain; charset=ISO-2022-JP
+Content-Transfer-Encoding: quoted-printable
+
+=1B$B#S#H#E=1B(B =1B$B#L#I#N#G#Z#H#A#O=1B(B =1B$B$5$s=1B(B
+
+=1B$B$3$s$K$A$O!*%Q%J%=3D%K%C%/%0%k!<%W:NMQC4Ev$G$9!#=1B(B
+=1B$B%(%s%H%j!<%7!<%H!:@ZD>A0$N3'MM08$K!"%Q%J%=3D%K%C%/%0%k!<%W$N4D6-$X$N<h=
+AHM}2r$,?<$^$k%;%_%J!<$r$40FFb$$$?$7$^$9!#=1B(B
+=1B$B4D6-?&$H$O$$$C$?$$$I$s$J;E;v$J$N$+!"5$$K$J$kJ}$O$<$R$4;22C$/$@$5$$!*=
+=1B(B
+=1B$B!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a=1B(B
+=1B$B"#=1B(B1=1B$B;~4V$G$o$+$k!*;v6H$H?&<o$N%j%"%k%;%_%J!<=1B(B =1B$B!A=1B(=
+BPCO =1B$B4D6-?&JT!A=1B(B
+=1B$B!!=1B(B- =1B$BF|Dx!'=1B(B3/27(=1B$B6b=1B(B)
+=1B$B!!=1B(B- =1B$B>l=3Dj!'%*%s%i%$%s$K$F<B;\=1B(B
+=1B$B!!=1B(B- =1B$B;~4V!'=1B(B3/27(=1B$B6b=1B(B)=1B$B!!=1B(B16:00-17:00
+=1B$B!!=1B(B- =1B$B?=3D9~!'%^%$%Z!<%8$K%m%0%$%s=1B(B =1B$B"*!V?=3D9~!&;22C!=
+&%"!<%+%$%V!W$+$iM=3DLs=1B(B
+=1B$B!!=1B(B- =1B$BM=3DLsDy@Z!'<B;\EvF|$N=1B(B12:00
+
+=1B$BFbMF=1B(B
+=1B$B!!4D6-?&$K4X$9$k<B:]$N6HL3FbMF$,J,$+$k=1B(B60=1B$BJ,4V$G$9!*=1B(B
+=1B$B!!4D6-$KM%$7$$%b%N$E$/$j$N?d?J$K8~$1$?<h$jAH$_$J$I!"%j%"%k$J<hAH$r$*EA=
+$($7$^$9!*=1B(B
+=1B$B!!4D6-$K7H$o$k;E;v$K6=3DL#$,$"$kJ}$O$<$R$4;22C$/$@$5$$!*=1B(B
+=1B$B!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a!a=1B(B
+=1B$B3'MM$N@Q6KE*$J$4;22C!"$*BT$A$7$F$*$j$^$9!*=1B(B
+------
+=1B$B%Q%J%=3D%K%C%/%0%k!<%W=1B(B =1B$B?7B4:NMQC4Ev=1B(B
+=1B$B%^%$%Z!<%8!'=1B(Bhttps://www.e2r.jp/ja/panasonic2027/
+
+

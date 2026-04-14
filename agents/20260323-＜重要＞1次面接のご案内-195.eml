@@ -1,0 +1,180 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:4189:b0:32f:2baf:8ecc with SMTP id xu9csp613816lkb;
+        Sun, 22 Mar 2026 21:33:33 -0700 (PDT)
+X-Received: by 2002:a05:6a00:2d07:b0:829:a127:518 with SMTP id d2e1a72fcca58-82a8c35cfbcmr8865823b3a.40.1774240413198;
+        Sun, 22 Mar 2026 21:33:33 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1774240413; cv=none;
+        d=google.com; s=arc-20240605;
+        b=QkEUmQ5Ab0fFCeGiFx7ehK+Tp50Iz/2hONZSZkeJq0yOW+gAHAh/l66N9+HVLyJ6Px
+         4tI6WiQQJUZ2c30Zz6/3BovNQJ60ES+M6uWGHi3K5f3AkUqSWRV/SAJIjWJ1+GK8ChMe
+         cdqBDl8Yh2VT+BNTyPuyxi3nn6s/0bR6tqW6/fu7EAE2lVy2zgpIdZs1EIbNVy+ksW2G
+         YurLLU9cjPqMyaupn89tlFghGXvQqBStzTkJMF4MPpCRev1f3crtVQ4OhTOk1h56hhAr
+         Dvvx57Mp7XQCZrxfDRlL4jUMpObi0gMd9QeVDQQ3cZKZN89PuJkd5g4a2OS8G5e41UVs
+         iaqw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=precedence:content-transfer-encoding:mime-version:subject
+         :message-id:to:from:date:dkim-signature:dkim-filter;
+        bh=FVlH6QVRNqbG84nvIm+pJ+HbeJ0bUYZjIIKlz9gdI1E=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=cIwi4T3aaXq3qGFA0rp+cDpafUe+7ODvjHBDcr+Bt+0wnTo5iPCYg6wOIrD5j8Mkyz
+         HA3uP7et7vQbIt0o8x8skvtsaayB5t8tvnnSZIySMEcVdCaS5z+ddJYmffyH75KNu5WY
+         UuJoiOJmBRUvii1Lnzwy0AwwJB1fy4vW9yA7QDX+tqR4nhBVUdF/54wQ0i+aoOeEzi5/
+         FhQDvhcaNgvzdeNvKBJPldVRGpn7AR/jrz5DrhTX13fUc5H51Q1CAfeJdmWncbfZvWHo
+         e+lkO3DbHEIvDNqatNFkb+22vrOymUxh7bnryxwuCinbIlRr1QIjuC9eKzQy/mMsQlwt
+         58eg==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@saiyo.jp header.s=20240105 header.b=Kh1+YTBn;
+       spf=pass (google.com: domain of i-helper-admin@saiyo.jp designates 202.222.81.35 as permitted sender) smtp.mailfrom=i-helper-admin@saiyo.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=saiyo.jp
+Return-Path: <i-helper-admin@saiyo.jp>
+Received: from smtp09.humanage.co.jp (smtp09.humanage.co.jp. [202.222.81.35])
+        by mx.google.com with ESMTPS id d2e1a72fcca58-82b04215ecfsi14616619b3a.143.2026.03.22.21.33.32
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Sun, 22 Mar 2026 21:33:33 -0700 (PDT)
+Received-SPF: pass (google.com: domain of i-helper-admin@saiyo.jp designates 202.222.81.35 as permitted sender) client-ip=202.222.81.35;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@saiyo.jp header.s=20240105 header.b=Kh1+YTBn;
+       spf=pass (google.com: domain of i-helper-admin@saiyo.jp designates 202.222.81.35 as permitted sender) smtp.mailfrom=i-helper-admin@saiyo.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=saiyo.jp
+Received: from vMLbat1002 (_gateway [10.13.39.254])
+	by smtp09.humanage.co.jp (Postfix) with ESMTP id B47DE106C970
+	for <raysya.biz@gmail.com>; Mon, 23 Mar 2026 13:33:31 +0900 (JST)
+DKIM-Filter: OpenDKIM Filter v2.11.0 smtp09.humanage.co.jp B47DE106C970
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=saiyo.jp;
+	s=20240105; t=1774240411;
+	bh=FVlH6QVRNqbG84nvIm+pJ+HbeJ0bUYZjIIKlz9gdI1E=;
+	h=Date:From:To:Subject:From;
+	b=Kh1+YTBngktgplRNU9+MQ+mRoPAx0rLEc0340skTH0YD861oi5crWlpXFtmWUCAzg
+	 ivM/xp3W8kyOg8ECr+flA5koc112ZC21Hur77j0RICcKk0Q043IoxS+0e9h/wmvKyT
+	 QPDYtssuqYXeLC1UYM5ihc/kFhAoZBadtd+V6jg+QENjE2G+biuxWaSsOud4nu+h7u
+	 RJsjWDCdRSwzwJokKUEFYMqgpIufuwoxHhsumNf2vLZfX3RpE7uwUu8YCMEFoEeaPW
+	 q/gSg209u6yVSSV3Po1aVUBL2pW/snrhnUwxPuoo/du0GllCt3gtgcrO5h/RrYxKES
+	 jsd4KQ7G3oUBw==
+Date: Mon, 23 Mar 2026 13:33:31 +0900 (JST)
+From: =?UTF-8?B?44Kk44O844K944Or5qCq5byP5Lya56S+?=
+ =?UTF-8?B?44CA5Lq65p2Q5o6h55So44Kw44Or44O844OX?= <esol@saiyo.jp>
+To: raysya.biz@gmail.com
+Message-ID: <998748711.10949011.1774240411731@vMLbat1002>
+Subject: =?UTF-8?B?77yc6YeN6KaB77yeMeasoemdouaOpeOBruOBlOahiOWGhQ==?=
+MIME-Version: 1.0
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Precedence: bulk
+
+=EF=BC=B3=EF=BC=A8=EF=BC=A5=E3=80=80=EF=BC=AC=EF=BC=A9=EF=BC=AE=EF=BC=A7=EF=
+=BC=BA=EF=BC=A8=EF=BC=A1=EF=BC=AF =E6=A7=98
+
+=E3=81=8A=E4=B8=96=E8=A9=B1=E3=81=AB=E3=81=AA=E3=81=A3=E3=81=A6=E3=81=8A=E3=
+=82=8A=E3=81=BE=E3=81=99=E3=80=82
+=E3=82=A4=E3=83=BC=E3=82=BD=E3=83=AB=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=
+=80=80=E6=8E=A1=E7=94=A8=E6=8B=85=E5=BD=93=E3=81=A7=E3=81=99=E3=80=82
+
+=E3=81=93=E3=81=AE=E5=BA=A6=E3=81=AFWEB=E9=81=A9=E6=80=A7=E6=A4=9C=E6=9F=BB=
+=E3=82=92=E5=8F=97=E6=A4=9C=E3=81=84=E3=81=9F=E3=81=A0=E3=81=8D=E3=81=82=E3=
+=82=8A=E3=81=8C=E3=81=A8=E3=81=86=E3=81=94=E3=81=96=E3=81=84=E3=81=BE=E3=81=
+=97=E3=81=9F=E3=80=82
+=E7=B5=90=E6=9E=9C=E3=80=90=E5=90=88=E6=A0=BC=E3=80=91=E3=81=A8=E3=81=AA=E3=
+=82=8A=E3=80=81=E3=81=9C=E3=81=B2=E6=AC=A1=E3=81=AE=E3=82=B9=E3=83=86=E3=83=
+=83=E3=83=97=E3=81=AB=E3=81=8A=E9=80=B2=E3=81=BF=E3=81=84=E3=81=9F=E3=81=A0=
+=E3=81=8D=E3=81=9F=E3=81=8F=E3=81=94=E9=80=A3=E7=B5=A1=E3=81=84=E3=81=9F=E3=
+=81=97=E3=81=BE=E3=81=97=E3=81=9F=E3=80=82
+
+=E3=83=9E=E3=82=A4=E3=83=9A=E3=83=BC=E3=82=B8TOP=E7=94=BB=E9=9D=A2=E3=82=88=
+=E3=82=8A=EF=BC=9CWEB=E5=B1=A5=E6=AD=B4=E6=9B=B8=EF=BC=9E=E3=82=92=E3=81=94=
+=E5=85=A5=E5=8A=9B=E3=81=84=E3=81=9F=E3=81=A0=E3=81=8F=E3=81=A8
+WEB 1=E6=AC=A1=E9=9D=A2=E6=8E=A5(=E4=BA=BA=E4=BA=8B=E9=9D=A2=E6=8E=A5=EF=BC=
+=89=E3=81=AE=E4=BA=88=E7=B4=84=E3=81=8C=E5=8F=AF=E8=83=BD=E3=81=A8=E3=81=AA=
+=E3=82=8A=E3=81=BE=E3=81=99=E3=80=82
+
+=E2=96=BC=E3=83=9E=E3=82=A4=E3=83=9A=E3=83=BC=E3=82=B8=E3=83=AD=E3=82=B0=E3=
+=82=A4=E3=83=B3
+https://mypage.3030.i-webs.jp/esol2027/
+=E3=81=93=E3=81=A1=E3=82=89=E3=81=AE=E3=83=A1=E3=83=BC=E3=83=AB=E3=81=8C=E5=
+=B1=8A=E3=81=84=E3=81=A6=E3=81=8B=E3=82=89=E3=80=81=EF=BC=93=E6=97=A5=E4=BB=
+=A5=E5=86=85=E3=81=AB=EF=BC=91=E6=AC=A1=E9=9D=A2=E6=8E=A5=E4=BA=88=E7=B4=84=
+=E3=82=92=E3=81=8A=E9=A1=98=E3=81=84=E3=81=84=E3=81=9F=E3=81=97=E3=81=BE=E3=
+=81=99=E3=80=82
+
+----------------------------------------------------------
+1=E6=AC=A1=E9=9D=A2=E6=8E=A5=E3=81=A7=E3=81=AF=E3=80=81=E3=81=82=E3=81=BE=
+=E3=82=8A=E5=A0=85=E8=8B=A6=E3=81=97=E3=81=8F=E3=81=AA=E3=81=8F=E3=80=81
+=E3=81=94=E8=87=AA=E8=BA=AB=E3=81=AE=E6=80=9D=E3=81=84=E3=82=92=E7=B4=A0=E7=
+=9B=B4=E3=81=AB=E3=81=8A=E8=A9=B1=E3=81=97=E3=81=84=E3=81=9F=E3=81=A0=E3=81=
+=8D=E3=81=9F=E3=81=84=E3=81=A8=E8=80=83=E3=81=88=E3=81=A6=E3=81=8A=E3=82=8A=
+=E3=81=BE=E3=81=99=E3=80=82
+
+=E9=9D=A2=E6=8E=A5=E3=81=A7=E3=81=AF=E6=AC=A1=E3=81=AE=EF=BC=93=E3=81=A4=E3=
+=81=AE=E3=83=9D=E3=82=A4=E3=83=B3=E3=83=88=E3=82=92=E3=81=8A=E8=81=9E=E3=81=
+=8D=E3=81=97=E3=81=A6=E3=81=84=E3=81=BE=E3=81=99=E3=80=82
+
+1,=E4=B8=80=E7=95=AA=E9=81=94=E6=88=90=E6=84=9F=E3=82=92=E6=84=9F=E3=81=98=
+=E3=81=9F=E3=82=A8=E3=83=94=E3=82=BD=E3=83=BC=E3=83=89=E3=81=A8=E3=81=9D=E3=
+=81=AE=E7=90=86=E7=94=B1
+=E2=80=BB=E8=87=AA=E5=B7=B1=E5=88=86=E6=9E=90=E3=81=A8=E3=81=97=E3=81=A6=E6=
+=B7=B1=E5=A0=80=E3=82=8A=E3=81=97=E3=81=A6=E3=81=BF=E3=81=A6=E3=81=8F=E3=81=
+=A0=E3=81=95=E3=81=84=E3=81=AD=E3=80=82
+
+2,=E5=B0=B1=E8=81=B7=E6=B4=BB=E5=8B=95=E3=81=AE=E8=BB=B8
+=E2=80=BB=E5=BF=85=E3=81=9A=E8=81=9E=E3=81=8F=E3=81=AE=E3=81=A7=E3=80=81=E3=
+=81=84=E3=81=8F=E3=81=A4=E3=81=8B=E8=80=83=E3=81=88=E3=81=A6=E3=81=8A=E3=81=
+=84=E3=81=A6=E3=81=8F=E3=81=A0=E3=81=95=E3=81=84=E3=80=82
+
+3,=E3=82=AD=E3=83=A3=E3=83=AA=E3=82=A2=E3=83=93=E3=82=B8=E3=83=A7=E3=83=B3
+=E2=80=BB=E5=A4=A7=E9=9B=91=E6=8A=8A=E3=81=A7=E3=82=82=E8=89=AF=E3=81=84=E3=
+=81=AE=E3=81=A7=E7=9B=AE=E6=8C=87=E3=81=97=E3=81=A6=E3=81=84=E3=82=8B=E6=96=
+=B9=E5=90=91=E6=80=A7=E3=82=92=E8=87=AA=E5=88=86=E3=81=AA=E3=82=8A=E3=81=AB=
+=E3=81=BE=E3=81=A8=E3=82=81=E3=81=A6=E3=81=8D=E3=81=A6=E3=81=8F=E3=81=A0=E3=
+=81=95=E3=81=84=E3=80=82
+
+=E3=81=9D=E3=82=8C=E3=81=9E=E3=82=8C=E3=81=8A=E4=BC=BA=E3=81=84=E3=81=97=E3=
+=81=BE=E3=81=99=E3=81=AE=E3=81=A7=E3=80=81=E3=81=94=E8=87=AA=E8=BA=AB=E3=81=
+=AE=E3=82=A8=E3=83=94=E3=82=BD=E3=83=BC=E3=83=89=E3=81=A7=E5=85=B7=E4=BD=93=
+=E7=9A=84=E3=81=AB=E3=81=8A=E8=A9=B1=E3=81=97=E3=81=84=E3=81=9F=E3=81=A0=E3=
+=81=91=E3=82=8B=E3=81=A8=E8=89=AF=E3=81=84=E3=81=A7=E3=81=99=E3=81=AD=E2=99=
+=AA
+
+=E3=81=BE=E3=81=9F=E3=80=81=E4=BC=9A=E7=A4=BE=E8=AA=AC=E6=98=8E=E4=BC=9A=E3=
+=82=92=E7=B5=8C=E3=81=A6=E3=80=81=E3=82=82=E3=81=A3=E3=81=A8=E3=81=93=E3=82=
+=93=E3=81=AA=E3=81=93=E3=81=A8=E3=82=92=E8=81=9E=E3=81=84=E3=81=A6=E3=81=BF=
+=E3=81=9F=E3=81=84=E2=80=A6=E3=81=AA=E3=81=A9=E3=81=82=E3=82=8A=E3=81=BE=E3=
+=81=97=E3=81=9F=E3=82=89
+=E3=81=9C=E3=81=B2=E3=80=901=E6=AC=A1=E9=9D=A2=E6=8E=A5=E3=80=91=E3=81=A7=
+=E9=81=A0=E6=85=AE=E3=81=AA=E3=81=8F=E8=B3=AA=E5=95=8F=E3=81=97=E3=81=A6=E3=
+=81=8F=E3=81=A0=E3=81=95=E3=81=84=E3=80=82
+
+=EF=BC=B3=EF=BC=A8=EF=BC=A5=E6=A7=98=E3=81=A8=EF=BC=91=E6=AC=A1=E9=9D=A2=E6=
+=8E=A5=E3=81=A7=E3=81=8A=E4=BC=9A=E3=81=84=E3=81=A7=E3=81=8D=E3=82=8B=E3=81=
+=93=E3=81=A8=E3=82=92=E6=A5=BD=E3=81=97=E3=81=BF=E3=81=AB=E3=81=97=E3=81=A6=
+=E3=81=8A=E3=82=8A=E3=81=BE=E3=81=99=EF=BC=81
+----------------------------------------------------------
+
+=E3=80=90=E3=81=8A=E7=9F=A5=E3=82=89=E3=81=9B=E3=80=91
+=E6=9D=B1=E4=BA=AC=E9=83=BD=E7=94=A3=E6=A5=AD=E5=8A=B4=E5=83=8D=E5=B1=80=E3=
+=80=8C=E5=AE=B6=E5=BA=AD=E3=81=A8=E4=BB=95=E4=BA=8B=E3=81=AE=E4=B8=A1=E7=AB=
+=8B=E6=94=AF=E6=8F=B4=E3=83=9D=E3=83=BC=E3=82=BF=E3=83=AB=E3=82=B5=E3=82=A4=
+=E3=83=88=E3=80=8D=E3=81=AB=E6=8E=B2=E8=BC=89=E3=81=95=E3=82=8C=E3=81=BE=E3=
+=81=97=E3=81=9F=EF=BC=81
+https://www.katei-ryouritsu.metro.tokyo.lg.jp/danseiikukyu/jirei/jirei-11.h=
+tml
+----------------------------------------------------------
+
+=E2=80=BB=E3=81=93=E3=81=A1=E3=82=89=E3=81=AF=E9=80=81=E4=BF=A1=E5=B0=82=E7=
+=94=A8=E3=82=A2=E3=83=89=E3=83=AC=E3=82=B9=E3=82=92=E4=BD=BF=E7=94=A8=E3=81=
+=97=E3=81=A6=E3=81=84=E3=81=BE=E3=81=99=E3=80=82
+**----------------------------------------------**
+=E3=82=A4=E3=83=BC=E3=82=BD=E3=83=AB=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE
+=E7=AE=A1=E7=90=86=E6=9C=AC=E9=83=A8 =E4=BA=BA=E4=BA=8B=E9=83=A8 =E4=BA=BA=
+=E4=BA=8B=E8=AA=B2
+=E4=BA=BA=E6=9D=90=E6=8E=A1=E7=94=A8=E3=82=B0=E3=83=AB=E3=83=BC=E3=83=97
+=E3=80=92164-8721 =E6=9D=B1=E4=BA=AC=E9=83=BD=E4=B8=AD=E9=87=8E=E5=8C=BA=E6=
+=9C=AC=E7=94=BA1-32-2 =E3=83=8F=E3=83=BC=E3=83=A2=E3=83=8B=E3=83=BC=E3=82=
+=BF=E3=83=AF=E3=83=BC
+TEL=EF=BC=9A03-5365-1560    FAX=EF=BC=9A03-5365-1561
+mail: esol-recruit@esol.co.jp=E3=80=80=E3=80=80
+URL:https://www.esol.co.jp
+
+**----------------------------------------------**

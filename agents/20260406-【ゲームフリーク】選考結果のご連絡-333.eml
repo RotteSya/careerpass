@@ -1,0 +1,114 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:6012:b0:32f:2baf:8ecc with SMTP id l18csp1219912lkl;
+        Sun, 5 Apr 2026 21:05:42 -0700 (PDT)
+X-Received: by 2002:a05:620a:290f:b0:8cf:c08e:5f43 with SMTP id af79cd13be357-8d41bdcfa54mr1531224085a.63.1775448342240;
+        Sun, 05 Apr 2026 21:05:42 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1775448342; cv=none;
+        d=google.com; s=arc-20240605;
+        b=MNWCS3ysngAfCKGt8jue8DLJ1Ddv91Vr5wKISvnlmEpuKVXndRBETCaJgHRlwNRURn
+         9yeWruMbtuZXr2frJX6KFZxGemKCRdanQkCt+fmDMpEelJZxOVv1CWMOgWb4CLbBjO4v
+         iEJlS88eBD85EeUBMEi8wJy5xhZImvnb1hxC+xJU9FTUolZpsIUXmy+Lc8ENZUJWrIPR
+         aTebnNdZH9gMY5NgC2kQBS/MsbDbTljKUbAKqkDtL9+z06f/b54a13myeUA8ebXGyxM6
+         SW/+9BXappGHeoINdL1n2ByB+oslefqC+ajUS4+k4/oIStQfIgwvdMdXwr0K+llt7gtp
+         O+Kg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:message-id:sender:reply-to:to:from
+         :subject:mime-version:date:dkim-signature:dkim-signature;
+        bh=Yto85juFY1MunewN0t3tICsO2NNKvc8Hfa4LjJT2mC4=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=eoee0zGUpiEimt5zJg+FMOB921/7GMITvaHb8ETOwdRnjFb107OexGZuoI+ToMT8E9
+         ORUXyd1nx7DGEcC0lReFsVD7+tMAtsGF2Zjy2NAUfa03eKjxHp+uBk7lF3whPpHgP+D7
+         Br/vH9CdAym1PEPN33VYZ12/F0HsPeB1HIVf10sYTdt1Z6Xu38A2J+c5s5cGJy8x0vVt
+         EktsmOFxTbsLxFJNfaw/z+Wbta/as0gTSbRx9kD08y1HrmT1ROvhtQy3WdpOXcCfHs55
+         6PWdQeRsUQrE1pwYVH5/8gKLX5s59yxFzJvIa2n1oEDA28pk7IKgcXLW/Fj1fsygsD4v
+         KmUQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@n-ats.hrmos.co header.s=smtp header.b=Xy6HKWBB;
+       dkim=pass header.i=@mailgun.org header.s=mg header.b=DnDNBPyc;
+       spf=pass (google.com: domain of bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co designates 69.72.40.241 as permitted sender) smtp.mailfrom="bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co";
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hrmos.co
+Return-Path: <bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co>
+Received: from v5241.v5c112201.use4.send.mailgun.net (v5241.v5c112201.use4.send.mailgun.net. [69.72.40.241])
+        by mx.google.com with UTF8SMTPS id af79cd13be357-8d4ad8f299fsi847680485a.451.2026.04.05.21.05.41
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Sun, 05 Apr 2026 21:05:42 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co designates 69.72.40.241 as permitted sender) client-ip=69.72.40.241;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@n-ats.hrmos.co header.s=smtp header.b=Xy6HKWBB;
+       dkim=pass header.i=@mailgun.org header.s=mg header.b=DnDNBPyc;
+       spf=pass (google.com: domain of bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co designates 69.72.40.241 as permitted sender) smtp.mailfrom="bounce+b22d07.b8f7dd-raysya.biz=gmail.com@n-ats.hrmos.co";
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hrmos.co
+DKIM-Signature: a=rsa-sha256; v=1; c=relaxed/relaxed; d=n-ats.hrmos.co; q=dns/txt; s=smtp; t=1775448341; x=1775455541;
+ h=Content-Type: Content-Transfer-Encoding: Message-Id: Sender: Sender: Reply-To: To: To: From: From: Subject: Subject: Mime-Version: Date: X-Feedback-Id;
+ bh=Yto85juFY1MunewN0t3tICsO2NNKvc8Hfa4LjJT2mC4=;
+ b=Xy6HKWBBuHjKk7v4xu8L2OuPoZyMT3i4S2H/w6+MHLd86KX3rcrVFjB+GrYPRNS4XGu/+aoRkb32NHNE5uCH2GeScA5m1IXVcCiKtmbeZU1TJEi0kdQdnnDyAbSjUlUm86bBV6oMOOdB+OJ7XNSYA1WBX2M8hEt2fxPzJ9DvpJ8=
+DKIM-Signature: a=rsa-sha256; v=1; c=relaxed/relaxed; d=mailgun.org; q=dns/txt; s=mg; t=1775448341; x=1775455541;
+ h=Content-Type: Content-Transfer-Encoding: Message-Id: Sender: Sender: Reply-To: To: To: From: From: Subject: Subject: Mime-Version: Date: X-Feedback-Id;
+ bh=Yto85juFY1MunewN0t3tICsO2NNKvc8Hfa4LjJT2mC4=;
+ b=DnDNBPyc55pBcpUt4zkwncK87ANlTAIkDCZ/EGUiblYAu9RIrjrJdLq4wCtSudfl0ymEiCoYpv+Fl3KHTTtIA6lMlJY6jGNL0V+kWgAENbZ9NwSmcTZoDKJeXSdD9OHdEQFrpqy9clYsru7/hQjUkMgHW/cV9VK0WAKMgVLdQIA=
+X-Mailgun-Sid: WyI1Y2Y5OCIsInJheXN5YS5iaXpAZ21haWwuY29tIiwiYjhmN2RkIl0=
+X-Feedback-Id: postmaster@n-ats.hrmos.co:RECRUITER_TO_CANDIDATE:5dbbd54f30ff9141c1da641e:mailgun
+Received: by 0ff78f0faa02adee6800c2b634ca581d4b87a6ed0cbcadbb0011a69750833996 with HTTP
+ id 69d33115e31382627a0ccce6; Mon, 06 Apr 2026 04:05:41 GMT
+X-Mailgun-Sending-Ip: 69.72.40.241
+Date: Mon, 06 Apr 2026 04:05:41 +0000
+Mime-Version: 1.0
+Subject: =?UTF-8?b?44CQ44Ky44O844Og44OV44Oq44O844Kv44CR6YG46ICD57WQ5p6c44Gu44GU?=
+ =?UTF-8?b?6YCj57Wh?=
+From: =?utf-8?b?5qCq5byP5Lya56S+44Ky44O844Og44OV44Oq44O844KvIOaOoeeUqOaLhQ==?=
+ =?utf-8?b?5b2T?= <2244022862189154304.candidate@gamefreak.n-ats.hrmos.co>
+To: raysya.biz@gmail.com
+X-Mailgun-Tag: RECRUITER_TO_CANDIDATE
+X-Mailgun-Drop-Message: false
+Reply-To: 2244022862189154304.candidate@gamefreak.n-ats.hrmos.co
+Sender: 2244022862189154304.candidate@gamefreak.n-ats.hrmos.co
+X-Mailgun-Variables: {"X-CandidateId": "2244022862189154304", "X-CorporateId":
+ "2095078229469544448", "X-Mail-Id": "2244715785302073344", "X-SentMailId":
+ "2244715785302073344"}
+Message-Id: <20260406040541.e7bef8fb2bed5d28@n-ats.hrmos.co>
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="utf-8"
+
+=E4=BD=98 =E4=BB=A4=E9=87=97=E6=A7=98
+
+=E6=8B=9D=E5=95=93=E3=80=80=E6=99=82=E4=B8=8B=E3=81=BE=E3=81=99=E3=81=BE=E3=
+=81=99=E3=81=94=E6=B8=85=E6=A0=84=E3=81=AE=E3=81=93=E3=81=A8=E3=81=A8=E5=AD=
+=98=E3=81=98=E4=B8=8A=E3=81=92=E3=81=BE=E3=81=99=E3=80=82
+
+=E3=81=93=E3=81=AE=E5=BA=A6=E3=81=AF=E6=96=B0=E5=8D=92=E6=8E=A1=E7=94=A8=E3=
+=81=AB=E3=81=94=E5=BF=9C=E5=8B=9F=E3=81=8F=E3=81=A0=E3=81=95=E3=82=8A=E3=81=
+=82=E3=82=8A=E3=81=8C=E3=81=A8=E3=81=86=E3=81=94=E3=81=96=E3=81=84=E3=81=BE=
+=E3=81=97=E3=81=9F=E3=80=82
+
+=E5=8E=B3=E6=AD=A3=E3=81=AA=E3=82=8B=E9=81=B8=E8=80=83=E3=81=AE=E7=B5=90=E6=
+=9E=9C=E3=80=81=E8=AA=A0=E3=81=AB=E6=AE=8B=E5=BF=B5=E3=81=A7=E3=81=AF=E3=81=
+=94=E3=81=96=E3=81=84=E3=81=BE=E3=81=99=E3=81=8C
+=E4=BB=8A=E5=9B=9E=E3=81=AF=E4=BD=98 =E4=BB=A4=E9=87=97=E6=A7=98=E3=81=AE=
+=E3=81=94=E5=B8=8C=E6=9C=9B=E3=81=AB=E6=B2=BF=E3=81=84=E3=81=8B=E3=81=AD=E3=
+=82=8B=E7=B5=90=E6=9E=9C=E3=81=A8=E3=81=AA=E3=82=8A=E3=81=BE=E3=81=97=E3=81=
+=9F=E3=81=93=E3=81=A8=E3=82=92=E3=81=8A=E4=BC=9D=E3=81=88=E8=87=B4=E3=81=97=
+=E3=81=BE=E3=81=99=E3=80=82
+
+=E3=81=82=E3=81=97=E3=81=8B=E3=82=89=E3=81=9A=E3=81=94=E4=BA=86=E6=89=BF=E3=
+=81=8F=E3=81=A0=E3=81=95=E3=81=84=E3=81=BE=E3=81=99=E3=82=88=E3=81=86=E3=81=
+=8A=E9=A1=98=E3=81=84=E7=94=B3=E3=81=97=E4=B8=8A=E3=81=92=E3=81=BE=E3=81=99=
+=E3=80=82
+
+=E3=81=93=E3=81=AE=E5=BA=A6=E3=81=AE=E9=81=B8=E8=80=83=E3=81=A7=E3=81=AF=E3=
+=81=94=E7=B8=81=E3=81=8C=E3=81=AA=E3=81=8F=E3=81=A6=E3=82=82
+=E3=81=94=E7=B5=8C=E9=A8=93=E3=82=92=E7=A9=8D=E3=81=BE=E3=82=8C=E3=81=9F=E5=
+=BE=8C=E3=80=81=E3=81=BE=E3=81=9F=E5=86=8D=E3=83=81=E3=83=A3=E3=83=AC=E3=83=
+=B3=E3=82=B8=E3=81=84=E3=81=9F=E3=81=A0=E3=81=91=E3=81=9F=E3=82=89=E5=B9=B8=
+=E7=94=9A=E3=81=AB=E3=81=94=E3=81=96=E3=81=84=E3=81=BE=E3=81=99=E3=80=82
+
+=E6=9C=AB=E7=AD=86=E3=81=AA=E3=81=8C=E3=82=89=E3=80=81=E4=BB=8A=E5=BE=8C=E3=
+=81=AE=E3=81=94=E5=81=A5=E5=8B=9D=E3=82=92=E3=81=8A=E7=A5=88=E3=82=8A=E7=94=
+=B3=E3=81=97=E4=B8=8A=E3=81=92=E3=81=BE=E3=81=99=E3=80=82=E6=95=AC=E5=85=B7
+
+=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=B2=E3=83=BC=E3=83=A0=E3=83=95=E3=
+=83=AA=E3=83=BC=E3=82=AF=E3=80=80
+=E6=8E=A1=E7=94=A8=E6=8B=85=E5=BD=93

@@ -1,0 +1,104 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:12af:b0:32f:2baf:8ecc with SMTP id do15csp2418152lkb;
+        Mon, 13 Apr 2026 18:58:53 -0700 (PDT)
+X-Received: by 2002:a05:6a20:7f9e:b0:39f:2ad9:e547 with SMTP id adf61e73a8af0-39fe376980cmr15849655637.0.1776131933753;
+        Mon, 13 Apr 2026 18:58:53 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1776131933; cv=none;
+        d=google.com; s=arc-20240605;
+        b=JN6tWSkQKiC7sj/uskswkmdmh2U1uVTAy/zi/m1VzM2qJ+L5Nc+c8thGNEMNKcAF5D
+         ybgDHAjZj+zaOxtHMTw3JHfY0N+iPm6nyhIZprVs9TaGeJiCVczlMh/X8DyEBGTN9rR2
+         5V/wKG5CKAZlGXTNn11a9PDH6Ff8fnP9NQQCgkJ5ZtkwixG9YPg/MQUK22Wnj/3Z3dsp
+         6a9AM+6DU+ofSD5D5r9MIsX6fAMSVlghIh31iE7OSvi560GiKphAWmTQCCstFE4n1pUw
+         eMEcKZz/arkju9J5x5E8Azf7sKmuqhqKfByVLDEecuNjkFVhgGhkzO7xQH7SSOSYEMzq
+         desQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:subject:date:to:from:mime-version
+         :message-id:dkim-signature;
+        bh=SRMCZeeVPDuWDq2PSsiFBCk/6Xk+BVqTC3jS04M6DY4=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=Yi+g2MEtk0NKZKj5XShHnmo2V/O4tKCZJ9hsfW6F5+i/7VOKjR8++ESr1D4Tr0+cFz
+         9do2I2ygmD9YuFSK40O10X+sX2gjErJCgEANGO8Dc/YBsr+Jk1f5oUoME5unIlBeF3wj
+         YTALwhFV1CVmc7O7zo/g+cf0Hr0uuDkTfAzgPhKH9kmZreBvQQrnX4arW9/kXy5Eaxiv
+         ByL1D7RSAyHHOkG1qG0GRmXYKoLEz/YrC9DpCh8gv8ikwDND2sqnRDrb5cjbVld2fr10
+         ytwjKdbr2fBwFCH7o6IjJrzkQsEWqxMhzBby1CbHR45RI+w8lq/VCvycgD3MzXgwIs7R
+         WfqQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@snar.jp header.s=s1693802379223 header.b=fftHc6j8;
+       spf=pass (google.com: domain of square-enix-recruit@snar.jp designates 153.125.144.248 as permitted sender) smtp.mailfrom=square-enix-recruit@snar.jp;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=snar.jp
+Return-Path: <square-enix-recruit@snar.jp>
+Received: from mta102.snar.smtps.jp (mta102.snar.smtps.jp. [153.125.144.248])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c794beefaf1si207386a12.209.2026.04.13.18.58.52
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Mon, 13 Apr 2026 18:58:53 -0700 (PDT)
+Received-SPF: pass (google.com: domain of square-enix-recruit@snar.jp designates 153.125.144.248 as permitted sender) client-ip=153.125.144.248;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@snar.jp header.s=s1693802379223 header.b=fftHc6j8;
+       spf=pass (google.com: domain of square-enix-recruit@snar.jp designates 153.125.144.248 as permitted sender) smtp.mailfrom=square-enix-recruit@snar.jp;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=snar.jp
+X-Persimmon: [%%^KrdO/c/7m6zZhqI8hqT/Ig==$%%]
+   [%%^XZZNZChRDkyXZMFM2BVzDg==$%%]
+   [%%^Fv23LW4RYI+Jj4fLub6383PZQQ8e69qZGBPcKUX2zVA93ym1ExyUZyb3vLDJ/v8m7IpbQflyFGIow229/jWymALnNd7qe+ntCuXd3zh2QBY=$%%]
+   [%%^LzfiA1B0G3Hf9QaKS+g+bg==$%%]
+   [%%^p884VVfWeo8u789GfanZn3qsjiycY5fWn2XIndCBgJzcII3+WVISH1KAIBHbj/P/$%%]
+   [%%^qh+7WYuCNNIsJPGhs4FBuA==$%%]
+   [%%^77jlwevHuG0Klz5h9IF4kkFZ+e8zZkkn/5ZjlITSyAs=$%%]
+   [%%^bNBrdFP4I9riIHVVPDXh6NsGVA7kidUQb0amFY6a3Ac=$%%]
+   [%%^yJPNeOZ18HY0FNgN1b5AMQ==$%%]
+DKIM-Signature: v=1; a=rsa-sha256;c=relaxed/relaxed;
+   d=snar.jp; s=s1693802379223; t=1776131931;
+   h=message-id:mime-version:from:to:date:subject
+   :content-type:content-transfer-encoding;
+   bh=SRMCZeeVPDuWDq2PSsiFBCk/6Xk+BVqTC3jS04M6DY4=;
+   b=fftHc6j8jUiPbArfyyMRHYDYrhC4FlhSGfdqjqhDx/z94YfeU6gDLmXlkHN/WenX
+   cpnzMUZVitxaHkPIC4TfyoU70b/u0eJOzEwzfT1+9qwBK2SvRM5Hm+HTRtoQ/aWw
+   HSTNe8Eyj3cifntmmoBu4Ub89Q6MeOPW74tKT+9D7Ng=
+Message-Id: <7c4627a0-37a5-11f1-8a4b-9ca3ba30c7cb@mta10.snar.smtps.jp>
+Received: from rddc984061cfe7 by mta10.snar.smtps.jp (without TLS);
+   Tue, 14 Apr 2026 10:58:51 +0900
+MIME-Version: 1.0
+From: =?utf-8?Q?=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=B9=E3=82=AF?=
+ =?utf-8?Q?=E3=82=A6=E3=82=A7=E3=82=A2=E3=83=BB=E3=82=A8=E3=83=8B=E3?=
+ =?utf-8?Q?=83=83=E3=82=AF=E3=82=B9?= <square-enix-recruit@snar.jp>
+To: raysya.biz@gmail.com
+Date: 14 Apr 2026 01:58:51 +0000
+Subject: =?utf-8?B?44CQU1FVQVJFIEVOSVjjgJEyMDI45bm05bqm5o6h55So5oOF?=
+ =?utf-8?B?5aCx44Gu5o+Q5L6b44GK44KI44Gz44Oe44Kk44Oa44O844K45Yip55So?=
+ =?utf-8?B?44Gr6Zai44GZ44KL44GU56K66KqN?=
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: base64
+
+77yz77yo77ylIO+8rO+8qe+8ru+8p++8uu+8qO+8oe+8r+OAgOanmAoK44K544Kv44Km
+44Kn44Ki44O744Ko44OL44OD44Kv44K544CA5paw5Y2S5o6h55So5ouF5b2T44Gn44GZ
+44CCCuaXpemgg+OCiOOCiuW8iuekvuOBuOmWouW/g+OCkuOBiuWvhOOBm+OBhOOBn+OB
+oOOBjeOAgeiqoOOBq+OBguOCiuOBjOOBqOOBhuOBlOOBluOBhOOBvuOBmQoK5pys5pel
+44GvMjAyOOW5tOW6puWQkeOBkeOBruOCpOODs+OCv+ODvOODs+OCt+ODg+ODl+WLn+mb
+huOCkumWi+Wni+OBl+OBn+OBk+OBqOOBq+S8tOOBhOOAgQrku4rlvozjga7mg4XloLHm
+j5DkvpvjgYrjgojjgbPjg57jgqTjg5rjg7zjgrjjga7jgqLjgqvjgqbjg7Pjg4jliKnn
+lKjjgavjgaTjgYTjgabmlLnjgoHjgabnorroqo3jgZXjgZvjgabjgYTjgZ/jgaDjgY3j
+gZ/jgY/jgZTpgKPntaHlt67jgZfkuIrjgZLjgb7jgZfjgZ/jgIIKCuOBiuaJi+aVsOOB
+p+OBr+OBlOOBluOBhOOBvuOBmeOBjOOAgQrjg57jgqTjg5rjg7zjgrjjg6Hjg4vjg6Xj
+g7zjgI7ku4rlvozjga7jgZTmoYjlhoXjgavplqLjgZnjgovjgqLjg7PjgrHjg7zjg4jj
+gI/jgojjgorjgIEKMjAyOOW5tOW6puWQkeOBkeOBruOBlOahiOWGheOBruOBlOW4jOac
+m+acieeEoeOCkuOBiuefpeOCieOBm+OBj+OBoOOBleOBhOOAggoK4pa85LuK5b6M44Gu
+44GU5qGI5YaF44Gr6Zai44GZ44KL44Ki44Oz44Kx44O844OI44Gv44GT44Gh44KJCmh0
+dHBzOi8vc3F1YXJlLWVuaXgtcmVjcnVpdC5zbmFyLmpwL3YyL2luZGV4LmFzcHg/cGFy
+YW09WVdNNGJGcFdFeEhsdW9xMnRMbUFfWVpjSTZ4VHk1eXNXNWlWMHJWV3pURDZfcjdy
+ZVBGeDFJaXFXX0xQakRPUgoK4oC744GU5biM5pyb6ICF44Gu5pa544G4CuOAgOODnuOC
+pOODmuODvOOCuOOBruOBlOeZu+mMsuWGheWuueOBq+OCiOOBo+OBpuS7iuW+jOOBruOB
+lOahiOWGheOBjOeVsOOBquOCiuOBvuOBmeOBruOBp+OAgQrjgIDlv4XopoHjgavlv5zj
+gZjnmbvpjLLlhoXlrrnjga7jgZTkv67mraPjgpLjgYrpoZjjgYToh7TjgZfjgb7jgZnj
+gIIKCuKAu+OBlOW4jOacm+OBleOCjOOBquOBhOaWueOBuArjgIDlrprmnJ/nmoTjgavp
+gIDkvJrlh6bnkIbjgpLooYzjgo/jgZvjgabjgYTjgZ/jgaDjgY3jgb7jgZnjga7jgafj
+gIEK44CA44Ki44Oz44Kx44O844OI5Zue562U5b6M44Gr5byK56S+44GL44KJ44Gu44GU
+6YCj57Wh44GM5bGK44GE44Gm44GX44G+44GG5Y+v6IO95oCn44GM44GU44GW44GE44G+
+44GZ44CCCuOAgOS6iOOCgeOBlOWuuei1puOBhOOBn+OBoOOBkeOBvuOBmeOBqOW5uOOB
+hOOBp+OBmeOAggoK44GK5omL5pWw44KS44GK44GL44GR44GX5oGQ44KM5YWl44KK44G+
+44GZ44GM44CBCuOBqeOBhuOBnuOCiOOCjeOBl+OBj+OBiumhmOOBhOOBhOOBn+OBl+OB
+vuOBmeOAggoK5qCq5byP5Lya56S+44K544Kv44Km44Kn44Ki44O744Ko44OL44OD44Kv
+44K544CA5o6h55So5ouF5b2T
+

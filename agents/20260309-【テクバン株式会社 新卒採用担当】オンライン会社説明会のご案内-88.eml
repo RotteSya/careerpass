@@ -1,0 +1,99 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:409b:b0:32d:d2ea:2208 with SMTP id i27csp1019425lkg;
+        Mon, 9 Mar 2026 01:02:08 -0700 (PDT)
+X-Received: by 2002:a05:6a20:cc0b:b0:394:f70c:b5d5 with SMTP id adf61e73a8af0-3985908b32cmr9434960637.43.1773043328503;
+        Mon, 09 Mar 2026 01:02:08 -0700 (PDT)
+ARC-Seal: i=2; a=rsa-sha256; t=1773043328; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=eseQWry5sDkXLuHxkuhi7F/RjCJRU3mvcmI90J2Y4C+p+R4lmFhrNWF4b2a/5tjfeY
+         5FhS+y8NxW4/FbueC7Efai1D/Q9G5O1la4fi52VWvv07ZQg0A6rIyj8RvlpNG4AmZwlu
+         EdYqO/TMMiViqsHwhHz0daoxZGXZM3kSjwx63mpKruvK0p6yd8+dyc8ECRVfanwWI/FQ
+         OKwWfk1n6NxjQvyxegWrlEeZxxZoR5AJ/crnEYZvRq+ojxl2rWNBD8uZEhKctcKt5a7l
+         TdOrXdgilSE9t14FoIymK1tM+VmFWLA94vsyCZhlgw5KZ+9qpUhWKx/bfQ3FM8WLuQvt
+         44OQ==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:mime-version:subject:message-id:to
+         :reply-to:from:date:dkim-signature:dkim-filter;
+        bh=aZo1+y86PX5/4F8YWweYBdtT1I/aNkOEeDE+ykPYu9A=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=DQJLbcj3HnHu4G7yhhcR8vKOzRom5CbblkomIUaoe3N8mn0PMQy6YdH9gDT4EBs6+0
+         aehG3DHKUihu5hg9SU7X95w1F9DW5iidBae6/A0UcNhr2BhmfVoh5vl6iGoN4VliwWzg
+         AcleHw30Xm+4rrr26bA2kFfI7G5T+yAjvddaJ4NxwUgm0bPKa5G/ttUBKH+2e9x5yZ5K
+         hWnjnsBHfLJHuhjTGiMEfOCZKEOqZRqzh0g2bBTmiD5np/XPmJJJ0yL9RF9dKicJCR1I
+         NYI9gu3MScUgFP7OScc7kC4au09lFibcWYp52d/G+219sTe8fzgjxlkfzmtMxjNqnbDF
+         l3Ow==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@hito-link.jp header.s=mta1_20151120 header.b="Y+b/dPCZ";
+       arc=pass (i=1);
+       spf=pass (google.com: domain of techvan-saiyo@hito-link.jp designates 52.68.182.138 as permitted sender) smtp.mailfrom=techvan-saiyo@hito-link.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hito-link.jp
+Return-Path: <techvan-saiyo@hito-link.jp>
+Received: from mta1.hito-link.jp (mta1.hito-link.jp. [52.68.182.138])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c739e1998c9si11637806a12.130.2026.03.09.01.02.08
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Mon, 09 Mar 2026 01:02:08 -0700 (PDT)
+Received-SPF: pass (google.com: domain of techvan-saiyo@hito-link.jp designates 52.68.182.138 as permitted sender) client-ip=52.68.182.138;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@hito-link.jp header.s=mta1_20151120 header.b="Y+b/dPCZ";
+       arc=pass (i=1);
+       spf=pass (google.com: domain of techvan-saiyo@hito-link.jp designates 52.68.182.138 as permitted sender) smtp.mailfrom=techvan-saiyo@hito-link.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hito-link.jp
+Received: from ip-172-16-77-162.ap-northeast-1.compute.internal (ip-172-16-77-162.ap-northeast-1.compute.internal [172.16.77.162])
+	by mta1.hito-link.jp (Postfix) with ESMTP id 2E384C800ABF
+	for <raysya.biz@gmail.com>; Mon,  9 Mar 2026 17:02:07 +0900 (JST)
+Authentication-Results: mta1.hito-link.jp; arc=none smtp.remote-ip=172.16.77.162
+ARC-Seal: i=1; a=rsa-sha256; d=hito-link.jp; s=mta1_20151120; t=1773043327;
+	cv=none; b=d7QDqLN8ULus/3N7zZfQz0iUM9QAuxT4ENTR9I87Ikip0CKMzR8ZlPzH4a37y1MKxLjMdautuFLIMVAUw8Ue39msrdXFQUm71B89pLJBxfE6DufP1/xdBDEwGOhyazzktYhbEfR02l6UajEymF2yRl3Qb01LG9T+SDMlFuBcPqJtEqUaLUyycTb7CDCVYFp6VECNgfW0mv15JUYXMnEqPX8aEpJhPjxR70C/zcb0K4MefE9skbNHfW79bnJ+N2P+BN7agauVmyNvtpD+gWSUtyRnjnRR4kqx4B1fLDQO44Zgb31qNsps/6XWMWSjkKNAlpZezI3YIW9glFldYOqjMg==
+ARC-Message-Signature: i=1; a=rsa-sha256; d=hito-link.jp; s=mta1_20151120;
+	t=1773043327; c=relaxed/relaxed;
+	bh=aZo1+y86PX5/4F8YWweYBdtT1I/aNkOEeDE+ykPYu9A=;
+	h=DKIM-Signature:Date:From:To:Message-ID:Subject:MIME-Version; b=WxxyV+O51qJjB1mXu6jyl9yw5JU5Ll6cc4ZTzzoVWziPekWwojfLBD5GiTRslAG4Ter4vYfcJ3feDJdODc34valkgEg1/Tvs1sEMdLyqyLnh3grey+NSbHakKCVSfA5FZhF2araqKl2xdaHl8FltP185ddPf/gDfVByE2F6tH8j5d63Ipm9eD7SHuuKvGW1dotNIjE/H2e8TkYa4cbaRlektBIqLL24mlcYQa1a7LzxX5qhC2ZiCjHkBRRGdPENefj0v1UU+m/JGP4z9OBlkezqDyWHoRXUHXPDsbEcFaJn4k2hv2utareATmw9IFJtfUcobY9UbE5GLWOSuCTe2Mw==
+ARC-Authentication-Results: i=1; mta1.hito-link.jp
+DKIM-Filter: OpenDKIM Filter v2.11.0 mta1.hito-link.jp 2E384C800ABF
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=hito-link.jp;
+	s=mta1_20151120; t=1773043327;
+	bh=aZo1+y86PX5/4F8YWweYBdtT1I/aNkOEeDE+ykPYu9A=;
+	h=Date:From:Reply-To:To:Subject:From;
+	b=Y+b/dPCZ5hzC5gXWzzbUPBuErfheHa0lbDJ68N2J/C4yEjCxn5uq+HQ+u5WY01xnt
+	 ff+nch56lxFKO+wJI6mbsVM2dfseoKNsyTSY0vazLSNmoWl3KELbm1jSi0gzEAGSdF
+	 GK0LHLdWoR6LJWoIH3tVQj2Nmw9lIYkQS1J76zLC4kvJDxqmNZnzglguaGnJyOz5Id
+	 5xnENgG4x0gEzx0SglSU+Gl5XWwYuDrHzC8XWW3AJQDMdZvlFrq7eEfxFykJkGsIi0
+	 2PgszN9PQOgOaL0YQDZcawEp7TsY6KcsUqAtayspKU7UvZeLOD0z6uURf7vSpBWWog
+	 qKrcb3gTUP1aw==
+Date: Mon, 9 Mar 2026 17:02:07 +0900 (JST)
+From: =?UTF-8?B?44OG44Kv44OQ44OzKOagqinmlrDljZLmjqHnlKjmi4XlvZM=?= <techvan-saiyo@hito-link.jp>
+Reply-To: techvan-saiyo@hito-link.jp
+To: raysya.biz@gmail.com
+Message-ID: <1778639584.173.1773043327184.JavaMail.root@mta.hito-link.local>
+Subject: =?UTF-8?B?44CQ44OG44Kv44OQ44Oz5qCq5byP5Lya56S+IOaWsOWNkuaOoeeUqOaLhQ==?=
+ =?UTF-8?B?5b2T44CR44Kq44Oz44Op44Kk44Oz5Lya?=
+ =?UTF-8?B?56S+6Kqs5piO5Lya44Gu44GU5qGI5YaF?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: base64
+
+77yz77yo77yl77ys77yp77yu77yn77y677yo77yh77yvIOanmAoK44GT44KT44Gr44Gh44Gv77yB
+CuODhuOCr+ODkOODs+agquW8j+S8muekviDmlrDljZLmjqHnlKjmi4XlvZPjgafjgZnjgIIKCuOC
+qOODs+ODiOODquODvOOBhOOBn+OBoOOBjeiqoOOBq+OBguOCiuOBjOOBqOOBhuOBlOOBluOBhOOB
+vuOBme+8gQrlvZPnpL7jga/ml6nmnJ/pgbjogIPnm7TntZDjga7jgqrjg7Pjg6njgqTjg7PkvJrn
+pL7oqqzmmI7kvJrjgpLlrp/mlr3jgZfjgabjgYTjgb7jgZnjgIIKCuOCquODs+ODqeOCpOODs+S8
+muekvuiqrOaYjuS8muOBp+OBr+OAgQpJVOalreeVjOOBruOBk+OBqOOAgeODhuOCr+ODkOODs+OB
+ruOBk+OBqOOAgTLmnKznq4vjgabjga7jgZ/jgoEK5bmF5bqD44GP55CG6Kej44KS5rex44KB44KL
+44GT44Go44GM5Y+v6IO944Gn44GZ44CCCgrjgZzjgbLkuIvoqJhVUkzjgojjgorjgZTkuojntITj
+gY/jgaDjgZXjgYTvvIEK4oC744GZ44Gn44Gr5LuW5aqS5L2T44Gn44GU5LqI57SE5riI44G/44Gn
+44GX44Gf44KJ44GU5pS+5b+144GP44Gg44GV44GE44CCCgpodHRwczovL2F0cy1lbnRyeS5oaXRv
+LWxpbmsuanAvc2l0ZXMvdGVjaHZhbi1zYWl5by9ldmVudC9pbnRlcnZpZXctcmVzZXJ2ZT9rZXk9
+ZWM2MmRkN2E4ZjM5NmY5OGY0ZWIyZTY5ZTIyMjE0NzMKCuOBlOahiOWGheOBr+S7peS4iuOBp+OB
+meOAgiAK44GU5LiN5piO54K5562J44GM44GC44KK44G+44GX44Gf44KJ44CB44GK5rCX6Lu944Gr
+44GK5ZWP44GE5ZCI44KP44Gb5LiL44GV44GE44G+44Gb44CCCgrjgZTlj4LliqDjgpLlv4Pjgojj
+gorjgYrlvoXjgaHjgZfjgabjgYrjgorjgb7jgZnjgIIK5L2V5Y2S44CB44KI44KN44GX44GP44GK
+6aGY44GE44GE44Gf44GX44G+44GZ44CCCgo9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09
+PT09PT09PQrjg4bjgq/jg5Djg7PmoKrlvI/kvJrnpL4K57WM5Za2566h55CG57Wx5ous5pys6YOo
+IOS6uuS6i+mDqCDkurrkuovoqrIg5paw5Y2S5o6h55So5ouF5b2TCgrjgJIxMDgtMDAyMiDmnbHk
+uqzpg73muK/ljLrmtbflsrgz5LiB55uuMjDnlaoyMOWPtyDjg6jjgrPjgr3jg7zjg6zjgqTjg7Pj
+g5zjg7zjgr/jg6/jg7wKVVJMOiBodHRwczovL3d3dy50ZWNodmFuLmNvLmpwCj09PT09PT09PT09
+PT09PT09PT09PT09PT09PT09PT09PT09PT0=

@@ -1,0 +1,131 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:612c:202f:b0:4bd:4811:23e9 with SMTP id ff15csp419608vqb;
+        Tue, 29 Apr 2025 09:52:49 -0700 (PDT)
+X-Google-Smtp-Source: AGHT+IFev5oLK8ljHmmUXUQHqHDOgLoHcnY7l4oCvWgdRHnGrO9kS16KGZH+lh+Ucu1/x2/UIZVp
+X-Received: by 2002:a05:6a00:2182:b0:73e:2dcf:e44a with SMTP id d2e1a72fcca58-740271df921mr6123662b3a.16.1745945568868;
+        Tue, 29 Apr 2025 09:52:48 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1745945568; cv=none;
+        d=google.com; s=arc-20240605;
+        b=enl12WixrYYbkxXNeNHGzzNPLx9A2ESz1+dSG6SsG4R+d+pWKCuLyLWAFgTWlBfrXN
+         W4cqSKkf0g3DY8u76UP5jjm7X/gA+0LUoK1QbzNFYpjEeFwQdNLnfWQqABBfmxHcNBUv
+         a4GYZSNPppfXuyRwwaI3BaRjftuJYvfWWx2u7zoEjRZ4pETrxDv/2jPEtgQhoJUdM8IG
+         z0MfLP7l+UF2WoVDpsH3Q5nR9PT5y0OOONpjs2vVYsoMrmaHwAse2XRyob1JHbE8Q92M
+         Lk057YtDlYkXWhdQz1dBJIovL/Aav9Z77cBdm8WZ93eoMPvaBALZhxhunvBiGwHc81mW
+         dXKA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=message-id:date:content-transfer-encoding:mime-version:subject:to
+         :from:dkim-signature;
+        bh=6UUAQhTMz20Oh7Mnz/RexHuJ+H1qxooj/v+p7J+/7LM=;
+        fh=X1eeQOtMRjDe+bB9j7Tz81IEfXqD6IeOy0DUl+wRdDY=;
+        b=ZEk9wkomoj4z0YlBny3clRWb4ZAEHC4LR+Fo/ySkOzDSOz+7SoRCN12Uuq7BRn3Kk3
+         IkU75AjKzafG2+Lf3YkqfTA184i3Nz1Tc6vggXBU2IyzyR9zVu+G68YBv8I/uBmN9udV
+         PYOU1+MuGwtKJiNEqpHLTHayKcoqRYBgAcrKv9tt4i8Otj66xweFVuhrH/2dlSDmhVM4
+         F00lnqvfjKFt7fSBuUHMMrQdVSy1ST+25SsR98uu+K7v2v/qUkcu2d3bkX/cGdzZ5TaO
+         YYq27ZM5fzGVRG2aS7gUn1xBmovzKAbBfofQ+w0Nuq4yL1kuSh3BoEe2/eOhsIiLiw0n
+         a1lg==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@foxmail.com header.s=s201512 header.b=D85+IF5A;
+       spf=pass (google.com: domain of raysya@foxmail.com designates 203.205.221.173 as permitted sender) smtp.mailfrom=raysya@foxmail.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=foxmail.com
+Return-Path: <raysya@foxmail.com>
+Received: from out203-205-221-173.mail.qq.com (out203-205-221-173.mail.qq.com. [203.205.221.173])
+        by mx.google.com with UTF8SMTPS id 41be03b00d2f7-b15f81ab8fdsi15797142a12.61.2025.04.29.09.52.48
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256);
+        Tue, 29 Apr 2025 09:52:48 -0700 (PDT)
+Received-SPF: pass (google.com: domain of raysya@foxmail.com designates 203.205.221.173 as permitted sender) client-ip=203.205.221.173;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@foxmail.com header.s=s201512 header.b=D85+IF5A;
+       spf=pass (google.com: domain of raysya@foxmail.com designates 203.205.221.173 as permitted sender) smtp.mailfrom=raysya@foxmail.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=foxmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=foxmail.com;
+	s=s201512; t=1745945567;
+	bh=6UUAQhTMz20Oh7Mnz/RexHuJ+H1qxooj/v+p7J+/7LM=;
+	h=From:To:Subject:Date;
+	b=D85+IF5Ah5TLZ6pKGy54kwScROAJMAT0kraWz0ccbDQXsIGoXnoba6K8PPvmLMHt0
+	 l44g7D8nirWtLTvK1ALxTSIAXLwpK4hKyeOzd+CXGX6EXTegtD7j0RN/hgOX09TK/H
+	 fn5tBhHR1E/wq4Xedx6FPtCUwsWpVGhEn7s4K8hQ=
+X-QQ-XMRINFO: MPJ6Tf5t3I/ycC2BItcBVIA=
+X-QQ-XMAILINFO: May6qHXULkdVHC+imT+R/kr5qINf9SmkeLRiZFkDh/5JqSdmbKYT6Nt1JY3rij
+	 wGKTp2JlwYTrr+142f34/Eg6ebeAJ0xikX0lpqbrmfDh83bE99af0ZH9D5+hyiKJZ5PmK1sPHTbZy
+	 Lg6gr+1HRcwhgcxajlQ9vSLePMw6jiVNXoEdNuXhlGKum8yKUeh6yhUvqxQAwkM7LYKYU8YItYzAs
+	 7wdT6zz5wT0clG8RH+JEjYV3kGpJHJyEWuX2dUhXG3p5TTwzuzcW3tQRbL2jaYWctvA4LP6h6pwqm
+	 42FQn8u21b13v62Mma3U8qb6ps91RYknNYbFCGXaSCQGJ1ucXlBLaTiIDicX/w5J91n6US1Ak1I4W
+	 V1h6Oq2Zd9YZltaGM0ylk+zjQEYeoWmDZtfgmEgTO93ip/zWE8oordfagFcFLdEcNl0ad33svtzwo
+	 L+lwKAInSdMB/EV4zVpPjjG8vQzkGLJNkv0Q5uILNszfYL+ZQhmii82TCzA90a5TcnkJ/ckFhUA/O
+	 jnYeCeoqQeZdYXQ+4CglsknwkvRBNAqjgOOS3XFFRZgMqkZ2BohE8vi6LSMTb5OybyIKHvqBJv+jS
+	 bDiuQCPAgIl6h5vor8igFPqSeDjw7WS27OE2o4+1PW1wReU7pOjZE3wM5sXPR9htCRrqG1w5tmWli
+	 NrjQY+jG7nFdGBHTcHXqN0Lu9y1hM2C25Md2aNEc6egU2ltfoL0ZlRpdyBfP7EKT88oOpSmJIO78k
+	 Fm2Ube614t1ahtM3EdXtH4rtYVfURUjvA3rXGdPPUk8nCOhPGE+by+kC+ZE/jt7xIzJ+BfvRD5Sng
+	 rzTjTc/IHmh2b+chthD2HCJza7HmaErs67MAw/6h0tTtpiLSBESgXS+4eX5CKz2KNsvmhYkcAwN7R
+	 3BWrDNMyhI47QGTWBa9dwsuc8hTbz0prpZ8mHnjGnEK0NDwDwpffo/guQdWQCME2Ua81C1tBqaGk8
+	 MpSvCl1jtpbPLxDYn3QstAGmspaX0Q65yMAJNt9A==
+From: "=?utf-8?B?UmF5U3lh?=" <raysya@foxmail.com>
+To: "=?utf-8?B?cmF5c3lhLmJpeg==?=" <raysya.biz@gmail.com>
+Subject: =?utf-8?B?5rWL6K+V?=
+Mime-Version: 1.0
+Content-Type: multipart/alternative;
+	boundary="----=_NextPart_681103DE_9D724980_43CAF584"
+Content-Transfer-Encoding: 8Bit
+Date: Wed, 30 Apr 2025 01:52:46 +0900
+X-Priority: 3
+Message-ID: <tencent_D76778846670ED03722DF6B1F3C77865B708@qq.com>
+X-QQ-MIME: TCMime 1.0 by Tencent
+X-Mailer: QQMail 2.x
+X-QQ-Mailer: QQMail 2.x
+X-QQ-mid: xmapza44-0t1745945566tgcvrwkpb
+
+This is a multi-part message in MIME format.
+
+------=_NextPart_681103DE_9D724980_43CAF584
+Content-Type: text/plain;
+	charset="utf-8"
+Content-Transfer-Encoding: base64
+
+6L+Z5piv5bel5L2c6YKu5Lu2DQoNCg0KDQoNCg0KDQoNCg0KDQoNCg0KDQpSYXlTeWENCnJh
+eXN5YUBmb3htYWlsLmNvbQ==
+
+------=_NextPart_681103DE_9D724980_43CAF584
+Content-Type: text/html;
+	charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PGRpdj7ov5nmmK/lt6XkvZzpgq7ku7Y8L2Rpdj48ZGl2PjxiciAgLz48L2Rpdj48ZGl2Pjxi
+ciAgLz48L2Rpdj48ZGl2PjxiciAgLz48L2Rpdj48ZGl2PjxiciAgLz48L2Rpdj48ZGl2Pjxi
+ciAgLz48L2Rpdj48ZGl2PjxociBzdHlsZT0ibWFyZ2luOiAwIDAgMTBweCAwO2JvcmRlcjog
+MDtib3JkZXItYm90dG9tOjFweCBzb2xpZCAjRTZFOEVCO2hlaWdodDowO2xpbmUtaGVpZ2h0
+OjA7Zm9udC1zaXplOjA7cGFkZGluZzogMjBweCAwIDAgMDt3aWR0aDogNTBweDsiICAvPjxh
+IGNsYXNzPSJ4bV93cml0ZV9jYXJkIiBzdHlsZT0id2hpdGUtc3BhY2U6IG5vcm1hbDsgZGlz
+cGxheTogaW5saW5lLWJsb2NrOyB0ZXh0LWRlY29yYXRpb246IG5vbmUgIWltcG9ydGFudDtm
+b250LWZhbWlseTogLWFwcGxlLXN5c3RlbSxCbGlua01hY1N5c3RlbUZvbnQsUGluZ0Zhbmcg
+U0MsTWljcm9zb2Z0IFlhSGVpOyIgaHJlZj0iaHR0cHM6Ly93eC5tYWlsLnFxLmNvbS9ob21l
+L2luZGV4P3Q9cmVhZG1haWxfYnVzaW5lc3NjYXJkX21pZHBhZ2UmYW1wO25vY2hlY2s9dHJ1
+ZSZhbXA7bmFtZT1SYXlTeWEmYW1wO2ljb249aHR0cHMlM0ElMkYlMkZ0aGlyZHFxLnFsb2dv
+LmNuJTJGZWtfcXFhcHAlMkZBUVNTQk11YkppYWx1RmlhMFFTY3BZb1hrZE83RVVtbmliZktB
+ZHpVM0pPVHlVdjdEbWh4cmR1NlVWSjRTcHlUMGxmaWNpYTlOT2t2ciUyRjAmYW1wO21haWw9
+cmF5c3lhJTQwZm94bWFpbC5jb20mYW1wO2NvZGU9SnlXYzZZVTZ2UzMyVm1HSzRjQ2k2U1Zl
+Y3pGUlpHc1lOU1JCcmJ2N2NkX3JnTDdaRTVHMF96UGdDM2VucVNPOU1uVHJGcXVydU9LcFBn
+UTlQWm1rdlEiIHRhcmdldD0iX2JsYW5rIj48dGFibGUgc3R5bGU9IndoaXRlLXNwYWNlOiBu
+b3JtYWw7dGFibGUtbGF5b3V0OiBmaXhlZDsgcGFkZGluZy1yaWdodDogMjBweDsiIGNvbnRl
+bnRlZGl0YWJsZT0iZmFsc2UiIGNlbGxwYWRkaW5nPSIwIiBjZWxsc3BhY2luZz0iMCI+PHRi
+b2R5Pjx0ciB2YWxpZ249InRvcCI+PHRkIHN0eWxlPSJ3aWR0aDogNDBweDttaW4td2lkdGg6
+IDQwcHg7IHBhZGRpbmctdG9wOjEwcHgiPjxkaXYgc3R5bGU9IndpZHRoOiAzOHB4OyBoZWln
+aHQ6IDM4cHg7IGJvcmRlcjogMXB4ICNGRkYgc29saWQ7IGJvcmRlci1yYWRpdXM6NTAlOyBt
+YXJnaW46IDA7dmVydGljYWwtYWxpZ246IHRvcDtib3gtc2hhZG93OiAwIDAgMTBweCAwIHJn
+YmEoMTI3LDE1MiwxNzgsMC4xNCk7Ij48aW1nIHNyYz0iaHR0cHM6Ly90aGlyZHFxLnFsb2dv
+LmNuL2VrX3FxYXBwL0FRU1NCTXViSmlhbHVGaWEwUVNjcFlvWGtkTzdFVW1uaWJmS0FkelUz
+Sk9UeVV2N0RtaHhyZHU2VVZKNFNweVQwbGZpY2lhOU5Pa3ZyLzAiIHN0eWxlPSJ3aWR0aDox
+MDAlO2hlaWdodDoxMDAlO2JvcmRlci1yYWRpdXM6NTAlO3BvaW50ZXItZXZlbnRzOiBub25l
+OyIgIC8+PC9kaXY+PC90ZD48dGQgc3R5bGU9InBhZGRpbmc6IDEwcHggMCA4cHggMTBweDsi
+PjxkaXYgY2xhc3M9ImJ1c2luZXNzQ2FyZF9uYW1lIiBzdHlsZT0iZm9udC1zaXplOiAxNHB4
+O2NvbG9yOiAjMzMzMTJFO2xpbmUtaGVpZ2h0OiAyMHB4OyBwYWRkaW5nLWJvdHRvbTogMnB4
+OyBtYXJnaW46MDtmb250LXdlaWdodDogNTAwOyI+UmF5U3lhPC9kaXY+PGRpdiBjbGFzcz0i
+YnVzaW5lc3NDYXJkX21haWwiIHN0eWxlPSJmb250LXNpemU6IDEycHg7Y29sb3I6ICM5OTk4
+OTY7bGluZS1oZWlnaHQ6IDE4cHg7IG1hcmdpbjowOyI+cmF5c3lhQGZveG1haWwuY29tPC9k
+aXY+PC90ZD48L3RyPjwvdGJvZHk+PC90YWJsZT48L2E+PC9kaXY+
+
+------=_NextPart_681103DE_9D724980_43CAF584--
+
