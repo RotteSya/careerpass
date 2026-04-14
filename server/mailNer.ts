@@ -89,6 +89,15 @@ function extractOrgCandidates(subject: string, from: string, body: string, fromD
     candidates.push({ name: fromHr[1], source: "display_hr", confidence: 0.85 });
   }
 
+  // Strategy 4.5: "XXXからメッセージが届きました" pattern in platform subject
+  if (fromDomainTier === "recruiting_platform") {
+    const msgMatch = subject.match(/(?:メッセージが届きました|新着メッセージ)\s*\(?([^)]+)\)?/i);
+    if (msgMatch?.[1] && msgMatch[1].length <= 40) {
+      const cleanMsg = msgMatch[1].replace(/株式会社|（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
+      if (cleanMsg) candidates.push({ name: cleanMsg, source: "platform_subject", confidence: 0.85 });
+    }
+  }
+
   // Strategy 5: Bracket patterns in subject 【Company】
   for (const m of Array.from(subject.matchAll(/(?:【|「|\[)([^】」\]]{2,30})(?:】|」|\])/g))) {
     if (m[1] && !/(面接|説明会|選考|結果|内定|不採用|エントリー|日程|案内|お知らせ|通知|重要|緊急|締切|ご連絡|ご案内)/.test(m[1])) {
@@ -123,7 +132,9 @@ function extractOrgCandidates(subject: string, from: string, body: string, fromD
 
   // Strategy 8: Clean display name as fallback (skip if it looks like an email)
   if (displayName && displayName.length >= 2 && displayName.length <= 40 && !/@/.test(displayName)) {
-    const cleaned = displayName.replace(HR_SUFFIXES, "").trim();
+    const cleaned = displayName.replace(HR_SUFFIXES, "")
+      .replace(/\)$/, "") // fix trailing parenthesis often caught from platform subject templates
+      .trim();
     if (cleaned.length >= 2 && !NON_COMPANY_PATTERNS.test(cleaned)) {
       candidates.push({ name: cleaned, source: "display_clean", confidence: 0.55 });
     }

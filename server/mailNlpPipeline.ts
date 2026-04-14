@@ -82,6 +82,8 @@ const PLATFORM_INCENTIVE_HINTS =
   /(抽選|当たります|プレゼント|ギフトカード|ギフトコード|amazon\s*ギフト|amazonギフト)/i;
 const PLATFORM_NEWSLETTER_HINTS =
   /(マイナビメール|ピックアップ|おすすめ企業|新着求人|求人をお届け|特集|キャンペーン|ランキング)/i;
+const PLATFORM_MESSAGE_NOTIFICATION_HINTS =
+  /(メッセージが届きました|新着メッセージ|企業から.*メッセージ|メッセージ受信)/i;
 const PLATFORM_ACTIONABLE_RELAY_HINTS =
   /(応募者管理システム|miws\.mynavi\.jp|info-job@|提出の御礼|提出ありがとう|ご応募ありがとうございます|ご応募ありがとうございました)/i;
 
@@ -364,6 +366,34 @@ export function runRecruitingNlpPipeline(
       _meta: { domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
     };
   }
+
+  // Platform message notifications: we mark them as job-related 'other' (or 'entry' if they don't contain strong interview/test signals)
+  // because they are just generic notifications telling the user to log in. We want to skip LLM to save cost,
+  // since the real action is on the platform's MyPage.
+  const isPlatformMessageNotification = 
+    domainRep.tier === "recruiting_platform" &&
+    PLATFORM_MESSAGE_NOTIFICATION_HINTS.test(input.subject);
+    
+  if (isPlatformMessageNotification) {
+    // Try to extract company name from subject or body snippet if possible
+    const nerCompany = extractBestCompanyName(input.subject, input.from, input.body, domainRep.tier);
+    const cleanedCompanyName = nerCompany.name?.replace(/\)$/, "").trim() || null;
+    
+    return {
+      isJobRelated: true,
+      confidence: 0.95,
+      reason: "rule:platform-message-notification",
+      eventType: "other", // Mark as other so it doesn't clutter calendar with fake briefings
+      companyName: cleanedCompanyName,
+      eventDate: input.fallbackDate,
+      eventTime: input.fallbackTime,
+      location: null,
+      todoItems: ["マイページにログインしてメッセージを確認する"],
+      shouldSkipLlm: true,
+      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+    };
+  }
+
   const hasActionableProcessHints =
     ACTIONABLE_PROCESS_HINTS.test(`${input.subject}\n${input.body}`) ||
     (/【[^】]{2,40}】/.test(input.subject) && PROCESS_HINTS.test(input.subject));
