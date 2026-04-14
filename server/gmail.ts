@@ -18,6 +18,7 @@ import {
   createJobApplication,
   createJobStatusEvent,
   updateJobApplicationStatus,
+  updateJobApplicationDetails,
   getUserCalendarColorPrefs,
   saveAgentMemory,
   updateGoogleAccountSyncState,
@@ -931,6 +932,10 @@ async function upsertJobProgressFromMail(params: {
   userId: number;
   companyName: string;
   nextStatus: JobStatus;
+  position?: string | null;
+  contactInfo?: string | null;
+  priority?: "high" | "medium" | "low" | null;
+  nextActionAt?: Date | null;
   mail?: {
     messageId: string;
     from: string;
@@ -939,7 +944,7 @@ async function upsertJobProgressFromMail(params: {
     reason?: string;
   };
 }): Promise<{ changed: boolean; jobId: number | null; prevStatus: JobStatus | null; nextStatus: JobStatus }> {
-  const { userId, companyName, nextStatus } = params;
+  const { userId, companyName, nextStatus, position, contactInfo, priority, nextActionAt } = params;
   const canonicalCompanyName = resolveCanonicalCompanyName(companyName) ?? companyName;
   const targetKey = normalizeCompanyKey(canonicalCompanyName);
   const jobs = await getJobApplications(userId);
@@ -950,7 +955,14 @@ async function upsertJobProgressFromMail(params: {
     return j.companyNameJa === canonicalCompanyName || j.companyNameEn === canonicalCompanyName;
   });
   if (!existing) {
-    await createJobApplication({ userId, companyNameJa: canonicalCompanyName });
+    await createJobApplication({
+      userId,
+      companyNameJa: canonicalCompanyName,
+      position: position ?? null,
+      contactInfo: contactInfo ?? null,
+      priority: priority ?? "medium",
+      nextActionAt: nextActionAt ?? null,
+    });
     const fresh = await getJobApplications(userId);
     const created = fresh.find((j) => {
       const jaKey = normalizeCompanyKey(j.companyNameJa);
@@ -958,7 +970,7 @@ async function upsertJobProgressFromMail(params: {
       return j.companyNameJa === canonicalCompanyName;
     }) ?? null;
     if (created) {
-      await updateJobApplicationStatus(created.id, userId, nextStatus);
+      await updateJobApplicationDetails(created.id, userId, { status: nextStatus });
       await createJobStatusEvent({
         userId,
         jobApplicationId: created.id,
@@ -978,8 +990,18 @@ async function upsertJobProgressFromMail(params: {
 
   const prevStatus = existing.status as JobStatus;
   const shouldAdvance = jobStatusRank(nextStatus) > jobStatusRank(prevStatus);
+  const updates: Record<string, any> = {};
+  if (shouldAdvance) updates.status = nextStatus;
+  if (position) updates.position = position;
+  if (contactInfo) updates.contactInfo = contactInfo;
+  if (priority) updates.priority = priority;
+  if (nextActionAt) updates.nextActionAt = nextActionAt;
+
+  if (Object.keys(updates).length > 0) {
+    await updateJobApplicationDetails(existing.id, userId, updates);
+  }
+
   if (shouldAdvance) {
-    await updateJobApplicationStatus(existing.id, userId, nextStatus);
     await createJobStatusEvent({
       userId,
       jobApplicationId: existing.id,
@@ -1016,6 +1038,9 @@ interface CareerpassmailDecision extends Partial<EmailEvent> {
   isJobRelated: boolean;
   confidence: number;
   reason: string;
+  position?: string | null;
+  contactInfo?: string | null;
+  priority?: "high" | "medium" | "low" | null;
 }
 
 function calendarColorForEventType(
@@ -1243,9 +1268,12 @@ async function runCareerpassmailAgent(input: {
   "reason": string (简短判断依据),
   "eventType": "interview" | "briefing" | "test" | "deadline" | "entry" | "offer" | "rejection" | "other",
   "companyName": string | null,
+  "position": string | null (具体的职位名称/选考Course等，若无则为null),
   "eventDate": "YYYY-MM-DD" | null,
   "eventTime": "HH:MM" | null,
   "location": string | null,
+  "contactInfo": string | null (联系方式，如HR邮箱、电话、人名等),
+  "priority": "high" | "medium" | "low" (基于此事件的紧迫程度评估),
   "todoItems": string[] (最多3条)
 }`;
   const soul = await loadAgentSoul("careerpassmail");
@@ -1297,6 +1325,9 @@ async function runCareerpassmailAgent(input: {
         eventTime: merged.eventTime,
         location: merged.location,
         todoItems: merged.todoItems,
+        position: parsed.position ?? null,
+        contactInfo: parsed.contactInfo ?? null,
+        priority: parsed.priority ?? "medium",
         _meta: {
           pipelineOnly: true,
           pipelineShouldSkipLlm: false,
@@ -1776,6 +1807,10 @@ async function processGmailMessageIds(params: {
               userId,
               companyName,
               nextStatus: inferredStatus,
+              position: decision.position,
+              contactInfo: decision.contactInfo,
+              priority: decision.priority,
+              nextActionAt: date ? new Date(`${date}T${time ?? "09:00"}:00+09:00`) : null,
               mail: {
                 messageId,
                 from: detail.from,

@@ -1092,8 +1092,16 @@ export default function Dashboard() {
                             <td className="px-4 py-3 min-w-[120px] whitespace-nowrap">
                               {c.job.nextActionAt ? new Date(c.job.nextActionAt).toLocaleDateString("ja-JP") : "—"}
                             </td>
-                            <td className="px-4 py-3 min-w-[140px] truncate">—</td>
-                            <td className="px-4 py-3 min-w-[100px] truncate">—</td>
+                            <td className="px-4 py-3 min-w-[140px] truncate" title={c.job.contactInfo ?? ""}>{c.job.contactInfo ?? "—"}</td>
+                            <td className="px-4 py-3 min-w-[100px] whitespace-nowrap">
+                              {c.job.priority === "high" ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">高</span>
+                              ) : c.job.priority === "medium" ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">中</span>
+                              ) : c.job.priority === "low" ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">低</span>
+                              ) : "—"}
+                            </td>
                           </tr>
                         ))
                       )}

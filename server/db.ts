@@ -568,10 +568,10 @@ export async function getJobApplications(userId: number) {
     .orderBy(desc(jobApplications.updatedAt));
 }
 
-export async function createJobApplication(app: InsertJobApplication) {
+export async function createJobApplication(data: InsertJobApplication) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(jobApplications).values(app);
+  const result = await db.insert(jobApplications).values(data);
   return result;
 }
 
@@ -585,6 +585,34 @@ export async function updateJobApplicationStatus(
   await db
     .update(jobApplications)
     .set({ status, updatedAt: new Date() })
+    .where(and(eq(jobApplications.id, id), eq(jobApplications.userId, userId)));
+}
+
+export async function updateJobApplicationDetails(
+  id: number,
+  userId: number,
+  updates: {
+    status?: InsertJobApplication["status"];
+    position?: string | null;
+    contactInfo?: string | null;
+    priority?: "high" | "medium" | "low" | null;
+    nextActionAt?: Date | null;
+  }
+) {
+  const db = await getDb();
+  if (!db) return;
+  const setObj: Record<string, any> = {};
+  if (updates.status !== undefined) setObj.status = updates.status;
+  if (updates.position !== undefined && updates.position !== null) setObj.position = updates.position;
+  if (updates.contactInfo !== undefined && updates.contactInfo !== null) setObj.contactInfo = updates.contactInfo;
+  if (updates.priority !== undefined && updates.priority !== null) setObj.priority = updates.priority;
+  if (updates.nextActionAt !== undefined) setObj.nextActionAt = updates.nextActionAt;
+  
+  if (Object.keys(setObj).length === 0) return;
+
+  await db
+    .update(jobApplications)
+    .set(setObj)
     .where(and(eq(jobApplications.id, id), eq(jobApplications.userId, userId)));
 }
 

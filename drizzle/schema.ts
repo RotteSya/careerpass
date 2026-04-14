@@ -137,6 +137,8 @@ export const jobApplications = mysqlTable("job_applications", {
   companyNameJa: varchar("companyNameJa", { length: 255 }).notNull(),
   companyNameEn: varchar("companyNameEn", { length: 255 }),
   position: varchar("position", { length: 255 }),
+  contactInfo: varchar("contactInfo", { length: 255 }),
+  priority: mysqlEnum("priority", ["high", "medium", "low"]).default("medium").notNull(),
   status: mysqlEnum("status", [
     "researching",
     "applied",
