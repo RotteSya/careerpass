@@ -46,7 +46,7 @@ const NON_COMPANY_PATTERNS =
   /^(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster|mail|me|cs|job|job-s27|reply)$/i;
 
 const AD_TITLE_PATTERNS =
-  /^(外国人留学生必見|.*の知識を活かせます|.*向け|.*卒|1次|2次|3次|最終|面接|選考|説明会|セミナー|エントリー|案内|結果|通知|お知らせ|重要|緊急|締切|ご連絡|ご案内|就活|速報|オファー|スカウト|メッセージ|おすすめ|ピックアップ|特集|キャンペーン|ランキング|本人確認|会員登録|利用規約|退会フォーム)$/i;
+  /^(外国人留学生必見|.*の知識を活かせます|.*向け|.*卒|1次|2次|3次|最終|面接|選考|説明会|セミナー|エントリー|案内|結果|通知|お知らせ|重要|緊急|締切|ご連絡|ご案内|就活|速報|オファー|スカウト|メッセージ|おすすめ|ピックアップ|特集|キャンペーン|ランキング|本人確認|会員登録|利用規約|退会フォーム|履歴書送付|資料提出|日程調整|書類選考|適性検査)$/i;
 
 const HR_SUFFIXES = /(採用担当|採用チーム|人事部|人事課|リクルート|Recruiting|recruit|HR|人材|キャリア|新卒採用|中途採用|採用事務局|運営事務局|事務局|マイページ|team|Team|採用|新卒)$/i;
 
@@ -106,47 +106,36 @@ export function extractOrgCandidates(subject: string, from: string, body: string
     }
   };
 
+  // Helper to extract Maekabu and Atokabu legal entities
+  const extractLegal = (text: string, sourcePrefix: string, baseConf: number) => {
+    if (!text) return;
+    const reMaekabu = new RegExp(`(?:^|[\\s【】\\[\\]<>「」/／\\n"'(（:：])(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n"'(（]+)`, "g");
+    for (const m of Array.from(text.matchAll(reMaekabu))) {
+      addCandidate(m[1], `${sourcePrefix}_maekabu`, baseConf);
+    }
+    const reAtokabu = new RegExp(`([^\\s【】\\[\\]<>「」/／\\n"'(（:：]+)\\s*(?:${LEGAL_ENTITY_PREFIX.source})(?=$|[\\s【】\\[\\]<>「」/／\\n"')）:：])`, "g");
+    for (const m of Array.from(text.matchAll(reAtokabu))) {
+      const fullMatch = m[0];
+      const prefixMatch = text.substring(0, m.index).match(/([a-zA-Z0-9\s.-]+)$/);
+      if (prefixMatch) {
+         addCandidate(prefixMatch[1] + fullMatch, `${sourcePrefix}_atokabu`, baseConf - 0.01);
+      } else {
+         addCandidate(fullMatch, `${sourcePrefix}_atokabu`, baseConf - 0.01);
+      }
+    }
+  };
+
   // Strategy 1: Explicit match in sender name
   if (fromDomainTier !== "recruiting_platform" && fromDomainTier !== "noise_platform") {
-    const senderExplicit = displayName.match(new RegExp(`(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n]+)`));
-    if (senderExplicit?.[1]) {
-      addCandidate(senderExplicit[1], "sender_explicit", 0.95);
-    }
+    extractLegal(displayName, "sender_explicit", 0.95);
   }
 
-  // Strategy 1: Legal entity in subject (highest confidence)
-  const reSubjectLegal = new RegExp(
-    `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n]+)`, "g"
-  );
-  for (const m of Array.from(subject.matchAll(reSubjectLegal))) {
-    addCandidate(m[1], "legal_subject", 0.95);
-  }
-
-  // Strategy 2: Inverted legal entity in subject (サンプル株式会社)
-  const reInvertedSubject = new RegExp(
-    `([^\\s【】\\[\\]<>「」/／\\n]+)\\s*(?:${LEGAL_ENTITY_PREFIX.source})`, "g"
-  );
-  for (const m of Array.from(subject.matchAll(reInvertedSubject))) {
-    // If it's something like "FIDIA SOLUTIONS株式会社 分銅", the match might be "FIDIA SOLUTIONS株式会社"
-    // Let's capture the whole thing including prefix if possible
-    const fullMatch = m[0];
-    const prefixMatch = subject.substring(0, m.index).match(/([a-zA-Z0-9\s]+)$/);
-    if (prefixMatch) {
-       addCandidate(prefixMatch[1] + fullMatch, "legal_subject_inv", 0.94);
-    } else {
-       addCandidate(fullMatch, "legal_subject_inv", 0.94);
-    }
-  }
+  // Strategy 1 & 2: Legal entity in subject
+  extractLegal(subject, "legal_subject", 0.95);
 
   // Strategy 3: Legal entity in sender display name
   const combinedFromSubject = `${displayName}\n${subject}`;
-  const reFromLegal = new RegExp(
-    `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\n【】\\[\\]<>「」/／\\n]+)`
-  );
-  const fromLegal = combinedFromSubject.match(reFromLegal);
-  if (fromLegal?.[1] && !subject.includes(fromLegal[1])) {
-    addCandidate(fromLegal[1], "legal_from", 0.93);
-  }
+  extractLegal(combinedFromSubject, "legal_from", 0.93);
 
   // Strategy 4: Display name with HR suffix → strip suffix to get company
   const fromHr = displayName.match(/^(.{2,30}?)\s*(?:採用|人事|HR|recruit|Recruit|キャリア|新卒|リクルート)/i);
@@ -209,17 +198,16 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   // Strategy 7: Legal entity in body (first 500 chars, lower confidence)
   if (!isFromPlatform) {
     const bodyPrefix = body.slice(0, 500);
-    const reBodyLegal = new RegExp(
-      `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n]+)`
-    );
-    const bodyLegal = bodyPrefix.match(reBodyLegal);
-    if (bodyLegal?.[1]) {
-      addCandidate(bodyLegal[1].replace(/御中|様$/, ""), "body_legal", 0.70);
-    }
+    extractLegal(bodyPrefix, "body_legal", 0.70);
   }
 
     // Strategy 8: Clean display name as fallback (skip if it looks like an email)
-    if (displayName && displayName.length >= 2 && displayName.length <= 40 && !/@/.test(displayName)) {
+  if (displayName && displayName.length >= 2 && displayName.length <= 40 && !/@/.test(displayName)) {
+    // If it's a free mail domain, the display name is highly likely to be a person's name (e.g. a student forwarding an email)
+    // unless it explicitly contains legal entity keywords.
+    if (fromDomainTier === "free_mail" && !LEGAL_ENTITY_PREFIX.test(displayName)) {
+      // skip
+    } else {
       const cleaned = displayName.replace(HR_SUFFIXES, "")
         .replace(/\)$/, "") // fix trailing parenthesis often caught from platform subject templates
         .replace(/株式会社|合同会社|有限会社|一般社団法人|一般財団法人|（株）|\(株\)/g, "")
@@ -228,13 +216,21 @@ export function extractOrgCandidates(subject: string, from: string, body: string
         candidates.push({ name: cleaned, source: "display_clean", confidence: 0.55 });
       }
     }
+  }
 
   // Strategy 9: Email domain SLD (lowest confidence) — also suppressed for platforms
   if (!isFromPlatform) {
     const domainMatch = from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
     if (domainMatch?.[1]) {
       const fullDomain = domainMatch[1].toLowerCase();
-      if (!FREE_MAIL_DOMAINS_NER.has(fullDomain) && !PLATFORM_DOMAINS.has(fullDomain)) {
+      const isDomainMatch = (dom: string, set: Set<string>) => {
+        if (set.has(dom)) return true;
+        for (const d of set) {
+          if (dom.endsWith("." + d)) return true;
+        }
+        return false;
+      };
+      if (!isDomainMatch(fullDomain, FREE_MAIL_DOMAINS_NER) && !isDomainMatch(fullDomain, PLATFORM_DOMAINS)) {
         const sld = fullDomain.split(".")[0];
         if (sld && sld.length >= 2 && !NON_COMPANY_PATTERNS.test(sld)) {
           candidates.push({ name: sld, source: "domain_sld", confidence: 0.40 });
@@ -259,12 +255,15 @@ function normalizeOrgName(raw: string): string | null {
 
 export function isValidExtractedCompany(name: string | null | undefined, recipientNames: string[] = []): string | null {
   if (!name) return null;
-  let c = name.replace(/^(【|「|\[|\()(.+?)(】|」|\]|\))$/, "$2").trim();
+  let c = name.replace(/^(【|「|\[|\(|"|')(.+?)(】|」|\]|\)|"|')$/, "$2").trim();
   c = c.replace(/\)$/, "").replace(/）$/, "").trim(); // fix trailing parenthesis
   
   // Reject obvious sentences or long descriptive texts
   if (c.length > 40) return null;
   if (/[!！?？。、]/.test(c)) return null;
+  if (/^fwd?:/i.test(c)) return null;
+  if (/^[-_=+*]{3,}/.test(c)) return null;
+  if (/^[一-龥]{1,3}[\s　]+[一-龥]{1,3}$/.test(c)) return null;
   
   // Dynamically reject if it's likely the recipient's name
   if (recipientNames.length > 0 && recipientNames.some(n => c === n || (c.includes(n) && c.length - n.length <= 4))) {
@@ -288,7 +287,7 @@ export function extractBestCompanyName(
   // Extract candidates using multi-strategy approach
   const candidates = extractOrgCandidates(subject, from, body, fromDomainTier, recipientNames);
   const normalized = candidates
-    .map((c) => ({ ...c, name: normalizeOrgName(c.name) ?? "" }))
+    .map((c) => ({ ...c, name: isValidExtractedCompany(c.name, recipientNames) ?? "" }))
     .filter((c) => c.name.length >= 2);
 
   if (normalized.length === 0) return { name: null, confidence: 0 };
@@ -562,9 +561,17 @@ export function getDomainReputation(from: string): DomainReputation {
   if (!m) return { tier: "unknown", score: 0.3, domain: null };
   const domain = m[1].toLowerCase();
 
-  if (FREE_MAIL_DOMAINS_NER.has(domain)) return { tier: "free_mail", score: 0.15, domain };
-  if (NOISE_PLATFORM_DOMAINS.has(domain)) return { tier: "noise_platform", score: 0.05, domain };
-  if (RECRUITING_PLATFORM_DOMAINS.has(domain)) return { tier: "recruiting_platform", score: 0.70, domain };
+  const isDomainMatch = (dom: string, set: Set<string>) => {
+    if (set.has(dom)) return true;
+    for (const d of set) {
+      if (dom.endsWith("." + d)) return true;
+    }
+    return false;
+  };
+
+  if (isDomainMatch(domain, FREE_MAIL_DOMAINS_NER)) return { tier: "free_mail", score: 0.15, domain };
+  if (isDomainMatch(domain, NOISE_PLATFORM_DOMAINS)) return { tier: "noise_platform", score: 0.05, domain };
+  if (isDomainMatch(domain, RECRUITING_PLATFORM_DOMAINS)) return { tier: "recruiting_platform", score: 0.70, domain };
 
   // *.co.jp is almost always a real Japanese company
   if (/\.co\.jp$/i.test(domain)) {
