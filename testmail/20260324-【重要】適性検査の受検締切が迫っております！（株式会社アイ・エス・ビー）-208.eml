@@ -1,0 +1,102 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:4189:b0:32f:2baf:8ecc with SMTP id xu9csp1220900lkb;
+        Mon, 23 Mar 2026 20:02:58 -0700 (PDT)
+X-Received: by 2002:a05:6a20:7350:b0:398:6ea8:21f7 with SMTP id adf61e73a8af0-39bce9f30f3mr14331325637.15.1774321377959;
+        Mon, 23 Mar 2026 20:02:57 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1774321377; cv=none;
+        d=google.com; s=arc-20240605;
+        b=h165T+0s4BIpyVVIeTbh7oBlRC5zSjlCmmN+OgRLVXW96w45dazr1UiwzNpfb9PpxQ
+         Y1iTbVBxPuFnhtBl8t0o8yR74l7qssJoLWxTwbJ6NHtYfsr/pfBZH3O7w6LXoQB0Sr61
+         Fq4odP0tHkQTgxHeM4qJJjtuYAz7ERwTYZBdkCOGz241OiNqm0m/8Nqt0SzcSCRQIXvz
+         vwBDsg9YoBQ7hULaVLZqTxX0E4lA/OcJPl1IbiQMuAjk6wwPKI0L9Dsxy/L3rPDAy2Fb
+         +9ZjjJ+K1lz+WrDdm2R46Er8EN5KDacIgSXCWoknJjKOTnWBF6+LnZAorjnQLX+zr5Rb
+         BKuA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=references:mime-version:message-id:subject:cc:to:from:date
+         :dkim-signature;
+        bh=UsM9Cu1RCTLNQgSXOuqexJ4AaviXM1WuBbCjch0k0Zc=;
+        fh=+s6Hz3twO2v+/WWMQqsP7DwIe5hWgjXQso9Nq6cLoDY=;
+        b=jeIniqWjdDGF0WG5eODgK0wNFC9gjhe8OqRntBLKAsW3hwKaxzBXtKMFhqih5apL9Z
+         TfVvPwo5DsYd21xMeBYa6+gkHiXs5ebXfuA+9S5xdTxfCnUnkWYrFtHyYTSvJE3KOgfT
+         twXSaXEfAN07hj1hMnFcCrVoftXADKy5PXwxNSSGxtzXKJ2ukPjyND4xYZwyNZSgFci/
+         cd/8M2oR+I1ZkJF0ajhE08A1XoqnJZ/jDL126ScZNNDWwRRW81acLUWvzeqeNDupyOn6
+         8UwJm2YHHyOcWJnFQFJBr97yDmqG3ArUATSJL5Gs5VSiGxWZ1LmpVjhAJvB6ADg6sumj
+         okfQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=O8yHVx5G;
+       spf=pass (google.com: domain of bounces-2723327859@recruit-mg.com designates 210.140.105.20 as permitted sender) smtp.mailfrom=bounces-2723327859@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Return-Path: <bounces-2723327859@recruit-mg.com>
+Received: from bmsl002585-01-02.baremetal.jp (bmsl002585-01-02.baremetal.jp. [210.140.105.20])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c74664bb2dasi15807889a12.265.2026.03.23.20.02.57
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Mon, 23 Mar 2026 20:02:57 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounces-2723327859@recruit-mg.com designates 210.140.105.20 as permitted sender) client-ip=210.140.105.20;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=O8yHVx5G;
+       spf=pass (google.com: domain of bounces-2723327859@recruit-mg.com designates 210.140.105.20 as permitted sender) smtp.mailfrom=bounces-2723327859@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Received: from 152-15-168-192.baremail.local.15.168.192.in-addr.arpa (HELO) (192.168.15.152)
+  by sl002585-01 with ESMTP; Tue, 24 Mar 2026 12:02:56 +0900
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=recruit-mg.com;
+	s=recruit-mg.com.202401; t=1774321376;
+	bh=UsM9Cu1RCTLNQgSXOuqexJ4AaviXM1WuBbCjch0k0Zc=;
+	h=From:To:Content-Type:Subject:Date:MIME-Version:Message-ID;
+	b=O8yHVx5G9s+AFgMOHL8I86+jpxM9SVicjRdfkohRJlz+Zlm80Wdxj5cSZxB3j+x4M
+	 ZEnvPM06G6M5CUcpFeJ0b7vJeAG3I8bs1+yuP3QwqSPuubgqRFkI6LtvO8z9zreH4T
+	 NrK8/k9/SCqt6j0DM56aUQunlDF96P/GMkmtPqwYU83MQZe7DflEBYepoL4cZAqKp9
+	 GlEycWtE3jIha6skXoK+8J89ujxtV4RcDqLutAHX9oz82hSzX42+vIrkS3GfO6ggUx
+	 oysYUrGKn82y1Uv5k8+4UwttD8GKvttUAQNaoVKXbYGbRnXXDQVwzU3dVV9z9X957J
+	 50FG0mT/Geb2A==
+Received: from localhost.local (ec2-52-69-130-14.ap-northeast-1.compute.amazonaws.com [52.69.130.14])
+	by sv587 (Postfix) with ESMTPA id C41C0C2EA462;
+	Tue, 24 Mar 2026 12:02:56 +0900 (JST)
+Date: Tue, 24 Mar 2026 12:02:56 +0900
+From: "=?UTF-8?B?5qCq5byP5Lya56S+44Ki44Kk44O744Ko44K544O744OT44O8IOaWsOWNkg==?=
+ =?UTF-8?B?5o6h55So?=" <isb-recruit+27@recruit-mg.com>
+To: raysya.biz@gmail.com
+Cc: raysyadesu@gmail.com
+Subject: =?UTF-8?B?44CQ6YeN6KaB44CR6YGp5oCn5qSc5p+744Gu5Y+X5qSc57eg5YiH44GM6L+r?=
+ =?UTF-8?B?44Gj44Gm44GK44KK44G+44GZ77yB77yI5qCq5byP5Lya56S+44Ki44Kk44O7?=
+ =?UTF-8?B?44Ko44K544O744OT44O877yJ?=
+Message-ID: <69c1fee0a9a52@recruit-mg.com>
+X-Priority: 2 (High)
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+References: <#22317468@recruit-mg.com>
+X-SE-HID: sl002585-01.1774321376973192.192.168.15.152.sl002585
+
+立命館大学
+ＳＨＥＬＩＮＧＺＨＡＯ様
+
+こんにちは。
+株式会社アイ・エス・ビー 新卒採用担当です。
+
+先日はプロフィールシートの提出ありがとうございました！
+適性検査が未受検となっておりますのでご連絡させていただきました。
+
+受験URLの有効期限が残り2日間です。
+お早めに下記URLにアクセスし、適性検査を受検してください。
+https://www.career-cloud.asia//27/form/aptitude?h=a915c26025a09f6c86565e777ce082e2ced977682
+
+※検査時間は約15分です。
+※言語、非言語テストは含まれておりません。
+※通信が安定した環境で受検を始めるようにしてください。
+
+検査が終了しましたら、自動的に当社へ結果が送信されます。
+※受験完了メールは送信されませんのでご了承ください。
+
+ＳＨＥさんと選考でお会いできることを楽しみにしております！
+
+*****************************************************************************
+■ご質問・お問い合わせはこちらまで　
+株式会社
+アイ・エス・ビー（東証プライム市場上場企業）新卒採用チーム
+TEL：03-6775-3274
+E-mail：isb-recruit+27@recruit-mg.com　
+URL：https://www.isb.co.jp/
+*****************************************************************************

@@ -1,0 +1,122 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a9a:5c04:0:b0:32d:d2ea:2208 with SMTP id f4csp253528lkg;
+        Thu, 12 Mar 2026 18:30:24 -0700 (PDT)
+X-Received: by 2002:a05:6a00:928a:b0:822:6830:5900 with SMTP id d2e1a72fcca58-82a196d9408mr1046673b3a.6.1773365423942;
+        Thu, 12 Mar 2026 18:30:23 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1773365423; cv=none;
+        d=google.com; s=arc-20240605;
+        b=b0bp8Oe5KoIR1SpCS62Ljl69Rhgcwpydeshykjxsw2ddSgcyNhg9EGBDd06hKZNmtH
+         XcCEJjWEQPPsQSy4m1arWpgv4POA0iuAb1MsfhV4htqlK7wskLdo/tzpZRrL+QVmrcu0
+         b3vUq9izextGPkZ06RoWV2shfxQ8af+oxWA9Atl/kkUp5uvwtYxsmGa/KvQimrYPXdiT
+         bnn8nFz+5KvLy/I9mxgZ0Um2BEqkFtPGd5Cx+vfwzpsKXN2U895eD8QkdCKUko6XNN0g
+         0ZSSD/Qz0HVqd22gpk7gM9Uu4kC1R9JfX5eerFWdTmQ3/l/AEZQvMLMYcG5h0LJSrCX5
+         +G5g==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:mime-version:subject:to:from:date
+         :message-id:dkim-signature;
+        bh=+ujQmY3YyYXslOIhE0VN+4b3DKcNsaTDVftxoDjbRCg=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=MMWkvQWfOXgUR2HZWZ6V9GH+ICq5bz/sDUhqfZ8/56+Nbfd7ue6nQYaOGGSSOxvZVb
+         2NSghIvicVFHnn+qOPnk6elmx+yRYGnt94zoAFkFikux4DaE9lTd+ByuKa5b0G/DSnfQ
+         E+2wPidlAfoSqtmJobEgK9e5+6fUZaS2zaVtVDTlUHiCL5yINC7MPA7tVZvcjWBK6ia8
+         HsIQMyu9iWWGZ1boFKaITREDFKf1I3JNgtiKBTI4v2F1LK4C8KoPd6xp6wO0Qhl2KnrH
+         QS3OicZoHBttxZDqFtfmLCGd0Si+jXHe2q7Id/ylcb+3rOQB5zsXvoL7BHxvnKD+OQBr
+         YJSQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@e2r.jp header.s=20231218 header.b="q/jrWSAr";
+       spf=pass (google.com: domain of panasonic2027@e2r.jp designates 61.121.214.123 as permitted sender) smtp.mailfrom=panasonic2027@e2r.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=e2r.jp
+Return-Path: <panasonic2027@e2r.jp>
+Received: from mail22.e2r.jp (e2r.jp. [61.121.214.123])
+        by mx.google.com with ESMTPS id d2e1a72fcca58-82a0725b712si7828052b3a.35.2026.03.12.18.30.23
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Thu, 12 Mar 2026 18:30:23 -0700 (PDT)
+Received-SPF: pass (google.com: domain of panasonic2027@e2r.jp designates 61.121.214.123 as permitted sender) client-ip=61.121.214.123;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@e2r.jp header.s=20231218 header.b="q/jrWSAr";
+       spf=pass (google.com: domain of panasonic2027@e2r.jp designates 61.121.214.123 as permitted sender) smtp.mailfrom=panasonic2027@e2r.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=e2r.jp
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=e2r.jp; s=20231218;
+	t=1773365324; bh=+ujQmY3YyYXslOIhE0VN+4b3DKcNsaTDVftxoDjbRCg=;
+	h=Date:From:To:Subject:From;
+	b=q/jrWSArqm2kTm7ddcbQfqjFK7Bm6RI7C9PsUxbyi43KWUXXo3uXYIVRCnXbaQzq4
+	 voxYI3tp3KQmDj1432v1QsLMQtxL9PLK3gbljwBoMWLsbRnS89np8LFEf8PFkpNN3Y
+	 UBpnHzHcfowg3/KHClwKlZ7ZRCyKJP21aAu7pv1EaUgxGx/hV82t4TeYYQQ93qGh2z
+	 l8KOhSvmQgL9cwgTHG+pLvi/4/DoPu/UQrG+sjIj5C1WJ2iScyIPKi3oXm1zRNi3C2
+	 iP3H6ibnUzBV9EznnRo+THDMXNSTTuizXyBn+IDw01WNpLxixQ/h1T7KaP9CkvrOjj
+	 WJBK8Qv9xooAA==
+Received: from mail21.e2r.jp (recmail21 [10.100.98.21])
+	by mail22.e2r.jp (Postfix) with ESMTP id 94A202A81698
+	for <raysya.biz@gmail.com>; Fri, 13 Mar 2026 10:28:44 +0900 (JST)
+Received: from recweb111.e2r.jp (recweb111-TRUST [10.100.98.111])
+	by mail21.e2r.jp (Postfix) with ESMTP id C249C216C44E
+	for <raysya.biz@gmail.com>; Fri, 13 Mar 2026 10:28:43 +0900 (JST)
+Received: from recweb111 (www.e2r.jp [127.0.0.1])
+	by recweb111.e2r.jp (Postfix) with ESMTP id C17F51C403B4
+	for <raysya.biz@gmail.com>; Fri, 13 Mar 2026 10:28:43 +0900 (JST)
+Message-ID: <1499506566.1773365323791.JavaMail.bea@recweb111>
+Date: Fri, 13 Mar 2026 10:28:43 +0900 (JST)
+From: 
+	=?ISO-2022-JP?B?GyRCJVElSiU9JUslQyUvJTAlayE8JVchITpOTVFDNEV2GyhC?= <panasonic2027@e2r.jp>
+To: raysya.biz@gmail.com
+Subject: =?ISO-2022-JP?B?GyRCJVclbCUoJXMlSCVqITw8dUlVNDBOOyROJDQbKEI=?=
+ =?ISO-2022-JP?B?GyRCTyJNbSFKJVElSiU9JUslQyUvJTAlayE8JVchSxsoQg==?=
+Mime-Version: 1.0
+Content-Type: text/plain; charset=ISO-2022-JP
+Content-Transfer-Encoding: quoted-printable
+
+=1B$B#S#H#E=1B(B =1B$B#L#I#N#G#Z#H#A#O=1B(B =1B$BMM=1B(B
+
+=1B$B%Q%J%=3D%K%C%/%0%k!<%W$X%W%l%(%s%H%j!<$$$?$@$-!"$"$j$,$H$&$4$6$$$^$9!#=
+=1B(B
+=1B$B0J2<=1B(BURL=1B$B$X%"%/%;%9$$$?$@$-!"%^%$%Z!<%8EPO?$r$*4j$$$7$^$9!#=1B=
+(B
+-------------------------------------------
+=1B$B!Z%Q%J%=3D%K%C%/%0%k!<%W!V%^%$%Z!<%8!W=1B(BURL=1B$B![=1B(B
+=1B$B!!=1B(Bhttps://www.e2r.jp/ja/panasonic2027/
+
+=1B$B!Z%^%$%Z!<%8=1B(B =1B$B%m%0%$%s>pJs![=1B(B
+=1B$B!&#I#D!'=1B(BP70612166
+=1B$B!&%Q%9%o!<%I!'=1B(BpUDbo34C
+=1B$B!J"(#I#D!&%Q%9%o!<%I$OBg@Z$KJ]4I$7$F$/$@$5$$!K=1B(B
+-------------------------------------------
+
+=1B$B!Z1~Jg4|4V![=1B(B
+=1B$B!&5;=3DQ7O!!%8%g%V%^%C%A%s%0=1B(B(2=1B$B<!Dy@Z=1B(B)
+=1B$B!!%(%s%H%j!<%7!<%HDs=3DPDy@Z!!=1B(B2026=1B$BG/=1B(B3=1B$B7n=1B(B23=1B$=
+BF|!J7n!K=1B(B12:00
+=1B$B!!E,@-8!::<u8!Dy@Z!!=1B(B2026=1B$BG/=1B(B3=1B$B7n=1B(B26=1B$BF|!JLZ!K=
+=1B(B23:59
+=1B$B"(%(%s%H%j!<%7!<%HDs=3DP!&E,@-8!::<u83$r40N;$5$l$?J}$h$j=3Dg<!$40FFb=
+=1B(B
+
+=1B$B!&;vL37O!!=1B(B6=1B$B7nEYA*9M2q=1B(B
+=1B$B!!%(%s%H%j!<%7!<%HDs=3DPDy@Z!!=1B(B2026=1B$BG/=1B(B4=1B$B7n=1B(B 1=1B$=
+BF|!J?e!K=1B(B12:00
+
+=1B$B!&%/%j%(%$%F%#%V7O!!%/%j%(%$%F%#%V7O?&<oA*9M2q=1B(B
+=1B$B!!%(%s%H%j!<%7!<%H!&<+8J=1B(BPR=1B$B;qNADs=3DPDy@Z!!=1B(B2026=1B$BG/=
+=1B(B3=1B$B7n=1B(B16=1B$BF|!J7n!K=1B(B12:00
+=1B$B!!E,@-8!::<u8!Dy@Z!!=1B(B2026=1B$BG/=1B(B3=1B$B7n=1B(B19=1B$BF|!JLZ!K=
+=1B(B23:59
+
+=1B$B!Z%Q%J%=3D%K%C%/%0%k!<%W=1B(B =1B$B:NMQ%5%$%H$O$3$A$i![=1B(B
+https://recruit.jpn.panasonic.com/
+
+=1B$B#S#H#E$5$s$N$41~Jg$r$*BT$A$7$F$*$j$^$9!*=1B(B
+
+=1B$B"(K\%a!<%k%"%I%l%9$OAw?.@lMQ$G$9!#=1B(B
+=1B$B!!$*Ld9g$;$O%^%$%Z!<%8!V$*Ld$$9g$o$;!W$h$j$*4j$$$7$^$9!#=1B(B
+=1B$B"($3$N%a!<%k$K$*?4Ev$?$j$N$J$$J}$O!"$*<j?t$G$9$,!"=1B(B
+=1B$B!!2<5-=1B(BURL=1B$B$h$j$*Ld$$9g$o$;$/$@$5$$!#=1B(B
+https://support.portal.e2r.jp/ja/panasonic_support_info/contact/?s=3Dpanaso=
+nic2027&f=3D9=1B$B!!!!=1B(B
+
+=1B$B0J>e=1B(B
+-----
+=1B$B%Q%J%=3D%K%C%/%0%k!<%W!!:NMQC4Ev=1B(B
+

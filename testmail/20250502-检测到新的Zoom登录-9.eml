@@ -1,0 +1,360 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:4d4b:b0:2b5:909b:c8ed with SMTP id cz11csp812487lkb;
+        Fri, 2 May 2025 05:04:36 -0700 (PDT)
+X-Google-Smtp-Source: AGHT+IGJnUKgbXzOguRFtSbGgYe2Tk/3PbToVVNP+rIIrMVek8RUL0gA834U54zo/aGdhTeR24Go
+X-Received: by 2002:a05:620a:1915:b0:7c5:5d4b:e62f with SMTP id af79cd13be357-7cad5ba3edfmr362556185a.43.1746187476467;
+        Fri, 02 May 2025 05:04:36 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1746187476; cv=none;
+        d=google.com; s=arc-20240605;
+        b=XCLhfn+72fd8xv4PBY6YdKF5T04+wizlqN4jHmJWUxg3NXyc0uKWYADJxts6ApMVEv
+         a5IQKNEd0IKlP7tIe9Ze0EfafTUjBWNwYPO3u9t6kI4PLhCYGEKDvjwz+frw3GBPxyRH
+         5/X0ImZmTTWNs84O89kcanTVqmzM3zfjBWr93Dmbs6YnUzVll+26G9kPOey8jWYjNE5k
+         V6YF5MH6UiECrywG3Ay5/3kajeGBnkkUhyW10czhvEgttPFvqvF23m/Bxb0GH52awwyV
+         bxoL5zGSrNOYpJXaBLNMcGe8QBNVHo6fnAG1joglBkbSjcUKFSEZ8o+W8j2uoVpiC+iO
+         gjjQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:mime-version:from:date
+         :content-transfer-encoding:dkim-signature:dkim-signature;
+        bh=SZg/ntpOVOU7bgHMKq0bXpohaDtD7lu1aOpexXE+eG0=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=a3NIgmzeDkv/FVqbVq/LfkoH1GS2qCA6zcLzttL0LEVx3an+uFm9MGSGhGvUFuFdfB
+         OUcWsPrL++gqkpvnuVTQ96Yg2RkO1Kqnr5LbakqRFDnV7429lnjmILHbvrGFuw9qxgXz
+         u35g8gMa+KC9+3+/AYdnTYe03LmW2czCjp8VewZDGcyS/ONvhWpxdexaICotbcnImXiO
+         hrGP72+tlSLu+9sB1ko2N9JpAPaq18piOSfXTgb0exWyUjhU7eUB6GrFuTlhsuABIfP3
+         R+xooYx2mW8DxgDbT+rWw1d5Nw5ReBQsXEMZTCWhKv9cEl3yABO1mvZCGcsRQmSqYIJn
+         PFMg==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@zoom.us header.s=sg header.b=LJ+IqAjK;
+       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b=QQh490Il;
+       spf=pass (google.com: domain of bounces+15570388-4037-raysya.biz=gmail.com@bounce-sg.zoom.us designates 149.72.198.96 as permitted sender) smtp.mailfrom="bounces+15570388-4037-raysya.biz=gmail.com@bounce-sg.zoom.us";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=zoom.us
+Return-Path: <bounces+15570388-4037-raysya.biz=gmail.com@bounce-sg.zoom.us>
+Received: from o4.sg.zoom.us (o4.sg.zoom.us. [149.72.198.96])
+        by mx.google.com with ESMTPS id af79cd13be357-7cad241fe9asi290078185a.319.2025.05.02.05.04.35
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Fri, 02 May 2025 05:04:36 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounces+15570388-4037-raysya.biz=gmail.com@bounce-sg.zoom.us designates 149.72.198.96 as permitted sender) client-ip=149.72.198.96;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@zoom.us header.s=sg header.b=LJ+IqAjK;
+       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b=QQh490Il;
+       spf=pass (google.com: domain of bounces+15570388-4037-raysya.biz=gmail.com@bounce-sg.zoom.us designates 149.72.198.96 as permitted sender) smtp.mailfrom="bounces+15570388-4037-raysya.biz=gmail.com@bounce-sg.zoom.us";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=zoom.us
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=zoom.us;
+	h=content-transfer-encoding:content-type:from:mime-version:subject:to:
+	cc:content-type:feedback-id:from:subject:to;
+	s=sg; bh=SZg/ntpOVOU7bgHMKq0bXpohaDtD7lu1aOpexXE+eG0=;
+	b=LJ+IqAjKhh7P7A7GxdMlstw1/KlLhjU7crlCy6fH6wdZvufvkbtom1Hv7yvJ72snlOiN
+	fEHp9qE2plyXY8YirPhyCM9adSYyxLz0sxXCTaVKLdrr+nY34RVz3FI7hbaKbvJ/jny+h5
+	X1olav3g9bdg65/rUQde9I80vAoUwqRzvSgl78EVcRxZJ6atHVdobx30KWsC/ssluHd6QA
+	RJRgRSo/fcqG0pFFw0K/4irM8pTyRSvD/DroIUrYO5J3/fGi5vBc0hB0w1CcrMagEgP9wu
+	YZKuRgLZ9Xj9vdneH3Y/fAw5DN+QAW7IxWCIwnQURPT79gBIbzr+4kmF0LYtUHIw==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sendgrid.info;
+	h=content-transfer-encoding:content-type:from:mime-version:subject:to:
+	cc:content-type:feedback-id:from:subject:to;
+	s=smtpapi; bh=SZg/ntpOVOU7bgHMKq0bXpohaDtD7lu1aOpexXE+eG0=;
+	b=QQh490Il9yGu0sRhilhBXPk7Aink0CotRDr3e/oafI27uHDzQWc/iWyvp0ocQHwFszZW
+	BUvUkm7lIhjrwUwe2HtssJaF7VSCDFSemsUyu4TegUl3Gb3fj8Dh5F6TU40GINuWD/uIh6
+	Z/BAT1vju2GifV4ArIAJUuEYWUa+3RSAM=
+Received: by recvd-59597fbc44-nznfr with SMTP id recvd-59597fbc44-nznfr-1-6814B4D2-4D
+	2025-05-02 12:04:34.574667957 +0000 UTC m=+2037381.209723922
+Received: from MTU1NzAzODg (unknown)
+	by geopod-ismtpd-28 (SG) with HTTP
+	id TToQZg7ISMuGGCvxc4mRag
+	Fri, 02 May 2025 12:04:34.558 +0000 (UTC)
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=utf-8
+Date: Fri, 02 May 2025 12:04:34 +0000 (UTC)
+From: Zoom <no-reply@zoom.us>
+Mime-Version: 1.0
+Message-ID: <TToQZg7ISMuGGCvxc4mRag@geopod-ismtpd-28>
+Subject: =?UTF-8?B?5qOA5rWL5Yiw5paw55qEWm9vbeeZu+W9lQ==?=
+X-SG-EID: 
+ =?us-ascii?Q?u001=2EV=2FCrMu5=2F7JiV4gIYr+InI6MELJgR7AD1buWM99=2FR73ZFoqqpDBbZ3TVvT?=
+ =?us-ascii?Q?+Lil2N=2FmclBvxYORlhNeIPYm+mNWZ6qOeymdTdh?=
+ =?us-ascii?Q?t2pm5++FX4afms2H5Isk4yVFi0YTC2W2vHtDEzS?=
+ =?us-ascii?Q?2jdTtdxQ5f51qjHkttM66zzcC5M61HA4b0mhxH1?=
+ =?us-ascii?Q?6=2FcrIGNeQXR879BDp5AJmgc5FV6KOzulvUrjkKq?=
+ =?us-ascii?Q?RPWIGRno+OrYZSsf2cop=2Fg=3D?=
+X-SG-ID: 
+ =?us-ascii?Q?u001=2ESdBcvi+Evd=2FbQef8eZF3Bj9cCn7DXWBjCME7nOxvqCx4XZHHex7Iud=2FBt?=
+ =?us-ascii?Q?C=2FJ68o54Ew5bc9CL1BT0ulGeh8OLKosrQdQSpmz?=
+ =?us-ascii?Q?NsASet7alW0fSj7riFB67Ilsq49CC2evaEWBYmQ?=
+ =?us-ascii?Q?HyEWGGhtJa0ZPAPXEKBsvHFnNIbINsZLsy9Iwz7?=
+ =?us-ascii?Q?XyjqeHVnweSgKcf1V0YfCfE5GN=2FtiI79KzUVfdp?=
+ =?us-ascii?Q?cKLVRmNm5OFflcmi4PHGcUSOus1TfSMTSpz9r1f?=
+ =?us-ascii?Q?zFUOtcQRXF9=2FtvTiXKJSeNNd8xzMe9OmauUtqsn?=
+ =?us-ascii?Q?6xLbFgxjI4233Y45cjagrKMDwAvc3SaLHY2DAW6?=
+ =?us-ascii?Q?IsuPPgo72djgN7NGs18+xvfG5Nlwnp3dFiJXMIx?=
+ =?us-ascii?Q?5P8SLYtW7RGF33dAnXvGkk=2F0s9pXPcWbLoJgBJy?=
+ =?us-ascii?Q?jPLE1S62k72rCg3MvxN8yeHW3O1gnF4XaNlTIlL?=
+ =?us-ascii?Q?0=2FUB=2FpQIzGkydjtItXQ9YsUDhcXaV0BD3zptXTr?=
+ =?us-ascii?Q?rTse1pa6OPuxWiyC3rskA6dSNSj0iUMI6dsuuJW?=
+ =?us-ascii?Q?8vPha+VCkzic9RVju7ASDYaHx4meEK6uXHPaGl3?=
+ =?us-ascii?Q?Ztm+O8f5kXt1oESVvc1MCxmzSN4NKtqmSVUvPaD?=
+ =?us-ascii?Q?ax1vNx1JUB8V+e0P8JZPV50LchvrI7Kzt31Mxen?=
+ =?us-ascii?Q?MA8H8Q3bG3ZgKukUBVKg=3D=3D?=
+To: raysya.biz@gmail.com
+X-Entity-ID: u001.6mUY7xs+tNnsNuz7tuXEzQ==
+
+<!DOCTYPE html>
+<html lang=3D"en">
+<head>
+    <meta charset=3D"UTF-8" />
+    <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=
+=3D1.0, maximum-scale=3D1.0, user-scalable=3D0" />
+    <meta http-equiv=3D"X-UA-Compatible" content=3D"ie=3Dedge" />
+    <style type=3D"text/css">
+        body { height: 100% !important; margin: 0 !important; padding: 0 !i=
+mportant; width: 100% !important;}
+        .email-body {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            text-align: center;
+            background: #F1F4F6;
+        }
+
+        .container {
+            display: inline-block;
+            width: 540px;
+            text-align: initial;
+            margin-top: 32px;
+            margin-bottom: 32px;
+            background-color: #fff;
+            border-radius: 30px;
+            font-family: 'Inter', 'Helvetica Neue', 'Helvetica', sans-serif=
+;
+        }
+        .container a {
+            text-decoration: none;
+            color: #0D6BDE;
+        }
+        .header {
+            background: #fff;
+            border-top-left-radius: 30px;
+            border-top-right-radius: 30px;
+        }
+
+        .header__logo {
+            padding: 24px 0px 24px 48px;
+        }
+        .header__logo img {
+            height: 20px;
+        }
+
+        .email-content {
+            background: #fff;
+            color: #2A2B2D;
+            font-size: 15px;
+            padding: 0 48px;
+        }
+
+        .email-content-box {
+            padding: 24px 0;
+            border-top: 1px solid #DFE3E8;
+            border-bottom: 1px solid #DFE3E8;
+        }
+
+        .email-content__text {
+            color: #2A2B2D;
+            font-weight: 400;
+            font-size: 15px;
+        }
+
+        .mb {
+            margin-bottom: 24px;
+        }
+
+        .button {
+            border-radius: 8px;
+            height: 35px;
+            padding: 6px 12px;
+            background-color: #0E72ED;
+            color: white;
+            border: 2px outset transparent;
+            font-family: Arial, sans-serif;
+            font-size: 15px;
+            text-align: center;
+            display: inline-block;
+            cursor: pointer;
+            box-sizing: border-box;
+            text-decoration: none;
+            cursor: pointer;
+            line-height: 20px;
+            letter-spacing: -0.15px;
+        }
+
+        .email-content__subtext {
+            display: flex;
+            margin-bottom: 24px;
+        }
+
+        .email-content_nickname {
+            margin-bottom: 8px;
+            color: #2A2B2D;
+        }
+
+        .email-content_title {
+            font-size: 24px;
+            font-weight: 590;
+            margin-bottom: 32px;
+            line-height: 28px;
+            letter-spacing: 0.07px;
+            color: #323539;
+        }
+
+        .social_icon {
+            display: inline-block;
+            width: 32px;
+            height: 32px;
+            vertical-align: middle;
+            background: url("https://st1.zoom.us/social_icons_gray.png") no=
+-repeat top left;
+            background-size: 272px 32px;
+        }
+
+        @media only screen and (max-width: 414px) {
+            .container {
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+            .header {
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
+            }
+            .container {
+                border-radius: 0;
+            }
+        }
+
+        @media only screen and (min-width: 900px) {
+            .container {
+                min-width: 420px;
+                max-width: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class=3D"email-body">
+    <div class=3D"container">
+        <div class=3D"header">
+            <div class=3D"header__logo">
+                <img src=3D"https://click.zoom.us/zoom-email-logo-blue" alt=
+=3D"zoom logo" />
+            </div>
+        </div>
+        <div class=3D"email-content">
+            <div class=3D"email-content-box">
+                <div class=3D"email-content_title">
+                    =E6=A3=80=E6=B5=8B=E5=88=B0=E6=96=B0=E7=9A=84Zoom=E7=99=
+=BB=E5=BD=95
+                </div>
+                <div class=3D"email-content_nickname" style=3D"margin-botto=
+m: 24px;">
+                    =E4=BB=A4=E9=92=8A =E4=BD=98=EF=BC=8C=E6=82=A8=E5=A5=BD=
+=EF=BC=81
+                </div>
+                <div class=3D"email-content__text mb">
+                    =E6=88=91=E4=BB=AC=E6=B3=A8=E6=84=8F=E5=88=B0=E4=BD=A0=
+=E7=9A=84Zoom=E8=B4=A6=E6=88=B7raysya.biz@gmail.com=E6=9C=89=E6=96=B0=E7=9A=
+=84=E7=99=BB=E5=BD=95=E3=80=82
+                </div>
+                <div class=3D"email-content__text mb">
+                    <strong>=E6=97=B6=E9=97=B4=EF=BC=9A</strong>2025/05/02 =
+09:04 =E4=B8=8B=E5=8D=88
+                </div>
+                <div class=3D"email-content__text mb">
+                    <strong>=E4=BD=8D=E7=BD=AE=EF=BC=9A</strong>Osaka, Osak=
+a, Japan
+                </div>
+                <div class=3D"email-content__text mb">
+                    <strong>=E8=AE=BE=E5=A4=87=EF=BC=9A</strong>MacBookPro1=
+8,3, macOS 15.4.1
+                </div>
+                <div class=3D"email-content__text mb">
+                    =E5=A6=82=E6=9E=9C=E8=BF=99=E7=A1=AE=E5=AE=9E=E6=98=AF=
+=E4=BD=A0=E6=9C=AC=E4=BA=BA=E6=89=80=E4=B8=BA=EF=BC=8C=E5=88=99=E6=97=A0=E9=
+=9C=80=E8=BF=9B=E4=B8=80=E6=AD=A5=E6=93=8D=E4=BD=9C=E3=80=82
+                </div>
+                <div class=3D"email-content__text mb">
+                    <strong>=E5=A6=82=E6=9E=9C=E8=BF=99=E4=B8=8D=E6=98=AF=
+=E4=BD=A0=E6=9C=AC=E4=BA=BA=E6=89=80=E4=B8=BA=EF=BC=8C</strong>=E8=AF=B7<a =
+href=3D"https://us05web.zoom.us/reset_password?code=3DOeLm3zUt6odNpBP5SwxSs=
+0uBCQQq3q4H3drWF6wD55k.AG.zuHM5iUhhjfoIdchmQhwQd5eEIX2Qy6evxpCFicq9IUU5AcPe=
+23K8FdbyZbunz5UKf4XGSKx2pu_t6OueCtS-PEv-ZJEJX6TaunGyZs510OqL1-0kds1V2VSXcCS=
+xA3APjDAEDfiRo6P5swOep-Trb-nY6OmqY1-ixuNmP2xLfQLuUbNXqVl6scun29qWB0p7d5krLs=
+TUJvmowoj_fq2o-FQofUW2p7eEBnvltXKBqQG6oDxbhNJVGXDdYAffIh8oTIESwaD0JyGB3YH9G=
+0W9_MgxvMYuk_sHKro_Z1Qiq0ULxE.fH52_s0LWwzJBfZH3dJOdQ.LtzzIo8gqB91EJnE" targ=
+et=3D"_blank">=E9=87=8D=E7=BD=AE=E4=BD=A0=E7=9A=84=E5=AF=86=E7=A0=81</a>=E3=
+=80=82=E6=AD=A4=E6=93=8D=E4=BD=9C=E5=B0=86=E4=BD=BF=E4=BD=A0=E9=80=80=E5=87=
+=BA=E7=99=BB=E5=BD=95=E6=89=80=E6=9C=89=E4=BC=9A=E8=AF=9D=E3=80=82=E5=A6=82=
+=E9=9C=80=E4=BA=86=E8=A7=A3=E6=9B=B4=E5=A4=9A=E5=85=B3=E4=BA=8E=E8=BF=99=E4=
+=BA=9B=E7=94=B5=E5=AD=90=E9=82=AE=E4=BB=B6=E6=8F=90=E9=86=92=E7=9A=84=E4=BF=
+=A1=E6=81=AF=EF=BC=8C=E8=AF=B7=E5=8D=95=E5=87=BB<a href=3D"https://support.=
+zoom.com/hc/en/article?id=3Dzm_kb&sysparm_article=3DKB0077907" target=3D"_b=
+lank">=E6=AD=A4=E5=A4=84</a>=E3=80=82
+                </div>
+            </div>
+        </div>
+        <div style=3D"color: #6e7680; padding-bottom: 24px">
+            <div style=3D"margin-top: 24px; text-align: center">
+                <div style=3D"margin-bottom: 16px; display: inline-block">
+                    <a href=3D"https://www.linkedin.com/company/zoom">
+                        <span class=3D"social_icon" style=3D"background-pos=
+ition:0 0;"></span>
+                    </a>
+                </div>
+
+                <div style=3D"margin-left: 16px; display: inline-block">
+                    <a href=3D"https://x.com/zoom">
+                        <span class=3D"social_icon" style=3D"background-pos=
+ition:-48px 0;"></span>
+                    </a>
+                </div>
+                <div style=3D"margin-left: 16px; display: inline-block">
+                    <a href=3D"https://www.instagram.com/zoom/">
+                        <span class=3D"social_icon" style=3D"background-pos=
+ition:-96px 0;"></span>
+                    </a>
+                </div>
+                <div style=3D"margin-left: 16px; display: inline-block">
+                    <a href=3D"https://www.facebook.com/zoom">
+                        <span class=3D"social_icon" style=3D"background-pos=
+ition:-144px 0;"></span>
+                    </a>
+                </div>
+                <div style=3D"margin-left: 16px; display: inline-block">
+                    <a href=3D"https://www.youtube.com/@Zoom">
+                        <span class=3D"social_icon" style=3D"background-pos=
+ition:-192px 0;"></span>
+                    </a>
+                </div>
+                <div style=3D"margin-left: 16px; display: inline-block">
+                    <a href=3D"https://www.zoom.com/blog/">
+                        <span class=3D"social_icon" style=3D"background-pos=
+ition:-240px 0;"></span>
+                    </a>
+                </div>
+            </div>
+            <div style=3D"font-size: 12px; line-height: 20px; text-align: c=
+enter; color:#6e7680;">
+                <div style=3D"color: #0D6BDE; font-size: 15px;letter-spacin=
+g: 0.5px;">+1.888.799.9666</div>
+                <div>&copy;2025 Zoom Communications, Inc.</div>
+                <div style=3D"margin-top: 16px">
+                    <a style=3D"text-decoration: none; font-size: 15px; col=
+or: #0D6BDE;" href=3D"https://www.zoom.com">Zoom.com</a>
+                    <div>55 Almaden Blvd</div>
+                    <div>San Jose, CA 95113</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

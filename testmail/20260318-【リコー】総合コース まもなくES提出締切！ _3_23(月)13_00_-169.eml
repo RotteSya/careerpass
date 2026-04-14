@@ -1,0 +1,108 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a9a:458d:0:b0:32f:2baf:8ecc with SMTP id m13csp99824lkd;
+        Tue, 17 Mar 2026 19:11:26 -0700 (PDT)
+X-Received: by 2002:a17:903:19c8:b0:2ae:66c9:4953 with SMTP id d9443c01a7336-2b06e3331e6mr17731495ad.9.1773799886379;
+        Tue, 17 Mar 2026 19:11:26 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1773799886; cv=none;
+        d=google.com; s=arc-20240605;
+        b=Y2Jnnv9zsbijEfPwT4/Wnc74cRHIdXkfrWNfU/Um34KMs3abtT41v9kJqxnTfZVe7C
+         S3bQGi9OiE483KHcefj5f6s1rVhT35VtLnaufwtgF3DktWU55DNtjaLz3xdlF2jRC+Kx
+         LlFqOuxyeMibZ/zDSYZvZOZpOEjZNjT9K9xt1XnHXJRJtL5OmBFOijtKdTbDtLcWr6xw
+         3v/AVdAJ8d3fanBBSBfYn6PBDgHKr8et4YCsYG5Yhsfrok8YcLArr1qBpH94PEs11YUo
+         ChEOatzP6X5Ir8kCTEIe8ZR4v0lOv7oi1TmtmTluksts6q+BsiZdN7G47ztEYJRY6EdC
+         jYCw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:mime-version:cc:subject:to:from:date
+         :message-id:dkim-signature;
+        bh=oUKKLSB2AB2MzwCr0m7osfJyFtc5my14wNh45IzAo+4=;
+        fh=+s6Hz3twO2v+/WWMQqsP7DwIe5hWgjXQso9Nq6cLoDY=;
+        b=iCc+R4/YBxHTcLZ4VeYC/Nt6Xc2Iog7GsRoFBK5VJEBjJ4K8sNwKS4jRhPIUNK/0uD
+         dHkuc0wrD3kdk/eIh8InLwCSgogj1Pq1phQUyHM402lmYiVxZGmx3GVXnIJ6/QMfCYB0
+         kPyzVntbOGLaqluugKsZ/ULpKdaG17i5Y76Bn0zWg0p7X6QETWQIR2Tmy8BIaW9xIggw
+         2sTlfd8pHgL6WifrqC3V8YdaXtIj0I2XTpHF7UnUXbjJBdgW5jKQ6/aTtuxjLEewnPCG
+         Davues4nuis2/Z3/eiL9lJHYjqbc5Qs8dMesXrTBCcezuIe4fpbGdOTAO84MQy7HsiQn
+         Mo7A==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@e2r.jp header.s=20231218 header.b=kUER2Scz;
+       spf=pass (google.com: domain of ricoh2027@e2r.jp designates 61.121.214.123 as permitted sender) smtp.mailfrom=ricoh2027@e2r.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=e2r.jp
+Return-Path: <ricoh2027@e2r.jp>
+Received: from mail22.e2r.jp (e2r.jp. [61.121.214.123])
+        by mx.google.com with ESMTPS id d9443c01a7336-2b06e65dcb7si29351935ad.145.2026.03.17.19.11.25
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Tue, 17 Mar 2026 19:11:26 -0700 (PDT)
+Received-SPF: pass (google.com: domain of ricoh2027@e2r.jp designates 61.121.214.123 as permitted sender) client-ip=61.121.214.123;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@e2r.jp header.s=20231218 header.b=kUER2Scz;
+       spf=pass (google.com: domain of ricoh2027@e2r.jp designates 61.121.214.123 as permitted sender) smtp.mailfrom=ricoh2027@e2r.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=e2r.jp
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=e2r.jp; s=20231218;
+	t=1773799885; bh=oUKKLSB2AB2MzwCr0m7osfJyFtc5my14wNh45IzAo+4=;
+	h=Date:From:To:Subject:Cc:From;
+	b=kUER2SczjaQGYSttbcKIcKBlgGSNOVYiofCLSgwsH/HjRyvYs7DarSu/VTPqcazu3
+	 J4iPZm20g+StXoi4SxAa/iLOy+idvsVrAsniKqYMIqtuRvQYLBXoDZuqftdKud1kvi
+	 AQVJdCEAVUbfagO7yWb41t3o6AmlzK6uwTSPCnwTXdXdsV6XnJcQjk5WEuVtBw0X4C
+	 wtVPVy+nWQUBbZtiKemKNKgUh2uu0Etm9K3bA0NmtE5csMc4VvqBq44Et4jKTOefRJ
+	 NZRvpXHFAuJkt4rbVNgDLMQw8O3lOgTaO/XSbWmRaAhjbBCD6iL8FUDlhdJ7NThnye
+	 ZOpeiV6RyuEiQ==
+Received: from mail21.e2r.jp (recmail21 [10.100.98.21])
+	by mail22.e2r.jp (Postfix) with ESMTP id 620362A80F15;
+	Wed, 18 Mar 2026 11:11:25 +0900 (JST)
+Received: from recmail21 (recmail21 [127.0.0.1])
+	by mail21.e2r.jp (Postfix) with ESMTP id 56782216C424;
+	Wed, 18 Mar 2026 11:11:25 +0900 (JST)
+Message-ID: <18750141.1773799885352.JavaMail.bea@recmail21>
+Date: Wed, 18 Mar 2026 11:11:25 +0900 (JST)
+From: ricoh2027@e2r.jp
+To: raysya.biz@gmail.com
+Subject: =?ISO-2022-JP?B?GyRCIVolaiUzITwhW0FtOWclMyE8GyhC?=
+ =?ISO-2022-JP?B?GyRCJTkbKEIgGyRCJF4kYiRKJC8bKEJFUxskQkRzGyhC?=
+ =?ISO-2022-JP?B?GyRCPVBEeUBaISobKEIgPDMvMjMoGyRCN24bKEIpMTM6MDA+?=
+Cc: raysyadesu@gmail.com
+Mime-Version: 1.0
+Content-Type: text/plain; charset=ISO-2022-JP
+Content-Transfer-Encoding: quoted-printable
+
+=1B$B#S#H#E!!#L#I#N#G#Z#H#A#O$5$s=1B(B
+
+=1B$B$3$s$K$A$O!#%j%3!<!!?7B4:NMQC4Ev$G$9!#=1B(B
+
+=1B$BJ@<RAm9g%3!<%9$N%(%s%H%j!<%7!<%H$NDs=3DP4|8B$,!V=1B(B3/23(=1B$B7n=1B(B=
+)13:00=1B$B!W$KGw$C$F$^$$$j$^$7$?!#=1B(B
+
+=1B$B%j%3!<$N=1B(BES=1B$B$O0lEYDs=3DP8e$b!"=1B(B3/25(=1B$B?e=1B(B)=1B$B$^$G=
+=3D$@52DG=3D$G$9!#=1B(B
+=1B$B$^$:$ODs=3DP$7$F!"$=3D$N$"$H$8$C$/$jN}$j>e$2D>$9$3$H$,$G$-$^$9$N$G!"$*=
+5$7Z$K$41~Jg$/$@$5$$!#=1B(B
+
+=1B$B!Z=1B(BES=1B$B$N=3Dq$-J}$K:$$C$?$i!D![=1B(B
+=1B$B:NMQC4Ev<T$,=1B(BES=1B$B$N=3Dq$-J}$N%]%$%s%H$r2r@b$7$?%i%$%VG[?.%"!<%+=
+%$%V8x3+Cf!*=1B(B
+=1B$B%^%$%Z!<%8%H%C%W$N!V=1B(BOnline Short Live!2025 =1B$B%"!<%+%$%VG[?.!W$=
+h$j$4Mw$/$@$5$$!#=1B(B
+
+=1B$B#S#H#E$5$s$N%(%s%H%j!<$r$*BT$A$7$F$*$j$^$9!#=1B(B
+
+=1B$B"(F~$l0c$$$G%(%s%H%j!<$$$?$@$$$F$$$k>l9g$O$4MF<O$/$@$5$$!#=1B(B
+=1B$B"(%^%$%Z!<%8$K$FJg=3D8MW9`$r$h$/$43NG'$N>e!"$41~Jg$/$@$5$$!#=1B(B
+
+=1B$B0J>e!"$I$&$>$h$m$7$/$*4j$$$$$?$7$^$9!#=1B(B
+
+
+=1B$B"#3t<02q<R%j%3!<!!%^%$%Z!<%8%m%0%$%s%Z!<%8=1B(B
+=1B$B!!=1B(Bhttps://www.e2r.jp/ja/ricoh2027/
+
+=1B$B"#3t<02q<R%j%3!<!!:NMQ%[!<%`%Z!<%8=1B(B
+=1B$B!!=1B(Bhttps://jp.ricoh.com/jobs/about/
+
+=1B$B:NMQ$K4X$9$k$*Ld$$9g$o$;!"%7%9%F%`$K4X$9$k$*Ld$$9g$o$;$O!"=1B(B
+=1B$B%^%$%Z!<%8$N$*Ld$$9g$o$;%U%)!<%`$+$i$4O"Mm$/$@$5$$!#=1B(B
+
+-----------------------------
+=1B$B3t<02q<R%j%3!<!!?M;vAmL3It!!?7B4:NMQC4Ev=1B(B
+-----------------------------
+=1B$B"($3$N%a!<%k$OH/?.@lMQ$G$9$N$G!"$4JV?.$O$41sN8$/$@$5$$!#=1B(B
+

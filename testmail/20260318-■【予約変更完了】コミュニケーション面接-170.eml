@@ -1,0 +1,90 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a9a:458d:0:b0:32f:2baf:8ecc with SMTP id m13csp105730lkd;
+        Tue, 17 Mar 2026 19:31:25 -0700 (PDT)
+X-Received: by 2002:a05:6a21:338d:b0:398:c3c3:867e with SMTP id adf61e73a8af0-39b99d8a41cmr1439780637.16.1773801085126;
+        Tue, 17 Mar 2026 19:31:25 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1773801085; cv=none;
+        d=google.com; s=arc-20240605;
+        b=Jnes9I3ngRv593UmZpSDH/3yYt3OxCNJYyG8+FiebRGfHZaS6Bvjhbq3p/ynYxHeW2
+         LZyV9AJWqBEKLh4oPsRmcoivJe/H+UWGKKK09Y8dAUGTQ5YD0bfg4EnvLUBgq3ZQ72hs
+         Aavp1vnp8dMZtR8I4mTvtiKrqHV0kVzCBQf/nSdmn+0ZTAZ05w2FD/yRE7Up5d7N6Q89
+         rzDCawGMhP4kiykykVUVckZtVtz9j2h6WEo3JBehC0F/L7QUlJeM6PcuYnjozRz8zgYI
+         3xm9dVY97JvFlQstzoGjc16qWurOldKeCVgEIOFaOLnuqNNeNnGd4P2tC36kzDTcTpqQ
+         egAA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=message-id:mime-version:content-disposition
+         :content-transfer-encoding:date:to:from:subject:dkim-signature
+         :dkim-filter;
+        bh=9zORQieMwaiiyvMqSXnM9EoAyB5nTL7BbQBmJkUbCmA=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=eCwmIEW6BpJo1tJcIR+Zd+h8u97KsUn5wN+1v0nrXXa7rNjV9OvXdMnNaSrYo9NpYl
+         EfR8P8GTPBEfb0YyBpm+bWrrWL/zZLzC77Nqvq2fgWs5W77la8tX6GrEYXqf/rydEn+T
+         tbCTuQbUIEFrC0MZTRhUULUSfqqZ4D4E324vBh/Sj5a+rIzAtQpWzydvSpzEK6FdpOyz
+         d0TY3asKB9dkXvLteAppJENnNc6dZ9FMWwQITOiMk4nVg2i6H5Ff7kiAj+Rx69jcj2m3
+         iWtPzAX8UtwLFrXjmKfQ5o+w5Or05zOJVzK9onxO+xik8R9QjPDFQUlgtUlSjBMJTwNU
+         t4vw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@saiyo.jp header.s=20240105 header.b=alk2aPaa;
+       spf=pass (google.com: domain of route_inn_hotels@saiyo.jp designates 202.222.81.8 as permitted sender) smtp.mailfrom=route_inn_hotels@saiyo.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=saiyo.jp
+Return-Path: <route_inn_hotels@saiyo.jp>
+Received: from smtp01.humanage.co.jp (smtp01.humanage.co.jp. [202.222.81.8])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c741e5dd663si2511704a12.126.2026.03.17.19.31.24
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Tue, 17 Mar 2026 19:31:25 -0700 (PDT)
+Received-SPF: pass (google.com: domain of route_inn_hotels@saiyo.jp designates 202.222.81.8 as permitted sender) client-ip=202.222.81.8;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@saiyo.jp header.s=20240105 header.b=alk2aPaa;
+       spf=pass (google.com: domain of route_inn_hotels@saiyo.jp designates 202.222.81.8 as permitted sender) smtp.mailfrom=route_inn_hotels@saiyo.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=saiyo.jp
+Received: from localhost (_gateway [10.13.39.254])
+	by smtp01.humanage.co.jp (Postfix) with ESMTP id B539E106C970
+	for <raysya.biz@gmail.com>; Wed, 18 Mar 2026 11:31:23 +0900 (JST)
+DKIM-Filter: OpenDKIM Filter v2.11.0 smtp01.humanage.co.jp B539E106C970
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=saiyo.jp;
+	s=20240105; t=1773801083;
+	bh=9zORQieMwaiiyvMqSXnM9EoAyB5nTL7BbQBmJkUbCmA=;
+	h=Subject:From:To:Date:From;
+	b=alk2aPaagxwqgeqvcfeSp7CFyYbVIFgPPbgembdtFk75A3JbAcpacqlifd4EHPCgd
+	 U21OFTK6JeRYJoYzqO/+quloLBjupLd37Gydln8tFdKHWkWY0YCGXJJnf5HRehiFeZ
+	 apc+T2NA3p5gPyhGDz42jb9Ntn4FfUaFFI9AOZA52wR6DsVPJ+sa+KSGNp5UhRkUMt
+	 GF4ULsLECXmfldnz+4YpSwafDAFOU8rZHBM1rpANIu0GNxR+6Xgc32IxV5bQ9vfJIM
+	 llf8a2IQKrIOIV3akBDxdAu13MPPA039ZyxsHcUhh7DDot/BwoFaEexIOrlu/YQqIF
+	 nEkzW03hm4aAg==
+Subject: =?UTF-8?B?4pag44CQ5LqI57SE5aSJ5pu05a6M5LqG44CR44Kz44Of44Ol44OL44Kx44O8?=
+ =?UTF-8?B?44K344On44Oz6Z2i5o6l?=
+From: =?UTF-8?B?44Or44O844OI44Kk44Oz44Kw44Or44O844OX44CA5paw5Y2S5o6h55So44OB?=
+ =?UTF-8?B?44O844Og?= <route_inn_hotels@saiyo.jp>
+To: raysya.biz@gmail.com
+Date: Wed, 18 Mar 2026 11:31:23 +0900
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: base64
+Content-Disposition: inline
+MIME-Version: 1.0
+Message-Id: <20260318023123.B539E106C970@smtp01.humanage.co.jp>
+
+77yz77yo77yl44CA77ys77yp77yu77yn77y677yo77yh77yv44GV44KTDQoNCuOBk+OCk+OB
+q+OBoeOBr+OAgg0K44Or44O844OI44Kk44Oz44Kw44Or44O844OXIOaWsOWNkuaOoeeUqOOD
+geODvOODoOOBp+OBmeOAgg0KDQrnrKwx5qyh6YG46ICDIOOCs+ODn+ODpeODi+OCseODvOOC
+t+ODp+ODs+mdouaOpQ0K44Gu44GU5LqI57SE44Gu5aSJ5pu044GM5a6M5LqG44GE44Gf44GX
+44G+44GX44Gf44CCDQoNCuKXh+KXhuKUgeKUgeKUgSDlpInmm7TlvozvvJrjgZTkuojntITl
+hoXlrrkg4pSB4pSB4pSB4peH4peGIA0KDQrilqDml6XjgIDmmYLvvJoyMDI2LzAzLzMwKOac
+iCkgMTM6MTANCuKWoOWPl+OAgOS7mO+8mumdouaOpemWi+WnizIw5YiG5YmN44G+44Gn44Gr
+5YWl5a6kDQoNCuKWoOS9v+eUqOOCouODl+ODqu+8mlpPT00NCuKWoOWFpeWupElE77yaODM3
+IDk3MjAgMDgzMQ0KDQrigLvoqbPntLDjga/jg57jgqTjg5rjg7zjgrjjgojjgorjgZTnorro
+qo3jgY/jgaDjgZXjgYTjgIIgDQoNCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tDQrjgZTkuojntITjga7lpInmm7Tjg7vjgq3jg6Pjg7Pjgrvjg6vnrYnjga/j
+gIENCuODnuOCpOODmuODvOOCuOOBq+OBpuWPl+OBkeS7mOOBkeOBpuOBiuOCiuOBvuOBmeOA
+gg0KLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0NCuKWoOODnuOC
+pOODmuODvOOCuO+8mmh0dHBzOi8vbXlwYWdlLjMwMTAuaS13ZWJzLmpwL3JvdXRlLWlubjIw
+MjcvDQrilqDlgIvkurpJRO+8mlJJMjg4MDA4NA0K4pag44OR44K544Ov44O844OJ77ya44GU
+55m76Yyy44Gu44OR44K544Ov44O844OJDQotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLQ0KDQrjgZ3jgozjgafjga/jgIHlvZPml6XvvLPvvKjvvKXjgZXjgpPj
+gasNCuOBiuS8muOBhOOBp+OBjeOCi+OBk+OBqOOCkualveOBl+OBv+OBq+OBl+OBpuOBiuOC
+iuOBvuOBmeOAgg0KDQoNCu+8nCDmlrDljZLmjqHnlKjjg4Hjg7zjg6Djgbjjga7pgKPntaHl
+hYjvvJ4NCumbu+ipseeVquWPt++8mjAzLTM3NzctNTY1Mw0K44Oh44O844Or77yac2FpeW91
+QHJvdXRlLWlubi5jby5qcA==

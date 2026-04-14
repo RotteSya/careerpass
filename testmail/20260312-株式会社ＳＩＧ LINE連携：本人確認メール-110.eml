@@ -1,0 +1,83 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:409b:b0:32d:d2ea:2208 with SMTP id i27csp2855621lkg;
+        Wed, 11 Mar 2026 18:02:46 -0700 (PDT)
+X-Received: by 2002:a05:6a20:cf85:b0:398:bbd6:80a6 with SMTP id adf61e73a8af0-398c5f4352amr4240297637.25.1773277365710;
+        Wed, 11 Mar 2026 18:02:45 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1773277365; cv=none;
+        d=google.com; s=arc-20240605;
+        b=RumZSRfxCkTOpl0CpE+j0B8++VB37vquau1+itztN0rieJYmmYEwYXw4jpEtFyID1w
+         sHtE56OWSh9SiozeMtxgC0DAc5eXZKM9wXlOib1QsKF9cYm4RWX8lKVotZ4xgfXMuuPN
+         xr2FnWQnySAIBXFSaUkb8xxkxvYmJGlob9X9fQ02fhkrhC1wLmUhQL2KW0tZIrSY2UpT
+         U+Rgrv6evbxKQeEf2ewi90LwfpGSLpKTj45AoVetoY5qw7MQBUXNV6IKATXB6fbWWHqj
+         KHC7QLgPD6qitw1ilW0NZBNPGVpqvSwZOA1WexmKFN5Mvarg2PS40noREEfNNKLKlhyp
+         HbuQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=mime-version:message-id:subject:to:from:date:dkim-signature;
+        bh=C8OuPWUFeopJ/Aj01ENBub/PzV8LwOn94QPEAir1cbU=;
+        fh=up0snWP8xFpbeO5hv7qnvj+9Zw/nsd0djSzi34sli8A=;
+        b=KGiU1Umbgr7JvZ5zCwmPgBX/UeWcaqdYTEc7DFWnqJFSIlabYOsMdpgawxyWeHdW4C
+         ynoBk0l9s6w5QH1dBhHT+Tno5SvkRiRS+YUJJsUcnTNJVVy2+KaM0M3M7QCBbe4I2Xu5
+         zbwgqcnrbZM7rJuG3KfZ3EznsBUG6m1YmlRi+i8UNGZZ+qD4BgvE5r1ic9IsIS8Thc/2
+         W5j5hLHWvlVX0fUEZOksJ9bu9QgbPtHrbEsdyzIs1JifWWvgGV2/MNWTJl9cpFyxK5pp
+         uaDR0MJdwWglECGZumH5imuQ3GeKYt31XE4RT6dX+sMkX+isbsc/v6y4xHvuz2DWzRzT
+         5vtQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=jL1Qwq3n;
+       spf=pass (google.com: domain of noreply@recruit-mg.com designates 210.140.105.27 as permitted sender) smtp.mailfrom=noreply@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Return-Path: <noreply@recruit-mg.com>
+Received: from bmsl002585-02-02.baremetal.jp (bmsl002585-02-02.baremetal.jp. [210.140.105.27])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c73cdf19766si6324234a12.22.2026.03.11.18.02.45
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Wed, 11 Mar 2026 18:02:45 -0700 (PDT)
+Received-SPF: pass (google.com: domain of noreply@recruit-mg.com designates 210.140.105.27 as permitted sender) client-ip=210.140.105.27;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=jL1Qwq3n;
+       spf=pass (google.com: domain of noreply@recruit-mg.com designates 210.140.105.27 as permitted sender) smtp.mailfrom=noreply@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Received: from 152-15-168-192.baremail.local.15.168.192.in-addr.arpa (HELO) (192.168.15.152)
+  by sl002585-02 with ESMTP; Thu, 12 Mar 2026 10:02:44 +0900
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=recruit-mg.com;
+	s=recruit-mg.com.202401; t=1773277364;
+	bh=+ZVcNQAJg1J/9J6ob89lKhrbB12dASgrLTpz1gEqz9I=;
+	h=From:To:Content-Type:Subject:Date:MIME-Version:Message-ID;
+	b=jL1Qwq3n2kNXHsdLEAwbCRtyPvi+S2BggMsC7v9jyHgp+j8rGnsEtEg/ao0IuQc4v
+	 AeV1aR1lXuyx6dSqa78ZUNHZ9/5EoypOh76NodStmD82XwvnfhABg5wrEFWD4l8m3P
+	 WdAR2vw8JqVCU+m7D/tQRGsQBDzg1FbjZY/di/LOfLiJyxJII6JpvgXpbD5vW1/X1s
+	 LNLLrcp8ILquNJhNR2Y1gpG+3qhxzysV25YOoaoEaIkbUdL322X/asyNLqjDJZRXHp
+	 hcozL6WOhf83hD1KsTolzVLp/Q/zpb5xKFJcrl1XH657w1CNpx3NUKltvZDyN1jVdQ
+	 TyAHCRYvffyVQ==
+Received: from www.career-cloud.asia (ec2-35-75-175-127.ap-northeast-1.compute.amazonaws.com [35.75.175.127])
+	by sv587 (Postfix) with ESMTPA id 6023EC1FD2AC;
+	Thu, 12 Mar 2026 10:02:44 +0900 (JST)
+Date: Thu, 12 Mar 2026 10:02:44 +0900
+From: "=?UTF-8?B?5qCq5byP5Lya56S+77yz77yp77yn?=" <noreply@recruit-mg.com>
+To: raysya.biz@gmail.com, raysyadesu@gmail.com
+Subject: =?UTF-8?B?5qCq5byP5Lya56S+77yz77yp77ynIExJTkXpgKPmkLrvvJrmnKzkurrnoro=?=
+ =?UTF-8?B?6KqN44Oh44O844Or?=
+Message-ID: <69b210b44d801@recruit-mg.com>
+X-Priority: 2 (High)
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+X-SE-HID: sl002585-02.1773277364092874.192.168.15.152.sl002585
+
+こちらのメールは、株式会社ＳＩＧとのLINE連携をするにあたり、連携しようとされている方のご本人確認のためお送りいたしました。
+        
+以下のリンクを開き、LINE連携を進めてください。
+
+-------------------------------------
+URL: https://www.career-cloud.asia/27/form/line/start/3fd5e6eff4661acdef26c02558692d29bf9d22d2
+
+※上記URLの有効期限はメールの受信から24時間です。期限を過ぎた場合は、下記URLから再度本人確認メールを送信してください。
+
+https://www.career-cloud.asia/27/form/line/identification?id=15857356052017
+
+-------------------------------------
+
+このメールアドレスは送信専用です。返信頂いてもお答えできませんのでご了承ください。
+
+このメールに心当たりがない場合は、お手数ですが削除してください。

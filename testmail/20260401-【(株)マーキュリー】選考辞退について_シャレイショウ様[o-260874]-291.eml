@@ -1,0 +1,98 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a9a:5c46:0:b0:32f:2baf:8ecc with SMTP id g6csp2475554lko;
+        Tue, 31 Mar 2026 23:09:52 -0700 (PDT)
+X-Received: by 2002:a05:6a00:3d47:b0:82c:217c:98ca with SMTP id d2e1a72fcca58-82ce88f50ecmr2505102b3a.12.1775023792079;
+        Tue, 31 Mar 2026 23:09:52 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1775023792; cv=none;
+        d=google.com; s=arc-20240605;
+        b=bXzoDoi8WiXIhd9gQVYCUVYEjWnTenIdJ/HZcfjEqCiElKeqtMmTn1L4+BXp/wNwn0
+         9fj0CiRMIkrGjgvtdqBrloiuNKynMQAURo/ijHPQUbp9o2COddgvp/F3ai9mxiuXvO6d
+         Y9GpO07i6tisDhg3k3xAC0MS75/MW3E/NLhcLFhtQrWMVOnOMfCfY99VQjOzEiRKw69m
+         pb90Qlo+MOiumUreKT9lAkeT2boJJWDx5wCMcklIA3PH2bpP/X42ZQI38heuX+OkoZu4
+         7i5TFIvJkA6gX078T174tOVnzU4jKOrmjNw9kqPhszNq91jwourUuv8OO4RUdSsbxUCc
+         Vzeg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=type:list-unsubscribe:list-unsubscribe-post
+         :content-transfer-encoding:mime-version:subject:message-id:to:from
+         :date:dkim-signature;
+        bh=35Si2yT1d1xvo+3ZG7B2fo2dusIIy3mFinzBLqFdQoM=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=F5vXwVWh6Lo0CsAcWAZSMFQvkXe4FI07bW4og0Wg+JSboDJXXqC2qmTWYMk1avDUYe
+         eUjAE9ysDcoUzPIFG/CS5kpqVEn0eiROn3VZfiZQuy8sKY/KzqAMd77nrZ+xZJXPmrqK
+         rv+1E5/6L6PuzB6SQsKjh+Q/7uuD0/xZuqrm4rR5rsg4c4F0WZzqia79wewxfN+ythRR
+         MOF3mbpsXR5AKk7nmsR3Ga3KPBMFy3tFr8+jKYyuoMaFtFNT1JwWS2XzqBnZZY1dVeJS
+         yv7hWsBWoMrVOOB4kiBczmYFTUKUMIokl7nf2rj83olucRsg91UC8UFF/K0fBl2OuEdT
+         FRug==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@rpms.jp header.s=key2.smx header.b=TgmLrh2z;
+       spf=pass (google.com: domain of mercury-group@rpms.jp designates 210.130.202.135 as permitted sender) smtp.mailfrom=mercury-group@rpms.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=rpms.jp
+Return-Path: <mercury-group@rpms.jp>
+Received: from mo-csw.securemx.jp (mo-csw1801.securemx.jp. [210.130.202.135])
+        by mx.google.com with ESMTPS id d2e1a72fcca58-82ca870cec2si31116972b3a.175.2026.03.31.23.09.51
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Tue, 31 Mar 2026 23:09:52 -0700 (PDT)
+Received-SPF: pass (google.com: domain of mercury-group@rpms.jp designates 210.130.202.135 as permitted sender) client-ip=210.130.202.135;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@rpms.jp header.s=key2.smx header.b=TgmLrh2z;
+       spf=pass (google.com: domain of mercury-group@rpms.jp designates 210.130.202.135 as permitted sender) smtp.mailfrom=mercury-group@rpms.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=rpms.jp
+DKIM-Signature: v=1;a=rsa-sha256;c=relaxed/simple;d=rpms.jp;h=Date:From:To:
+	Message-ID:Subject:Mime-Version:Content-Type:Content-Transfer-Encoding:
+	List-Unsubscribe;i=mercury-group@rpms.jp;s=key2.smx;t=1775023791;x=
+	1776233391;bh=35Si2yT1d1xvo+3ZG7B2fo2dusIIy3mFinzBLqFdQoM=;b=TgmLrh2z0gVpvzZw
+	B3oCk00m8tBtxE4BmECo/d5JSmhv4qHgiWKxmVD7Ug0Vou31Em1iSS0EqnW91uUBiZ/jVSyGE/IKO
+	iQRZrDalkrT0It4hCA1+y8n2ZSMrjZT5W+ZIsvkG46NSXyDD753jNDIvQTfGpJjY7TTAwcCH+M3sc
+	KT5W7lC7gY6qhRFV4GvWjRMwYCUOwYyp39+SN/+bAG1e9+hyei7MANr500qbO3rmTITYWTOt116Wx
+	Fn7DCAi0VwzcIKGBXurK23GzKPYLqlda8hrYo1ACO08z9CRijvZ1OxEY/GbIP3qDOObQKtbRVbUyY
+	uYAjtV8d8mv7+HBxeg==;
+Received: by mo-csw.securemx.jp (mx-mo-csw1801) id 63169oUH3585553; Wed, 1 Apr 2026 15:09:51 +0900
+X-Iguazu-Qid: 2yAbiBABH4VDMrrKGp
+X-Iguazu-QSIG: v=2; s=0; t=1775023790; q=2yAbiBABH4VDMrrKGp; m=2VyKt4hIrFKigj6nPos+pM2qWxsRoBLI4gK5u02knLc=
+Received: from mail.rpm-sys.jp (ec2-52-194-80-26.ap-northeast-1.compute.amazonaws.com [52.194.80.26])
+	(using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+	 key-exchange ECDHE (P-256) server-signature RSA-PSS (4096 bits) server-digest SHA256)
+	(No client certificate requested)
+	(Authenticated sender: mercury-group@rpms.jp) id 4flvht4fXczCqjx; Wed,  1 Apr 2026 15:09:50 +0900 (JST)
+Date: Wed, 01 Apr 2026 15:09:50 +0900
+From: =?UTF-8?B?5qCq5byP5Lya56S+44Oe44O844Kt44Ol44Oq44O8?= <mercury-group@rpms.jp>
+To: raysya.biz@gmail.com
+Message-ID: <69ccb6ae8d8c0_4412d38902546c@rpm-prod-job-rb5.mail>
+Subject: =?UTF-8?Q?=E3=80=90=28=E6=A0=AA=29=E3=83=9E=E3=83=BC=E3=82=AD=E3=83=A5=E3=83=AA=E3=83=BC=E3=80=91=E9=81=B8=E8=80=83=E8=BE=9E=E9=80=80=E3=81=AB=E3=81=A4=E3=81=84=E3=81=A6/=E3=82=B7=E3=83=A3=E3=83=AC=E3=82=A4=E3=82=B7=E3=83=A7=E3=82=A6=E6=A7=98[o-260874]?=
+Mime-Version: 1.0
+Content-Type: text/plain;
+ charset=UTF-8
+Content-Transfer-Encoding: base64
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+List-Unsubscribe: <https://www18.rpmz.jp/RPM-mercury-group/api/unsubscribe_mail?oid=260874>
+type: text/plain;charset=iso-2022-jp
+
+4oC76L+U5L+h44KS44GZ44KL5aC05ZCI44Gv5Lu25ZCN44Gv5YmK6Zmk44Gb
+44Ga44Gr6L+U5L+h44GX44Gm44GP44Gg44GV44GE44CCDQoNCuOCt+ODo+OD
+rOOCpOOCt+ODp+OCpuanmA0KDQrmoKrlvI/kvJrnpL7jg57jg7zjgq3jg6Xj
+g6rjg7zmjqHnlKjmi4XlvZPjga7phZLkupXjgafjgZnjgIINCg0K6YG46ICD
+6L6e6YCA44Gu5peo56K66KqN44GE44Gf44GX44G+44GX44Gf44CCDQrooYzj
+gY3pgZXjgYTjgafjga7jgZTpgKPntaHjgajjgarjgaPjgabjgZfjgb7jgYTn
+lLPjgZfoqLPjgZTjgZbjgYTjgb7jgZvjgpPjgIINCg0K44K344Oj44Os44Kk
+44K344On44Km5qeY44Gu5LuK5b6M44Gu44GU5rS76LqN44KS44GK56WI44KK
+44GX44Gm44GK44KK44G+44GZ44CCDQoNCuKWoCBNIEUgUiBDIFUgUiBZIOKU
+geKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKU
+geKUgeKUgeKUgeKUgeKWoA0KDQrmoKrlvI/kvJrnpL7jg57jg7zjgq3jg6Xj
+g6rjg7wg5aSn6Ziq5pSv5bqX44CADQoNCuOAkjUzMC0wMDAxDQrlpKfpmKrl
+upzlpKfpmKrluILljJfljLrmooXnlLAxLTEtMyDlpKfpmKrpp4XliY3nrKwz
+44OT44OrMjjpmo4NClRFTO+8mjAxMjAtOTk5LTg2NO+8iOaOoeeUqOmDqOeb
+tOmAmuODleODquODvOODgOOCpOODpOODq++8iQ0K44CA44CAICAgMDYtNjM0
+My05NTU577yI5Luj6KGo77yJDQoNCuKWvOaWsOWNkuaOoeeUqEhQDQpodHRw
+Oi8vcmVjcnVpdC5tZXJjdXJ5LWdyb3VwLmNvLmpwLw0K4pa85YWs5byPWW91
+VHViZS/jg57jg7zjgq3jg6Xjg6rjg7zjg4Hjg6Pjg7Pjg43jg6sNCmh0dHBz
+Oi8vd3d3LllvdVR1YmUuY29tL0BtZXJjdXJ5X2NoYW5uZWwNCuKWvEluc3Rh
+Z3JhbQ0KaHR0cHM6Ly93d3cuSW5zdGFncmFtLmNvbS9tZXJjdXJ5X3JlY3J1
+aXRtZW50Lw0K4pa8V2FudGVkbHkNCmh0dHBzOi8vd3d3LldhbnRlZGx5LmNv
+bS9jb21wYW5pZXMvY29tcGFueV83MDIyNjc5L3N0b3JpZXMNCuKWoOKUgeKU
+geKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKU
+geKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKUgeKWoCANCg0K
+

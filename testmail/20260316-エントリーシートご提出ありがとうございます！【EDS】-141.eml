@@ -1,0 +1,83 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a9a:5c04:0:b0:32d:d2ea:2208 with SMTP id f4csp1596649lkg;
+        Sun, 15 Mar 2026 08:06:46 -0700 (PDT)
+X-Received: by 2002:a17:90b:1a8c:b0:35b:9ab6:1d65 with SMTP id 98e67ed59e1d1-35b9ab61fb4mr1247238a91.25.1773587206675;
+        Sun, 15 Mar 2026 08:06:46 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1773587206; cv=none;
+        d=google.com; s=arc-20240605;
+        b=C/JKYSQB82z1jkLtJRbt5OjLYHKJq8c9igks4pT5aIPfsWP4coGUkV4aks08jQOpoV
+         4aeTIuX7+GidMc4DZ4tf2sR6YoU1ynmqrVAtrdi72zIHUMHOUt1LcPWMZaqsbvKR6DJt
+         XT833pJCJ/h4qowHX1eFXV7adS7t8uGmDFNBdvg7yBz8yamz9OexuUwLFdnQkqUduI3Z
+         jo5IQA0NLESfzqVkl1v5of7aGkJ5ja3D6rb8JF14y5U6EknxKsH7xkVlF6adwEV0tqJx
+         RwshKH6jnfR8ectVvtCDRQuOSo7LbXG7SIFI7wm/U26gAp++GwIX/GkcuVb7108TYsbZ
+         LAHA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:mime-version:list-unsubscribe
+         :list-unsubscribe-post:message-id:subject:reply-to:from:to:date
+         :dkim-signature;
+        bh=7csB5E35VpupNfMSfuv9i8c1C6xuh5BslO/r3226k04=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=KUuRCf3IAN0PgSXwdwD/05wjxIu4g6/rzjB0xu9QyMRgHIK/RjQEdNrOk1UI1OORWx
+         nF9QTSg1pM2Km0dl2Hos0IAJ7+07wGtle3burqXSmLIUymMggTozSbBLPnpS4HRzTpiX
+         jlLA2yPoNOWl4c6r7OKkO01KH9Oe5WdfI21C4xeQmrxq/Qp6P/dk9CExbIxW7E0nHG9c
+         +ae6PrJCEt07IuQ44sGn1BJPq6479Dq3rsh1sHMCDRvJ/KRlA5phXsEgX/f05/odLk6g
+         SKSdDc2L1EjQY8QnXCSWYqRuQMfwd21YFU0zADIbaviaVM+90Oj8X9YzMvXHR2FS34JS
+         Tfgw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@mail.axol.jp header.s=20221001 header.b=ZZQFxpHq;
+       spf=pass (google.com: domain of bounce_sbx-sbx1823-m1010213-p34181-raysya.biz=gmail.com@axol.jp designates 157.205.251.24 as permitted sender) smtp.mailfrom="bounce_sbx-sbx1823-m1010213-p34181-raysya.biz=gmail.com@axol.jp";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=mail.axol.jp
+Return-Path: <bounce_sbx-sbx1823-m1010213-p34181-raysya.biz=gmail.com@axol.jp>
+Received: from yamazoe.axol.jp (yamazoe.axol.jp. [157.205.251.24])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c73eb99069dsi11853996a12.83.2026.03.15.08.06.45
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Sun, 15 Mar 2026 08:06:46 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounce_sbx-sbx1823-m1010213-p34181-raysya.biz=gmail.com@axol.jp designates 157.205.251.24 as permitted sender) client-ip=157.205.251.24;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@mail.axol.jp header.s=20221001 header.b=ZZQFxpHq;
+       spf=pass (google.com: domain of bounce_sbx-sbx1823-m1010213-p34181-raysya.biz=gmail.com@axol.jp designates 157.205.251.24 as permitted sender) smtp.mailfrom="bounce_sbx-sbx1823-m1010213-p34181-raysya.biz=gmail.com@axol.jp";
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=mail.axol.jp
+Received: from oki-10.axol.jp (HELO) (172.16.0.150)
+  by masuda-28.axol.jp with ESMTP; Mon, 16 Mar 2026 00:06:45 +0900
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=mail.axol.jp;
+	s=20221001; t=1773587205;
+	bh=7csB5E35VpupNfMSfuv9i8c1C6xuh5BslO/r3226k04=;
+	h=From:To:Content-Type:Content-Transfer-Encoding:Subject:Reply-To:
+	 Date:MIME-Version:Message-ID:List-Unsubscribe:
+	 List-Unsubscribe-Post;
+	b=ZZQFxpHqI/Qzd4+i770BK00kgS8jxgMmJvUKHwpIBG6jdLJCBcm4I/uCtX8RELFu1
+	 /qdBfD2Nd1YLSE90SEeqoTWqK8YtJFTqZic5NPdjEGm04jcMYBENQGXEePmnsyb8yf
+	 IzkWPbV637lTTAS/4kx6ssmLtS8xtIQhDpr2GY9A=
+Date: Mon, 16 Mar 2026 00:06:45 +0900
+To: raysya.biz@gmail.com
+From: =?UTF-8?B?44Ko44Kv44K344Kq44O744OH44K444K/44Or44K944Oq44Ol44O844K344On?=
+ =?UTF-8?B?44Oz44K65qCq5byP5Lya56S+?= <exeo-digitalsolutions@mail.axol.jp>
+Reply-To: exeo-digitalsolutions@mail.axol.jp
+Subject: =?UTF-8?B?44Ko44Oz44OI44Oq44O844K344O844OI44GU5o+Q5Ye644GC44KK44GM44Go?=
+ =?UTF-8?B?44GG44GU44GW44GE44G+44GZ77yB44CQRURT44CR?=
+Message-ID: <fQhKkLrNV7eH49P3FyIUvl3nBCMEitklAGrXCYCbk@10.132.61.210>
+X-Mailer: access online
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+List-Unsubscribe: <https://job.axol.jp/bx/unsubscribe/WzJwyHqgJl9fvtfQtt1EJw>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: base64
+X-SE-HID: masuda-28.axol.jp.1773587205956429
+
+5L2YIOS7pOmHl+OBleOCkwoK44GT44KT44Gr44Gh44Gv77yBCuOCqOOCr+OCt+OCquODu+ODh+OC
+uOOCv+ODq+OCveODquODpeODvOOCt+ODp+ODs+OCuuOBp+OBmeOAggoK44Ko44Oz44OI44Oq44O8
+44K344O844OI44Gu44GU5o+Q5Ye644GC44KK44GM44Go44GG44GU44GW44GE44G+44GX44Gf77yB
+CuS6jOmAsemWk+eoi+W6puOCkuebruWuieOBq+WQiOWQpuOBruOBlOmAo+e1oeOCkuOBhOOBn+OB
+l+OBvuOBmeOBruOBp+WwkeOAheOBiuW+heOBoeOBj+OBoOOBleOBhOOBvuOBm+OAggoK5Lul5LiK
+44CB44Gp44GG44Ge44KI44KN44GX44GP44GK6aGY44GE44GE44Gf44GX44G+44GZ44CCCgotLS0t
+LS0tLS0tLS0tLS0tLQrjgqjjgq/jgrfjgqrjg7vjg4fjgrjjgr/jg6vjgr3jg6rjg6Xjg7zjgrfj
+g6fjg7PjgrrmoKrlvI/kvJrnpL7jgIDmjqHnlKjmi4XlvZMKCgrimIXjg57jgqTjg5rjg7zjgrjj
+ga/jgZPjgaHjgokKaHR0cHM6Ly9qb2IuYXhvbC5qcC9ieC9zL2V4ZW8tZGlnaXRhbHNvbHV0aW9u
+c18yNy9teXBhZ2UvbG9naW4KCuKAu+OBk+OBoeOCieOBr+mAgeS/oeWwgueUqOOCouODieODrOOC
+ueOBp+OBmeOAggrjgIDjgZTov5Tkv6Hjg7vjgZTpgKPntaHjga7loLTlkIjjga/jg57jgqTjg5rj
+g7zjgrjjgojjgorjgYrpoZjjgYTjgYTjgZ/jgZfjgb7jgZnjgII=
+

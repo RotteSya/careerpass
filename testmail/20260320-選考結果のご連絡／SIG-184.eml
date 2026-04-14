@@ -1,0 +1,89 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a9a:458d:0:b0:32f:2baf:8ecc with SMTP id m13csp1362280lkd;
+        Thu, 19 Mar 2026 23:00:35 -0700 (PDT)
+X-Received: by 2002:a17:902:e74b:b0:2ae:4555:479e with SMTP id d9443c01a7336-2b08275dfd2mr15608385ad.18.1773986434872;
+        Thu, 19 Mar 2026 23:00:34 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1773986434; cv=none;
+        d=google.com; s=arc-20240605;
+        b=PLi/fXlTf1iDVeque52ISC4lXqynwg3mhiHYpv6LHqX2qoiH9aiz5hGQpbEowVJZOB
+         cC0maIBg1up68IGX4N93rUy8cNvbcDKJFfUucpEt+0o81jdynCanq2FSnwTATlz90fCF
+         BTZI86PSO1QcPVZGVIx1CsEONdyMC8L57GuOnZR0AqNOeLyCkGgkzCc0fACk1EJmpjll
+         hm60T3qnEEhjZk1Q5g81MvxLn6KYFJwVKKALMDBNtPH3qIvsOWT8cEnZOYkWhoajtek1
+         a52aY25oGv58y+kwhLNT6I69QdmXzYtWf75conhO1iUfj2Ykwodre4KELuIcVbPi9lNa
+         GIDg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=references:mime-version:message-id:subject:cc:to:from:date
+         :dkim-signature;
+        bh=3EryfVg3T89W16B0DxhOutv/4lf0sliK04rVepfRSTI=;
+        fh=+s6Hz3twO2v+/WWMQqsP7DwIe5hWgjXQso9Nq6cLoDY=;
+        b=Rj8Gi+FvotdqG9YV2qQpw1W7wpI5x8LmVPv0J2fEK3c49bJEOEWujanmX0jvqOaN8E
+         q+Dp4FWcVU7jlYik7J2eEDhwTnUMhBYW+4l4JwazFQ5Mz3TUq06UG/n+3yWY7hCMlEfB
+         +wbDboWKU42B39Pi4vtH7IuL4ff6v10bWKvrB6tmNb6ulvHCUiRkovm8lph8DI0SCaQP
+         qXA/TJFdyVCzTdN0+eeD59O+K6Od8Y+WzJE9ONntNDLdC4ISNisof9nH8LDH+o/Rpl89
+         b7ZBzRGIUNxZz/5Wgao3/I19NBGRm4UDUR5diYrRZv7ytqUQ3ufTuH3RaB3NuHAfgMl4
+         nQFA==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=O9KHZw7n;
+       spf=pass (google.com: domain of bounces-2723059482@recruit-mg.com designates 210.140.105.27 as permitted sender) smtp.mailfrom=bounces-2723059482@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Return-Path: <bounces-2723059482@recruit-mg.com>
+Received: from bmsl002585-02-02.baremetal.jp (bmsl002585-02-02.baremetal.jp. [210.140.105.27])
+        by mx.google.com with ESMTPS id d9443c01a7336-2b083677654si21848415ad.134.2026.03.19.23.00.33
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Thu, 19 Mar 2026 23:00:34 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounces-2723059482@recruit-mg.com designates 210.140.105.27 as permitted sender) client-ip=210.140.105.27;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@recruit-mg.com header.s=recruit-mg.com.202401 header.b=O9KHZw7n;
+       spf=pass (google.com: domain of bounces-2723059482@recruit-mg.com designates 210.140.105.27 as permitted sender) smtp.mailfrom=bounces-2723059482@recruit-mg.com;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=recruit-mg.com
+Received: from 152-15-168-192.baremail.local.15.168.192.in-addr.arpa (HELO) (192.168.15.152)
+  by sl002585-02 with ESMTP; Fri, 20 Mar 2026 15:00:33 +0900
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=recruit-mg.com;
+	s=recruit-mg.com.202401; t=1773986433;
+	bh=Kv0De9WofAklM1+FE/GvNB3ydeLfVFHcT8gkflgBXuA=;
+	h=From:To:Content-Type:Subject:Date:MIME-Version:Message-ID;
+	b=O9KHZw7nPKp2zquoi9rCR5hYvJJETyhrDPzFJXJUVyU2nL3DAtxNeWhuWC2gViF8l
+	 7WnsN0OHlLLeq2MhJ7rkENdo4E6efpeXWgs5df6b16w01EgmSwJfepbVXGdRsF4FDQ
+	 1y3MZFogn25omLpmwPIYvdfa+Njl87XSpcBmgVomxirWYubm/i+FrfPD/TT7Zbz2q/
+	 1cWOmWiiLUMwbVuyvqHFggPiUOW1TanqV/8anib/mohF81mAczTiOTntW1P0OZrPXZ
+	 Rk3hJ/5OxU/YL6Cmc42TVWLn39il++XxZEZi7+IW/RuL0SR7Qof02PZKebDas0uf2p
+	 s0R3IKtjdLzAw==
+Received: from localhost.local (ec2-52-69-130-14.ap-northeast-1.compute.amazonaws.com [52.69.130.14])
+	by sv587 (Postfix) with ESMTPA id 2AC47C2EA462;
+	Fri, 20 Mar 2026 15:00:33 +0900 (JST)
+Date: Fri, 20 Mar 2026 15:00:33 +0900
+From: "=?UTF-8?B?5qCq5byP5Lya56S+77yz77yp77yn?=" <sig-c+27@recruit-mg.com>
+To: raysya.biz@gmail.com
+Cc: raysyadesu@gmail.com
+Subject: =?UTF-8?B?6YG46ICD57WQ5p6c44Gu44GU6YCj57Wh77yPU0lH?=
+Message-ID: <69bce2811853a@recruit-mg.com>
+X-Priority: 2 (High)
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+References: <#22064201@recruit-mg.com>
+X-SE-HID: sl002585-02.1773986433753673.192.168.15.152.sl002585
+
+立命館大学
+ＳＨＥ ＬＩＮＧＺＨＡＯ　様
+
+SIG採用担当でございます。
+この度は選考にお進みくださりありがとうございました。
+
+今回の選考結果につきまして、慎重厳正に検討いたしました結果、
+誠に遺憾ながら貴意に添いかねる結果となりました。
+
+このようなご通知となりましたこと
+ご了承くださいますようよろしくお願い申し上げます。 
+
+ＳＨＥ様の就職活動のご健闘と、今後ますますご健勝のうえ
+ご活躍されること心よりお祈りいたしております。 
+
+なお、お預かりした応募書類につきましては、
+弊社にて責任を持って破棄いたしますので
+ご了承くださいますようお願い申し上げます。
+
+以上、略式ながら書中にてご通知申し上げます。

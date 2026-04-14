@@ -1,0 +1,462 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:12af:b0:32f:2baf:8ecc with SMTP id do15csp1312296lkb;
+        Sat, 11 Apr 2026 15:35:42 -0700 (PDT)
+X-Received: by 2002:a05:622a:1b01:b0:50b:2d93:97bd with SMTP id d75a77b69052e-50dd5b7b1e0mr129924841cf.24.1775946942702;
+        Sat, 11 Apr 2026 15:35:42 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1775946942; cv=none;
+        d=google.com; s=arc-20240605;
+        b=QQo3lDxwhP6720rksoCqIM0D42Xe9qm1qYjcL7hJdj9DO78Xh5HpqjqBZqwfulOfbw
+         X9fH4bikIccIqi2GMmqV8NDSRYYCC+CPSeVK5NVlp/xdlkNhw3uv3kUfe/APfs29xBA4
+         WHPxFm7b/k4NzAbyIbnhAI/KI1V/c8Gt+XfLq4pIVHY5g5VcXRrXOTj6m4qTuAmoUvFi
+         79hx87pigIqr8rFiuIoS2oPO/HCctX7DQJEQOSlV05R+J376ogWOz2FItRqVoGG8rexx
+         zfBzAVdoFlFc036qrmwXY0Jft2qaQXZrGcjWc3+iiq+f/aLSWmUPlbDn47PBcO+6Tlm7
+         PJLw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:reply-to:subject:message-id:mime-version:from:date
+         :dkim-signature:dkim-signature;
+        bh=Sp7QVVws+Sl1JS02ne1txEIOCl0tHs99IDToidUW1L8=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=LCmxLvYyAeTDFr8ZxNjC4PQeHA/ePHCQUd31sa3w7JWW5fb7E1anNq1ApGJIIwIXW5
+         Krd3WBAvmKqk50gtugpn0ymV/YlC5Mlb7yavYYis89sUavRuJ1fhOpk9xC0uHw1Fruta
+         z8VSbTn82nDcVKnNgD5wtmV8Id+7yq7JStzXuVkNzSeJLwuVWwfIuRRzA2drL8+g+VsG
+         iy0D4jzGTsyrO1njFSaygxxobWvvvuUUzAP1hsstvD6WraSkeGgHbAP7/znBM4cLtmyp
+         4jJaAR1iDTh5CpNljheTUbBnUQ+3iY+W4oE/+8o/Hz8C/pJtHRqLtyXqKwxj3eDWr5qN
+         qfPA==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@info.syukatsu-kaigi.jp header.s=s1 header.b=p3cvTPoB;
+       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b=D7i0MoiL;
+       spf=pass (google.com: domain of bounces+41179675-ad52-raysya.biz=gmail.com@em2270.info.syukatsu-kaigi.jp designates 167.89.78.115 as permitted sender) smtp.mailfrom="bounces+41179675-ad52-raysya.biz=gmail.com@em2270.info.syukatsu-kaigi.jp";
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=info.syukatsu-kaigi.jp
+Return-Path: <bounces+41179675-ad52-raysya.biz=gmail.com@em2270.info.syukatsu-kaigi.jp>
+Received: from o1678978x115.outbound-mail.sendgrid.net (o1678978x115.outbound-mail.sendgrid.net. [167.89.78.115])
+        by mx.google.com with ESMTPS id d75a77b69052e-50dd565172csi93940161cf.175.2026.04.11.15.35.42
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_128_GCM_SHA256 bits=128/128);
+        Sat, 11 Apr 2026 15:35:42 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounces+41179675-ad52-raysya.biz=gmail.com@em2270.info.syukatsu-kaigi.jp designates 167.89.78.115 as permitted sender) client-ip=167.89.78.115;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@info.syukatsu-kaigi.jp header.s=s1 header.b=p3cvTPoB;
+       dkim=pass header.i=@sendgrid.info header.s=smtpapi header.b=D7i0MoiL;
+       spf=pass (google.com: domain of bounces+41179675-ad52-raysya.biz=gmail.com@em2270.info.syukatsu-kaigi.jp designates 167.89.78.115 as permitted sender) smtp.mailfrom="bounces+41179675-ad52-raysya.biz=gmail.com@em2270.info.syukatsu-kaigi.jp";
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=info.syukatsu-kaigi.jp
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=info.syukatsu-kaigi.jp;
+	h=content-type:date:from:mime-version:subject:reply-to:to:cc:
+	content-type:date:feedback-id:from:subject:to;
+	s=s1; t=1775946941; bh=Sp7QVVws+Sl1JS02ne1txEIOCl0tHs99IDToidUW1L8=;
+	b=p3cvTPoBwFWrjIZS+m7uP7S4ZFwXCOri7OoHcAdDDrjf4lrB45K/RxLeBoLFxz63yqFt
+	MBcK+aYdSvE4SbIVpenRP2uwOZwu7Lq/ZHs68pouDZTDRpgJuSpagbiMVGgiINKVdFdw3B
+	CM6V4ruI9pbEaSijSh12HMfurHZFpPE3nj4ySe3Jag9FUBtA3oED5NdZ9osB5BPn9gpRwZ
+	VUXitx/XoE90W8pqc60/dTCVwrvGPHFaTkCgmNQ/OFYMz8FdF/uBy+4ovyUOL1x0OfH50h
+	qO6TUZro5yv8fgnOc/WlPgl/aSkeykIdxybsdYJXCK0DOm2hjsiRUG12sXvxa3Vg==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=sendgrid.info;
+	h=content-type:date:from:mime-version:subject:reply-to:to:cc:
+	content-type:date:feedback-id:from:subject:to;
+	s=smtpapi; t=1775946941; bh=Sp7QVVws+Sl1JS02ne1txEIOCl0tHs99IDToidUW1L8=;
+	b=D7i0MoiLNkDSHbd3rP4JpJr6m/n2p/3EONt3Xka4wlM5O2J8fi6n/4y4KHm4OQIxstlK
+	BtL7OEv3WXLvfL+oqyOzI2D66wnDiwvOtVQZPzkbY9wTWv3wUtkzEkN8gKqjcsnGtE2jDy
+	fhoJ3Yef6VEvAZQQQTXRSFRE4kLUnEvHU=
+Received: by recvd-64d4876cc6-cslpp with SMTP id recvd-64d4876cc6-cslpp-1-69DACCBD-6B
+	2026-04-11 22:35:41.914752333 +0000 UTC m=+106334.225547475
+Received: from NDExNzk2NzU (unknown)
+	by geopod-ismtpd-13 (SG) with HTTP
+	id vpeCxW1XRHWTebtO49cjbw
+	Sat, 11 Apr 2026 22:35:41.780 +0000 (UTC)
+Content-Type: multipart/alternative; boundary=b71ca2c435adc84efe431637034c5e16368e3f79209be6fbc82f5d569408
+Date: Sat, 11 Apr 2026 22:35:41 +0000 (UTC)
+From: =?UTF-8?b?5bCx5rS75Lya6K2w?= <no-reply@info.syukatsu-kaigi.jp>
+Mime-Version: 1.0
+Message-ID: <vpeCxW1XRHWTebtO49cjbw@geopod-ismtpd-13>
+Subject: 
+ =?UTF-8?B?5L2Y44GV44KT44Gu44OX44Ot44OV44Kj44O844Or44KS44G/44Gf5LyB5qWt44GL44KJ44Kq44OV44Kh44O844GM5bGK44GE44Gm44GE44G+44GZ44CC?=
+Reply-To: =?UTF-8?b?5bCx5rS75Lya6K2w?= <no-reply@syukatsu-kaigi.jp>
+X-SG-EID: 
+ =?us-ascii?Q?u001=2E8XPcf3AHRCgOZW82bt55HAoqVbWs7lja+sEbO0y7O5JJaynS2ve3XSM98?=
+ =?us-ascii?Q?BSuSwfXlHd4WbGjL0eZ0OD5QmH5PXFMDhDEEPGK?=
+ =?us-ascii?Q?+kgNG+lWV0iZIcVuAKuDDt0eWdInejinh6dxHUW?=
+ =?us-ascii?Q?vKZZ57YYRL=2FyTYLvjCq8qV9=2F5LSFzhXz8b0WgfX?=
+ =?us-ascii?Q?jhNp7NCochM91X7K7xf6z1C2yjv1nPutYzGA5AM?=
+ =?us-ascii?Q?U4+WzRNSZkzgALPlkyXcxOfYYLkmiX5ztNFjW+Q?= =?us-ascii?Q?jhVI?=
+X-SG-ID: 
+ =?us-ascii?Q?u001=2ESdBcvi+Evd=2FbQef8eZF3BpVRkbqzAnq=2FkJniaVRUVAsGYR6ErbWIAvOzD?=
+ =?us-ascii?Q?7onGCem5570ZPUBIA5W8MWebz0u9Q=3D=3D?=
+To: raysya.biz@gmail.com
+X-Entity-ID: u001.NMV1ONRyAUB56ZuReL9DMA==
+
+--b71ca2c435adc84efe431637034c5e16368e3f79209be6fbc82f5d569408
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=utf-8
+Mime-Version: 1.0
+
+=E3=81=93=E3=82=93=E3=81=AB=E3=81=A1=E3=81=AF=E3=80=82=E5=B0=B1=E6=B4=BB=E4=
+=BC=9A=E8=AD=B0=E4=BA=8B=E5=8B=99=E5=B1=80=E3=81=A7=E3=81=99=E3=80=82
+
+=E4=BD=98=E3=81=95=E3=82=93=E5=AE=9B=E3=81=A6=E3=81=AB=E3=80=81=E4=BC=81=E6=
+=A5=AD=E3=81=8B=E3=82=89=E3=83=A1=E3=83=83=E3=82=BB=E3=83=BC=E3=82=B8=E3=81=
+=8C=E5=B1=8A=E3=81=8D=E3=81=BE=E3=81=97=E3=81=9F=E3=80=82
+
+=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81
+=E2=98=85 =E6=96=B0=E3=81=9F=E3=81=AB=E5=B1=8A=E3=81=84=E3=81=9F=E3=83=A1=
+=E3=83=83=E3=82=BB=E3=83=BC=E3=82=B8
+
+=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=
+=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=
+=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95
+=E2=96=BC =E3=80=9027=E5=8D=92=E2=94=82=E6=9C=80=E7=9F=AD1=E3=83=B5=E6=9C=
+=88=E3=81=A7=E5=86=85=E5=AE=9A=E3=80=91=E6=A5=AD=E7=95=8CNo.1=EF=BC=81=E2=
+=80=9C=E4=BA=BA=E3=81=A8=E7=B5=84=E7=B9=94=E3=81=AE=E8=AA=B2=E9=A1=8C=E8=A7=
+=A3=E6=B1=BA=E2=80=9D=E3=81=AB=E6=8C=91=E3=82=80=E3=80=81=E3=82=A6=E3=82=A7=
+=E3=83=AB=E3=83=93=E3=83=BC=E3=82=A4=E3=83=B3=E3=82=B0=E3=81=AE=E3=83=97=E3=
+=83=AD=E3=83=95=E3=82=A7=E3=83=83=E3=82=B7=E3=83=A7=E3=83=8A=E3=83=AB=E3=81=
+=B8/=E6=88=90=E9=95=B7=E7=92=B0=E5=A2=83=E3=81=AE=E3=83=AA=E3=82=A2=E3=83=
+=AB=E3=82=92=E7=9F=A5=E3=82=8B=E3=82=AA=E3=83=B3=E3=83=A9=E3=82=A4=E3=83=B3=
+=E8=AA=AC=E6=98=8E=E4=BC=9A60=E5=88=86
+
+[=E7=A4=BE=E5=90=8D] =E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=A2=E3=83=89=
+=E3=83=90=E3=83=B3=E3=83=86=E3=83=83=E3=82=B8=E3=83=AA=E3=82=B9=E3=82=AF=E3=
+=83=9E=E3=83=8D=E3=82=B8=E3=83=A1=E3=83=B3=E3=83=88
+[=E6=A5=AD=E7=95=8C] =E3=82=B5=E3=83=BC=E3=83=93=E3=82=B9=E3=80=8C=E3=81=9D=
+=E3=81=AE=E4=BB=96=E3=80=8D/=E9=87=91=E8=9E=8D=E3=80=8C=E3=81=9D=E3=81=AE=
+=E4=BB=96=E4=BF=9D=E9=99=BA=E3=80=8D
+
+[=E4=BC=81=E6=A5=AD=E3=81=8B=E3=82=89=E3=81=AE=E3=83=A1=E3=83=83=E3=82=BB=
+=E3=83=BC=E3=82=B8]
+<p>=E3=81=AF=E3=81=98=E3=82=81=E3=81=BE=E3=81=97=E3=81=A6=E3=80=81
+<br />=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=A2=E3=83=89=E3=83=90=E3=83=
+=B3=E3=83=86=E3=83=83=E3=82=B8=E3=83=AA=E3=82=B9=E3=82=AF=E3=83=9E=E3=83=8D=
+=E3=82=B8=E3=83=A1=E3=83=B3=E3=83=88
+<br />=E4=BA=BA=E4=BA=8B=E9=83=A8=E3=80=80=E6=96=B0=E5=8D=92=E6=8E=A1=E7=94=
+=A8=E6=8B=85=E5=BD=93=E3=81=A7=E3=81=99=E3=80=82</p>
+
+<p>=E3=81=94=E9=96=8B=E5=B0=81=E3=81=84=E3=81=9F=E3=81=A0=E3=81=84=E3=81=9F=
+=E7=9A=86=E3=81=95=E3=82=93=E3=81=B8
+<br />=E5=84=AA=E5=85=88=E7=9A=84=E3=81=AB=E3=81=94=E6=A1=88=E5=86=85=E3=81=
+=97=E3=81=9F=E3=81=8F...</p>
+=E7=B6=9A=E3=81=8D=E3=82=92=E8=A6=8B=E3=82=8B=E2=86=93
+http://url8386.info.syukatsu-kaigi.jp/ls/click?upn=3Du001.-2BsqK7CckCiZe9Dj=
+F6NDKMX5MXwuHpMTbB30tP1GzjMaW148Jq9zpSlZ4sULyMypVv7DjR8MdXVxlVnXa-2BzczgUz4=
+pkhc6NklVukthcy7T28CEt0DrOPwfrcxtFyam0uE2jSuP-2Bnw2-2BhZwxfb0wR9t6GjXzn7GzH=
+g87DKYjRB4-2FldxFB8vlR4I1dQstHbI3zMaRipW0IbxTKn1IdA2ixIA4x70PRR2UcO5RA1jv0a=
+HWQnCaH5cDe8aBkQF-2BL-2BlCNMe3-2FCmw80Ren3G-2F2y6d4-2FQg-3D-3DArRd_Gm8Z-2BL=
+yfKz5sHpugyi9Ik1dk3TGgVXmww-2Bl6zL1yH0YMMNqBUuW5zeUsHewU-2F5wmFdIcjb5hD1uFS=
+d6bt7HFWxat1CN7ksxh5NIsUACS0tDL5Je1BWtar8hWt6eNdiG0B2pjcwMuDw-2FSVV-2B6XkNz=
+oAul7nV72vUVH-2Fxg1iHrTYXI-2BYY5-2B4Cd3JQ2vuMsYFt3GoA7fMUTqO43jQGdzTEetJ5Ep=
+9IsyI5epvQNQonDPHD4MhI-2BeOdMYFzE8w9TFDh6
+
+=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81
+=E2=98=85 =E6=9C=AA=E8=AA=AD=E3=81=AE=E3=83=A1=E3=83=83=E3=82=BB=E3=83=BC=
+=E3=82=B8
+
+1=E9=80=9A=E3=81=AE=E3=83=A1=E3=83=83=E3=82=BB=E3=83=BC=E3=82=B8=E3=81=8C=
+=E6=9C=AA=E8=AA=AD=E3=81=A7=E3=81=99=E3=80=82=E7=B7=A0=E5=88=87=E3=81=8C=E8=
+=BF=AB=E3=81=A3=E3=81=A6=E3=81=84=E3=82=8B=E3=82=A4=E3=83=99=E3=83=B3=E3=83=
+=88=E3=82=82=E3=81=82=E3=82=8A=E3=81=BE=E3=81=99=E3=81=AE=E3=81=A7=E3=80=81=
+=E6=98=AF=E9=9D=9E=E4=B8=80=E5=BA=A6=E3=81=94=E7=A2=BA=E8=AA=8D=E3=81=8F=E3=
+=81=A0=E3=81=95=E3=81=84=E3=80=82
+http://url8386.info.syukatsu-kaigi.jp/ls/click?upn=3Du001.-2BsqK7CckCiZe9Dj=
+F6NDKMX5MXwuHpMTbB30tP1GzjMaW148Jq9zpSlZ4sULyMypVwBj1tENLAKUsZkZ4FEj3qoZ3I-=
+2BZLxt6DulFKVZLfXZY-2BWlFBCGOSd-2FslJrFY2ZXgiA0gS7ZYmDQjMxafqG4vNWCEZCQnyQ5=
+hCGjl7O3XsnXhhcSb-2FDe2iblTxjYX9aJ9S01qU1fP7XcxqFltT5fcN6VCEpSmh-2FMhObHe5C=
+LPbbFSmJ96raDia-2Fu9oTztVujVE4WqdEoOPWOHagKlU8IvDQ-3D-3DNgfV_Gm8Z-2BLyfKz5s=
+Hpugyi9Ik1dk3TGgVXmww-2Bl6zL1yH0YMMNqBUuW5zeUsHewU-2F5wmYZ7xBHba3rvWdunLFMW=
+-2FN-2Bjt8aX0kUcddSlu7DjDDunaHj26qj-2BKI5rgj1hxaxSTuh5IxpdbpdSg7pPaTwC5giNu=
+y3ISHFAlpw67wu0N1bFAUddKRDrLWiI6sJR52BgNeHROcS66SXSvoB5qDtfsQt9OGZsS0pPv-2B=
+khSPzzb5svTWPBJ5Q66zW1iRGkCz48v
+
+=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81
+
+=E3=82=84=E3=82=8A=E3=81=9F=E3=81=84=E3=81=93=E3=81=A8=E3=81=8C=E6=B1=BA=E3=
+=81=BE=E3=81=A3=E3=81=A6=E3=81=84=E3=82=8B=E6=96=B9=E3=82=82=E3=81=9D=E3=81=
+=86=E3=81=A7=E3=81=AA=E3=81=84=E6=96=B9=E3=82=82=E3=80=81=E3=81=A7=E3=81=8D=
+=E3=82=8B=E9=99=90=E3=82=8A=E4=BC=81=E6=A5=AD=E3=81=AB=E8=B6=B3=E3=82=92=E9=
+=81=8B=E3=81=B3=E3=80=81=E3=81=9F=E3=81=8F=E3=81=95=E3=82=93=E7=A4=BE=E4=BC=
+=9A=E4=BA=BA=E3=81=AB=E4=BC=9A=E3=81=86=E3=81=93=E3=81=A8=E3=82=92=E3=81=8A=
+=E3=81=99=E3=81=99=E3=82=81=E3=81=97=E3=81=BE=E3=81=99=E3=80=82
+
+=E8=A1=8C=E5=8B=95=E3=81=99=E3=82=8B=E3=81=BB=E3=81=A9=E3=81=AB=E4=BD=98=E3=
+=81=95=E3=82=93=E3=81=8C=E9=80=B2=E3=82=80=E3=81=B9=E3=81=8D=E9=81=93=E3=81=
+=8C=E3=80=81=E8=A6=8B=E3=81=88=E3=81=A6=E3=81=8F=E3=82=8B=E3=81=AF=E3=81=9A=
+=E3=81=A7=E3=81=99=E3=80=82
+=E4=BD=93=E8=AA=BF=E3=81=AB=E3=81=AF=E3=81=8F=E3=82=8C=E3=81=90=E3=82=8C=E3=
+=82=82=E6=B0=97=E3=82=92=E4=BB=98=E3=81=91=E3=81=A6=E3=80=81=E9=A0=91=E5=BC=
+=B5=E3=81=A3=E3=81=A6=E3=81=84=E3=81=8D=E3=81=BE=E3=81=97=E3=82=87=E3=81=86=
+=E3=80=82
+
+=E4=BB=A5=E4=B8=8A=E3=80=81=E4=BC=81=E6=A5=AD=E3=81=8B=E3=82=89=E3=81=AE=E3=
+=81=8A=E8=AA=98=E3=81=84=E3=81=AE=E3=81=94=E5=A0=B1=E5=91=8A=E3=81=A7=E3=81=
+=97=E3=81=9F=E3=80=82
+
+=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=
+=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95=E2=80=95
+=E2=96=A1=E7=99=BA=E8=A1=8C:=E3=80=80=E5=B0=B1=E6=B4=BB=E4=BC=9A=E8=AD=B0=
+=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE
+=E2=96=A1=E7=B7=A8=E9=9B=86:=E3=80=80=E5=B0=B1=E6=B4=BB=E4=BC=9A=E8=AD=B0=
+=E9=81=8B=E5=96=B6=E4=BA=8B=E5=8B=99=E5=B1=80
+
+=E3=83=A1=E3=83=83=E3=82=BB=E3=83=BC=E3=82=B8=E3=81=8C=E4=B8=8D=E8=A6=81=E3=
+=81=AE=E6=96=B9=E3=81=AF=E3=80=81=E3=81=8A=E6=89=8B=E6=95=B0=E3=81=A7=E3=81=
+=99=E3=81=8C=E4=B8=8B=E8=A8=98URL=E3=82=92=E3=82=AF=E3=83=AA=E3=83=83=E3=82=
+=AF=E3=81=97=E3=80=81=E3=80=8C=E4=BC=81=E6=A5=AD=E3=81=8B=E3=82=89=E3=81=AE=
+=E3=82=AA=E3=83=95=E3=82=A1=E3=83=BC=E3=82=92=E5=8F=97=E3=81=91=E5=8F=96=E3=
+=82=8B=E3=80=8D=E3=81=AE=E3=83=81=E3=82=A7=E3=83=83=E3=82=AF=E3=82=92=E3=81=
+=AF=E3=81=9A=E3=81=97=E3=81=A6=E3=81=8F=E3=81=A0=E3=81=95=E3=81=84=E3=80=82
+=E3=81=AA=E3=81=8A=E9=85=8D=E4=BF=A1=E5=81=9C=E6=AD=A2=E3=81=BE=E3=81=A7=E3=
+=81=AB=E3=81=AF=EF=BC=92=EF=BD=9E=EF=BC=93=E6=97=A5=E3=81=8B=E3=81=8B=E3=82=
+=8B=E5=A0=B4=E5=90=88=E3=81=8C=E3=81=82=E3=82=8A=E3=81=BE=E3=81=99=E3=80=82
+http://url8386.info.syukatsu-kaigi.jp/ls/click?upn=3Du001.-2BsqK7CckCiZe9Dj=
+F6NDKMX5MXwuHpMTbB30tP1GzjMbl7W7h9fj7L5PCQGnvIUBODjo3ftWhA-2FydZa3WikYMrnAM=
+Wcg9O6T3w-2FslkE2TVr8BXSeosU9POtA5jgjfN9KrFvlsQVohuFXzBBLngCorV0UOKqtilL6V0=
+eLN5El2Epy4D4Ps07iwdNllfcl76PZaawicPapLBoUbv-2Fms-2FuFFUn97j1C7yGxNTLiBEPkY=
+brAzuQNVR4Rz5JfX9-2BrG1WrI0038_Gm8Z-2BLyfKz5sHpugyi9Ik1dk3TGgVXmww-2Bl6zL1y=
+H0YMMNqBUuW5zeUsHewU-2F5wmrG6cA7oXaDjLCFtTKpHfgQ1rgQ3O4yq2uRwjHN7JJZLwY7Ch3=
+pCijIBiISjH3EiJ8LWAzVEIwUmAR0Qky4HUKvkAHYa2mzPdg-2BulFejYDbGHjCgU9wFeN0ReYq=
+Dr1wRmqxRG1jBEolnI-2FgGrBuIJCbMjHzlsf98OJ3FORyF0b-2FtNi8JOls9h5swpXBpHamC2
+
+
+--b71ca2c435adc84efe431637034c5e16368e3f79209be6fbc82f5d569408
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=utf-8
+Mime-Version: 1.0
+
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta content=3D"text/html; charset=3DUTF-8" http-equiv=3D"Content-Type">
+<meta content=3D"width=3Ddevice-width" name=3D"viewport">
+<style>body {
+margin: 0; padding: 0;
+}
+img {
+vertical-align: bottom;
+}
+</style>
+</head>
+<body style=3D"margin: 0; padding: 0;">
+<div class=3D"l-wrapper" style=3D"background-color: #fff; color: #505055; f=
+ont-family: =E3=83=92=E3=83=A9=E3=82=AE=E3=83=8E=E8=A7=92=E3=82=B4 Pro W3,H=
+iragino Kaku Gothic Pro,Osaka,=E3=83=A1=E3=82=A4=E3=83=AA=E3=82=AA,Meiryo,=
+=EF=BC=AD=EF=BC=B3 =EF=BC=B0=E3=82=B4=E3=82=B7=E3=83=83=E3=82=AF,MS P Gothi=
+c,Verdana,sans-serif; font-size: 14px; -webkit-text-size-adjust: 100%; vert=
+ical-align: baseline; word-wrap: break-word;">
+<div class=3D"l-header--offer" style=3D"padding: 22px 0;" align=3D"center">
+<a href=3D"http://url8386.info.syukatsu-kaigi.jp/ls/click?upn=3Du001.-2BsqK=
+7CckCiZe9DjF6NDKMX5MXwuHpMTbB30tP1GzjMavQF1ArlFZHlSrvpOLLeWLdxYo884-2FVyhnA=
+SSRZqhNvMm7pD2oftfPQJs1qQadz3R2hNQOTY7vaiCG5n6a-2B-2FoHwYVpzFJCSOmPjW5p0p-2=
+BsraS-2B8qgg5LsLlLBqNLBI82U-3DTrS1_Gm8Z-2BLyfKz5sHpugyi9Ik1dk3TGgVXmww-2Bl6=
+zL1yH0YMMNqBUuW5zeUsHewU-2F5wmVJEdBzA2cMron1dJQEcA7VvavWZcEh2v-2Bzx8Y-2FmxL=
+b71xCFyvt2msoF7-2Bp607yDYIHSsL8un3hFWj5O-2FtGCfx0jQRDncF2MY5wAvEYaxxjarFFgs=
+2vboEJmAC-2FCml1qPVW3SKha5anZtJDOaUeri69gZatMNqZBTQf-2FbNZgABLyb2p78Ma4gpMf=
+tEhrifLb1" style=3D"color: #0191cf; -webkit-text-decoration: none; text-dec=
+oration: none;"><img alt=3D"=E5=B0=B1=E6=B4=BB=E4=BC=9A=E8=AD=B0" border=3D=
+"0" height=3D"31" width=3D"180" src=3D"https://static.syukatsu-kaigi.jp/pac=
+ks/images/recruit/logo_mail-6ea6e5fb6a51c02c2255.png" style=3D"vertical-ali=
+gn: bottom;">
+</a>
+</div>
+<div class=3D"l-wrapper--offer" style=3D"background-color: #004b9e;">
+<div class=3D"p-offer" style=3D"background-image: linear-gradient(to bottom=
+ right,#0097ba,#001b8d); color: #fff; line-height: 2; margin-bottom: 45px; =
+padding: 45px 0 50px;">
+<div class=3D"l-inner" style=3D"max-width: 620px; margin: 0 auto;">
+<div class=3D"p-offer__headline" style=3D"color: #fff7d6; font-size: 20px; =
+margin: 0 20px;" align=3D"center">
+<b>=E4=BC=81=E6=A5=AD=E3=81=8B=E3=82=89=E8=AA=AC=E6=98=8E=E4=BC=9A=E3=83=BB=
+=E3=82=A4=E3=83=B3=E3=82=BF=E3=83=BC=E3=83=B3=E3=81=AE=E3=81=8A=E8=AA=98=E3=
+=81=84=E3=81=8C=E3=81=8D=E3=81=BE=E3=81=97=E3=81=9F</b>
+</div>
+<br>
+<div class=3D"u-center" style=3D"" align=3D"center">
+<div class=3D"p-offer__lead" style=3D"margin: 0 20px;">
+=E3=81=93=E3=82=93=E3=81=AB=E3=81=A1=E3=81=AF=E3=80=82=E5=B0=B1=E6=B4=BB=E4=
+=BC=9A=E8=AD=B0=E4=BA=8B=E5=8B=99=E5=B1=80=E3=81=A7=E3=81=99=E3=80=82
+<br>
+=E4=BD=98=E3=81=95=E3=82=93=E3=81=AE=E3=83=97=E3=83=AD=E3=83=95=E3=82=A3=E3=
+=83=BC=E3=83=AB=E3=82=92=E3=81=BF=E3=81=9F=E4=BC=81=E6=A5=AD=E3=81=8B=E3=82=
+=89=E3=80=81=E7=89=B9=E5=88=A5=E3=81=AB=E3=82=AA=E3=83=95=E3=82=A1=E3=83=BC=
+=E3=81=8C=E5=B1=8A=E3=81=8D=E3=81=BE=E3=81=97=E3=81=9F=E3=80=82
+</div>
+<br>
+<a href=3D"http://url8386.info.syukatsu-kaigi.jp/ls/click?upn=3Du001.-2BsqK=
+7CckCiZe9DjF6NDKMX5MXwuHpMTbB30tP1GzjMbMU-2BbR4gSA1NPDbwmGrQOxIrxnKx0DZTbOn=
+KBGtB4OhuRWLhgLQROALpahPAW2XDje6k7GUTyAGQCdSgIDIfVmv-2F35d5YViOauXSE8uk0ZfZ=
+Uy3-2BBx7LxYBg-2BPuUqSDgThl6F2p6phFnQr-2Fe-2BjAR9RONS8aP-2BSQkkOccSNlpzPreb=
+JFGNvAL5RxFtiCkN43Ec-3DQMDz_Gm8Z-2BLyfKz5sHpugyi9Ik1dk3TGgVXmww-2Bl6zL1yH0Y=
+MMNqBUuW5zeUsHewU-2F5wm0ynvAFyqi-2FyhGfz0FWbv2OzAAPwIg1yS6n29521WShZjCLPExN=
+Ji1JffShQ4Y2qVP-2FYGqCxGw2Pg4ajPRq3mKN-2FXp5-2B2zEJLHgZNXm5Wx5Rc4Gb2ztAWHha=
+IYtNz3m8qcNJpDAqZgyB-2FmBq5xEQ6lpHc6VjCTbEzoGntuJXKs6RRDYy896Id3QtoGtGWCDJu=
+" style=3D"color: #0191cf; -webkit-text-decoration: none; text-decoration: =
+none;"><img alt=3D"" border=3D"0" height=3D"395" width=3D"345" src=3D"https=
+://static.syukatsu-kaigi.jp/packs/images/recruit/img_mail_offer-64a12f8d948=
+ba990df47.png" style=3D"vertical-align: bottom; height: auto; max-width: 10=
+0%;">
+</a>
+</div>
+<br>
+</div>
+</div>
+</div>
+<div class=3D"l-inner" style=3D"max-width: 620px; margin: 0 auto;">
+<div class=3D"p-article" style=3D"background-color: #fff; border-top-width:=
+ 5px; border-top-color: #00beff; border-top-style: solid;">
+<div class=3D"p-article__item" style=3D"background-color: #fff; padding: 30=
+px; border-color: #e7e9ec; border-style: solid; border-width: 0 1px 5px;">
+<div class=3D"p-article__heading" style=3D"font-size: 16px; line-height: 1.=
+8; margin: 15px 0 20px;">
+<b>=E3=80=9027=E5=8D=92=E2=94=82=E6=9C=80=E7=9F=AD1=E3=83=B5=E6=9C=88=E3=81=
+=A7=E5=86=85=E5=AE=9A=E3=80=91=E6=A5=AD=E7=95=8CNo.1=EF=BC=81=E2=80=9C=E4=
+=BA=BA=E3=81=A8=E7=B5=84=E7=B9=94=E3=81=AE=E8=AA=B2=E9=A1=8C=E8=A7=A3=E6=B1=
+=BA=E2=80=9D=E3=81=AB=E6=8C=91=E3=82=80=E3=80=81=E3=82=A6=E3=82=A7=E3=83=AB=
+=E3=83=93=E3=83=BC=E3=82=A4=E3=83=B3=E3=82=B0=E3=81=AE=E3=83=97=E3=83=AD=E3=
+=83=95=E3=82=A7=E3=83=83=E3=82=B7=E3=83=A7=E3=83=8A=E3=83=AB=E3=81=B8/=E6=
+=88=90=E9=95=B7=E7=92=B0=E5=A2=83=E3=81=AE=E3=83=AA=E3=82=A2=E3=83=AB=E3=82=
+=92=E7=9F=A5=E3=82=8B=E3=82=AA=E3=83=B3=E3=83=A9=E3=82=A4=E3=83=B3=E8=AA=AC=
+=E6=98=8E=E4=BC=9A60=E5=88=86</b>
+</div>
+<div class=3D"p-article__content" style=3D"border-bottom-width: 1px; border=
+-bottom-color: #e7e9ec; border-bottom-style: solid; line-height: 1.8; margi=
+n-bottom: 30px; padding-bottom: 20px;">
+=E3=81=AF=E3=81=98=E3=82=81=E3=81=BE=E3=81=97=E3=81=A6=E3=80=81<br>=E6=A0=
+=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=A2=E3=83=89=E3=83=90=E3=83=B3=E3=83=86=
+=E3=83=83=E3=82=B8=E3=83=AA=E3=82=B9=E3=82=AF=E3=83=9E=E3=83=8D=E3=82=B8=E3=
+=83=A1=E3=83=B3=E3=83=88<br>=E4=BA=BA=E4=BA=8B=E9=83=A8=E3=80=80=E6=96=B0=
+=E5=8D=92=E6=8E=A1=E7=94=A8=E6=8B=85=E5=BD=93=E3=81=A7=E3=81=99=E3=80=82<br=
+><br>=E3=81=94=E9=96=8B=E5=B0=81=E3=81=84=E3=81=9F=E3=81=A0=E3=81=84=E3=81=
+=9F=E7=9A=86=E3=81=95=E3=82=93=E3=81=B8<br>=E5=84=AA=E5=85=88=E7=9A=84=E3=
+=81=AB=E3=81=94=E6=A1=88=E5=86=85=E3=81=97=E3=81=9F=E3=81=8F...
+<a class=3D"p-article__btn" href=3D"http://url8386.info.syukatsu-kaigi.jp/l=
+s/click?upn=3Du001.-2BsqK7CckCiZe9DjF6NDKMX5MXwuHpMTbB30tP1GzjMaW148Jq9zpSl=
+Z4sULyMypVv7DjR8MdXVxlVnXa-2BzczgUz4pkhc6NklVukthcy7T28CEt0DrOPwfrcxtFyam0u=
+E2jSuP-2Bnw2-2BhZwxfb0wR9t6GjXzn7GzHg87DKYjRB4-2FldxFB8vlR4I1dQstHbI3zMaRip=
+W0IbxTKn1IdA2ixIA4x70PRR2UcO5RA1jv0aHWQnCaH5cDe8aBkQF-2BL-2BlCNMe3-2FCmw80R=
+en3G-2F2y6d4-2FQg-3D-3DYlOU_Gm8Z-2BLyfKz5sHpugyi9Ik1dk3TGgVXmww-2Bl6zL1yH0Y=
+MMNqBUuW5zeUsHewU-2F5wmUUfm7AZCjvSMYrs1UeHQgWt8yFhdbRt6jRWUgLdSAo2rJf9X88Vh=
+vE-2F4RDJ-2FieRtPaBr4De5AXHconrpR1SHsNudds2n4FxVYC2AVvpEMrNc0bp1AVs39Cbuhsb=
+0VNDGzxx4lHxBpqFLmGaSWOLxTRVbh5-2BOi7SolhUBsX22rBDf2orsTHpi6dZjzcr7dDYU" st=
+yle=3D"color: #fff; -webkit-text-decoration: none; text-decoration: none; b=
+ackground-color: #00beff; border-radius: 2em; display: block; font-weight: =
+700; text-align: center; width: 200px; margin: 25px auto 0; padding: 15px 0=
+;">=E7=B6=9A=E3=81=8D=E3=82=92=E8=A6=8B=E3=82=8B</a>
+</div>
+<table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%">
+<tr>
+<td class=3D"p-article__company-logo" height=3D"42" rowspan=3D"2" width=3D"=
+42" style=3D"border-radius: 100%; height: 39px; width: 39px; border: 1px so=
+lid #e7e9ec;" align=3D"center">
+<img alt=3D"=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=A2=E3=83=89=E3=83=90=
+=E3=83=B3=E3=83=86=E3=83=83=E3=82=B8=E3=83=AA=E3=82=B9=E3=82=AF=E3=83=9E=E3=
+=83=8D=E3=82=B8=E3=83=A1=E3=83=B3=E3=83=88=E3=81=AE=E3=83=AD=E3=82=B4" bord=
+er=3D"0" height=3D"*" width=3D"28" src=3D"https://static.syukatsu-kaigi.jp/=
+images/clients/203/logo/display_48f14266-68f1-4a7c-a095-914bd7be9c29.jpg" s=
+tyle=3D"vertical-align: middle;">
+</td>
+</tr>
+<tr>
+<td style=3D"padding-left: 10px;">
+<span class=3D"p-article__company-type" style=3D"color: #afafba; font-size:=
+ 10px;">=E3=82=B5=E3=83=BC=E3=83=93=E3=82=B9=E3=80=8C=E3=81=9D=E3=81=AE=E4=
+=BB=96=E3=80=8D/=E9=87=91=E8=9E=8D=E3=80=8C=E3=81=9D=E3=81=AE=E4=BB=96=E4=
+=BF=9D=E9=99=BA=E3=80=8D</span>
+<br>
+<b class=3D"u-font-3xs" style=3D"font-size: 1rem !important;">=E6=A0=AA=E5=
+=BC=8F=E4=BC=9A=E7=A4=BE=E3=82=A2=E3=83=89=E3=83=90=E3=83=B3=E3=83=86=E3=83=
+=83=E3=82=B8=E3=83=AA=E3=82=B9=E3=82=AF=E3=83=9E=E3=83=8D=E3=82=B8=E3=83=A1=
+=E3=83=B3=E3=83=88</b>
+</td>
+</tr>
+</table>
+</div>
+<a class=3D"p-article__more" href=3D"http://url8386.info.syukatsu-kaigi.jp/=
+ls/click?upn=3Du001.-2BsqK7CckCiZe9DjF6NDKMX5MXwuHpMTbB30tP1GzjMaW148Jq9zpS=
+lZ4sULyMypVwBj1tENLAKUsZkZ4FEj3qoZ3I-2BZLxt6DulFKVZLfXZY-2BWlFBCGOSd-2FslJr=
+FY2ZXgiA0gS7ZYmDQjMxafqG4vNWCEZCQnyQ5hCGjl7O3XsnXhhcSb-2FDe2iblTxjYX9aJ9S01=
+qU1fP7XcxqFltT5fcN6VCEpSmh-2FMhObHe5CLPbbFSmJ96raDia-2Fu9oTztVujVE4WqdEoOPW=
+OHagKlU8IvDQ-3D-3Dbi4B_Gm8Z-2BLyfKz5sHpugyi9Ik1dk3TGgVXmww-2Bl6zL1yH0YMMNqB=
+UuW5zeUsHewU-2F5wmTpODdozG9IrcQTwEWmVL7MtpQ-2BD4lJaYOdaJB7q-2B6jRGTBlWqwqFJ=
+LTt-2BhbTd225dKbHNxPUTSKp-2FsCE4Mlt-2BdjkCZ8quZ-2FhwPEvKmgZRJ66gihq-2BuOWot=
+gw1Fh4pMWs7Bl-2BQs2uHO-2BtY0ewRvyflnjwxjxOKzJ2gjqG2GaABrIxmnUPlh0nj4dPsah4i=
+XU2" style=3D"color: #0191cf; -webkit-text-decoration: none; text-decoratio=
+n: none; background-color: #fafafa; display: block; font-weight: 700; margi=
+n-bottom: 40px; text-align: center; padding: 45px;">=E7=B6=9A=E3=81=8D=E3=
+=82=92=E8=A6=8B=E3=82=8B=EF=BC=88=E6=9C=AA=E8=AA=AD1=E4=BB=B6=EF=BC=89</a>
+</div>
+<div class=3D"l-footer--offer" style=3D"background-color: #fafafa; line-hei=
+ght: 2; margin-bottom: 40px; padding: 30px;">
+<div class=3D"u-font-3xs" style=3D"font-size: 1rem !important;">
+=E3=82=84=E3=82=8A=E3=81=9F=E3=81=84=E3=81=93=E3=81=A8=E3=81=8C=E6=B1=BA=E3=
+=81=BE=E3=81=A3=E3=81=A6=E3=81=84=E3=82=8B=E6=96=B9=E3=82=82=E3=81=9D=E3=81=
+=86=E3=81=A7=E3=81=AA=E3=81=84=E6=96=B9=E3=82=82=E3=80=81=E3=81=A7=E3=81=8D=
+=E3=82=8B=E9=99=90=E3=82=8A=E4=BC=81=E6=A5=AD=E3=81=AB=E8=B6=B3=E3=82=92=E9=
+=81=8B=E3=81=B3=E3=80=81=E3=81=9F=E3=81=8F=E3=81=95=E3=82=93=E7=A4=BE=E4=BC=
+=9A=E4=BA=BA=E3=81=AB=E4=BC=9A=E3=81=86=E3=81=93=E3=81=A8=E3=82=92=E3=81=8A=
+=E3=81=99=E3=81=99=E3=82=81=E3=81=97=E3=81=BE=E3=81=99=E3=80=82
+<br>
+=E8=A1=8C=E5=8B=95=E3=81=99=E3=82=8B=E3=81=BB=E3=81=A9=E3=81=AB=E4=BD=98=E3=
+=81=95=E3=82=93=E3=81=8C=E9=80=B2=E3=82=80=E3=81=B9=E3=81=8D=E9=81=93=E3=81=
+=8C=E3=80=81=E8=A6=8B=E3=81=88=E3=81=A6=E3=81=8F=E3=82=8B=E3=81=AF=E3=81=9A=
+=E3=81=A7=E3=81=99=E3=80=82=E4=BD=93=E8=AA=BF=E3=81=AB=E3=81=AF=E3=81=8F=E3=
+=82=8C=E3=81=90=E3=82=8C=E3=82=82=E6=B0=97=E3=82=92=E4=BB=98=E3=81=91=E3=81=
+=A6=E3=80=81=E9=A0=91=E5=BC=B5=E3=81=A3=E3=81=A6=E3=81=84=E3=81=8D=E3=81=BE=
+=E3=81=97=E3=82=87=E3=81=86=E3=80=82
+<br>
+=E4=BB=A5=E4=B8=8A=E3=80=81=E4=BC=81=E6=A5=AD=E3=81=8B=E3=82=89=E3=81=AE=E3=
+=81=8A=E8=AA=98=E3=81=84=E3=81=AE=E3=81=94=E5=A0=B1=E5=91=8A=E3=81=A7=E3=81=
+=97=E3=81=9F=E3=80=82
+<br>
+<br>
+=E7=99=BA=E8=A1=8C=EF=BC=9A=E5=B0=B1=E6=B4=BB=E4=BC=9A=E8=AD=B0=E6=A0=AA=E5=
+=BC=8F=E4=BC=9A=E7=A4=BE=E2=80=83=E2=80=83=E7=B7=A8=E9=9B=86=EF=BC=9A=E5=B0=
+=B1=E6=B4=BB=E4=BC=9A=E8=AD=B0=E9=81=8B=E5=96=B6=E4=BA=8B=E5=8B=99=E5=B1=80
+<br>
+<br>
+=E3=83=A1=E3=83=83=E3=82=BB=E3=83=BC=E3=82=B8=E3=81=8C=E4=B8=8D=E8=A6=81=E3=
+=81=AE=E6=96=B9=E3=81=AF=E3=80=81=E3=81=8A=E6=89=8B=E6=95=B0=E3=81=A7=E3=81=
+=99=E3=81=8C=E4=B8=8B=E8=A8=98URL=E3=82=92=E3=82=AF=E3=83=AA=E3=83=83=E3=82=
+=AF=E3=81=97=E3=80=81=E3=80=8C=E4=BC=81=E6=A5=AD=E3=81=8B=E3=82=89=E3=81=AE=
+=E3=82=AA=E3=83=95=E3=82=A1=E3=83=BC=E3=82=92=E5=8F=97=E3=81=91=E5=8F=96=E3=
+=82=8B=E3=80=8D=E3=81=AE=E3=83=81=E3=82=A7=E3=83=83=E3=82=AF=E3=82=92=E3=81=
+=AF=E3=81=9A=E3=81=97=E3=81=A6=E3=81=8F=E3=81=A0=E3=81=95=E3=81=84=E3=80=82=
+=E3=81=AA=E3=81=8A=E9=85=8D=E4=BF=A1=E5=81=9C=E6=AD=A2=E3=81=BE=E3=81=A7=E3=
+=81=AB=E3=81=AF=EF=BC=92=EF=BD=9E=EF=BC=93=E6=97=A5=E3=81=8B=E3=81=8B=E3=82=
+=8B=E5=A0=B4=E5=90=88=E3=81=8C=E3=81=82=E3=82=8A=E3=81=BE=E3=81=99=E3=80=82
+<br>
+<a href=3D"http://url8386.info.syukatsu-kaigi.jp/ls/click?upn=3Du001.-2BsqK=
+7CckCiZe9DjF6NDKMX5MXwuHpMTbB30tP1GzjMbl7W7h9fj7L5PCQGnvIUBODjo3ftWhA-2FydZ=
+a3WikYMrnAMWcg9O6T3w-2FslkE2TVr8BXSeosU9POtA5jgjfN9KrFvlsQVohuFXzBBLngCorV0=
+UOKqtilL6V0eLN5El2Epy4D4Ps07iwdNllfcl76PZaawicPapLBoUbv-2Fms-2FuFFUn97j1C7y=
+GxNTLiBEPkYbrAzuQNVR4Rz5JfX9-2BrG1WrIdYiR_Gm8Z-2BLyfKz5sHpugyi9Ik1dk3TGgVXm=
+ww-2Bl6zL1yH0YMMNqBUuW5zeUsHewU-2F5wmDRuE9GZLrZ6-2BMC-2BwkTJmRNgLAaV08OgJoe=
+DrNa86OWrMH62KFccHmZX5uns1uRPdZgpMeJ-2FtNLRygVh-2BFIgcKbCkmvgl1T75vFEaWvJ8x=
+bkUJbWXxT4vkhknkmpBoYwNTn-2FnIzgC7EHrKmhrVTNFHhKIQDRSGlAtZ226Mf-2BOjTj166IL=
+frpuR2kC7Wc4LRHc" style=3D"color: #0191cf; -webkit-text-decoration: none; t=
+ext-decoration: none;">https://syukatsu-kaigi.jp/student/service_permission=
+</a>
+</div>
+</div>
+</div>
+<div class=3D"l-footer-copyright" style=3D"background-color: #031c29; color=
+: #fff; font-size: 12px; padding: 18px 0;" align=3D"center">Copyright =C2=
+=A9 Syukatsu Kaigi Inc. All rights reserved.</div>
+</div>
+
+<img src=3D"http://url8386.info.syukatsu-kaigi.jp/wf/open?upn=3Du001.Qnv9S9=
+7v11mE-2FX9SuZ7UjUMlnYzXVwEogTqAlaJwoZ1e7Gfzltd-2BdeOS3KuwVSg5XLYD5Osi8OD8I=
+Plf9TcEXWNdXwZkrAvNv2imNDW1ZikiYiVe32d7dT1A5gSmTSJu36tgYC0hwmY9mO6HZcrbjMau=
+lOI-2FdSFGEHt3oLroSbko-2FPD1Zn4XzKxOzHNjcAQtd68sQgKGc9twErtIo9f4HlEfhNyqgXK=
+7u8J7omKNfDB1z-2Bvu-2B4Rvy7QbjAXGNvnk" alt=3D"" width=3D"1" height=3D"1" bo=
+rder=3D"0" style=3D"height:1px !important;width:1px !important;border-width=
+:0 !important;margin-top:0 !important;margin-bottom:0 !important;margin-rig=
+ht:0 !important;margin-left:0 !important;padding-top:0 !important;padding-b=
+ottom:0 !important;padding-right:0 !important;padding-left:0 !important;"/>=
+</body>
+</html>
+
+--b71ca2c435adc84efe431637034c5e16368e3f79209be6fbc82f5d569408--

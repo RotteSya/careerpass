@@ -1,0 +1,115 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:612c:202f:b0:4bd:4811:23e9 with SMTP id ff15csp411349vqb;
+        Tue, 29 Apr 2025 09:40:26 -0700 (PDT)
+X-Received: by 2002:a05:6102:3f12:b0:4c1:71b6:6c with SMTP id ada2fe7eead31-4da7f52f85cmr3850807137.7.1745944826578;
+        Tue, 29 Apr 2025 09:40:26 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1745944826; cv=none;
+        d=google.com; s=arc-20240605;
+        b=ZCIOf58iFMA4wwigOyY322loGijNUnekgLjhX2lANnHyIzHSdTw9O2yLZ0rjQqFj8K
+         io0pFPqS1/gYoO+lU8UNTf20xkPlIICI4WO1bU8HWZIKP1CxvtzAufYBCcAFWBkShePk
+         e9VBtuOrf9PwKNXYwhviIbxJdci9ri4BGjsOMd7D3dvAZebkYIRJxrogor/72z/Wo0Xk
+         5iuptOF4L8rZBdESatP9CXmufAlovjTZ/q2fzHcbkMQHGzYhzR7ECL7sKR9Z5efCGgQ3
+         EmdZ6dHVW2gSZrwNdi/QGf3IweuBvyd/teaujMmsLFV41VqSXFmRhlEa8Ro+zWcK0/92
+         BKYQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:to:from:subject:message-id:date
+         :mime-version:dkim-signature;
+        bh=hvwHnx5vsJN7VCGrz55P7zjgb6MwIaZPxyVl9wqLNjY=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=H1SX6yOSRR9ycqP9OvhPTcNsQflxLQwb2BrKL6bX+MUdzZsAndxa8HSMMfikW3aDbB
+         H0pnapqNLQEv9/MY2LyhZ8zwXH0VnGMLq9dVBDjeMh2UQiGNoOVGLxePZRHPjP3OAtzD
+         TRkyHs+W+mKbFqwiYEirSpW+//lF0wmmKSqsA+amSVmAPM/ygXLN8yZrDs+ADBkZWqQf
+         BySsU2iewHBgpiOfM2XBvhVWO33KkIt4uFt9wrNGb0ewO3mmd4rmaaSzCAUykAnP+H2p
+         m++NpICFm99eIu4xGqm89N51oSmsYa28nv5s0BsjDe2RqarfDvlkdsHiPw3ccXcC6xmr
+         IcQw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@google.com header.s=20230601 header.b=Z3lt8+W6;
+       spf=pass (google.com: domain of gmail-noreply@google.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=gmail-noreply@google.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=google.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <gmail-noreply@google.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id ada2fe7eead31-4d3d71d08b7sor3944002137.9.2025.04.29.09.40.26
+        for <raysya.biz@gmail.com>
+        (Google Transport Security);
+        Tue, 29 Apr 2025 09:40:26 -0700 (PDT)
+Received-SPF: pass (google.com: domain of gmail-noreply@google.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@google.com header.s=20230601 header.b=Z3lt8+W6;
+       spf=pass (google.com: domain of gmail-noreply@google.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=gmail-noreply@google.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=google.com;
+       dara=pass header.i=@gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=google.com; s=20230601; t=1745944826; x=1746549626; dara=google.com;
+        h=content-transfer-encoding:to:from:subject:message-id:date
+         :mime-version:from:to:cc:subject:date:message-id:reply-to;
+        bh=hvwHnx5vsJN7VCGrz55P7zjgb6MwIaZPxyVl9wqLNjY=;
+        b=Z3lt8+W6FPtZBEPiK0/+XZ3w81DMoihhPD3iQUP6U5cZNdXIOTJKR4tJbU1DqfS3hF
+         1JvsAm+Ka3yPBjVqZwZDBb4xfPiI68fb/o/N1W1l9raCuZPrLzkzfGmTWzrp4NIoCJrd
+         PBm2w4QhrP8ur67eWtz6H07wn9+YWzVXYET6JE4o7+uos8xk0A+rEHBG3tbmIVDUaJFT
+         m36OLdzVnd3uo6YUQyxTa/3Qbsi3ZXfATDa+SSklskXzcSRTc5aZ5UWJC20QyX97r4TC
+         +SgwL+0EHjkfr0THK/DEv9WK+pAnbU+MCc9te/8g8ySa4p06MYjqMBepb9hP5RHstHiZ
+         tnlw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1745944826; x=1746549626;
+        h=content-transfer-encoding:to:from:subject:message-id:date
+         :mime-version:x-gm-message-state:from:to:cc:subject:date:message-id
+         :reply-to;
+        bh=hvwHnx5vsJN7VCGrz55P7zjgb6MwIaZPxyVl9wqLNjY=;
+        b=MwByRzBM/VDhy8KUazB2720hDNveyDIBtXXJ5uGnbxm+60iN/pnP/8edVor7ehwIJo
+         SmIN14e3LKa5bsVMY8GhggSUaPCw7NyZtvf/9LRJ9skwMnnPGakfMNp9gUR2Nepsk45X
+         RlZq09qU2jlKXD7gRfw5ISkCHG+ff1G7j9jbXvDIgK8/OuIWuIHYq2v9pZ8a6+Bf124I
+         1bmJv0g8W5SHfV8b0heZ5LMNuItlmuy8EMp7eE75s1CLtO0kX9fW0rv+AhUJWhM33goF
+         zmiv/0EZvVMvEDq2mGfA7W56lkowKqsZluJYPOVAhQt2zaxpZSjDTvujekW3A7sJrThj
+         vZuQ==
+X-Gm-Message-State: AOJu0YypUKDj3pPjXeXJRKVp0MkNADc9A6hAs0OmStlEfa4BdleO0o1E
+	SKfIuzS8316rF8hqOT7SQo/d8dvLpEC/fH750uKcT00gYzV4aUWZmRBrWeRyNwjcNMBC9UAgWzw
+	WLuQPutEfYE3Uh9y/SaGYmBBFj3j3Ke7uTg1rPnmTcC1vPWu39mFkgBuWQACvKA==
+X-Gm-Gg: ASbGncuY7yfWPJIqkmuC0HFJDug4Q6uFnupSMEuJ7DWnaRANEWLCpsGW6i9lW4hBnHw
+	fpZePqEoPgfNYWvF6l+rBIbGdMIEY/WLHImePKu85gJ3OF1E+qlP1LxoxYsgtoRUNYzaCil2ESm
+	nAAMqkJh7yIhRNufsAvcXQ3EE=
+X-Google-Smtp-Source: AGHT+IFdV+l/7ihIxoqbhKu5RjlL8P0cFfgBzt28RPEcv7lOvXwc6KjDRdVk8EU5Mo7rTLikTNaS3eZ6E4qidcGGWgbWpNI8cxGvtg==
+MIME-Version: 1.0
+X-Received: by 2002:a05:6102:3e0e:b0:4c1:83c4:8562 with SMTP id
+ ada2fe7eead31-4da7fb1bd24mr3630046137.13.1745944826301; Tue, 29 Apr 2025
+ 09:40:26 -0700 (PDT)
+X-Google-Address-Confirmation: _8fOlC1F2KgyAY3sjTwe_V35nxM
+Date: Wed, 30 Apr 2025 01:40:26 +0900
+X-Gm-Features: ATxdqUFj9pGUXTyckEZU2XG3b9SzBPmY82FqHxi4CW_EFDpxL9fNW82or62-iwE
+Message-ID: <CAHVjxtT1qUAcH1jrXDqYQBOvMkRdqR7SFLcSk174cft-ALhceQ@mail.gmail.com>
+Subject: =?UTF-8?B?R21haWwg56Gu6K6kIOKAkyDnlKjov5nkuKrlnLDlnYDlj5HpgIHpgq7ku7Y6IHJheXN5YQ==?=
+	=?UTF-8?B?LmJpekBnbWFpbC5jb20=?=
+From: =?UTF-8?B?R21haWwg5bCP57uE5pWs5LiK?= <gmail-noreply@google.com>
+To: raysya.biz@gmail.com
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: base64
+
+5oKo5bey6K+35rGC5bCGIHJheXN5YS5iaXpAZ21haWwuY29tIOa3u+WKoOWIsOaCqOeahCBHbWFp
+bCDotKblj7fjgIINCg0K5oKo6ZyA6KaB54K55Ye75Lul5LiL6ZO+5o6l56Gu6K6k6K+35rGC77yM
+54S25ZCO5omN5Y+v5Lul5L2/55SoIEdtYWlsIOi0puWPtyAocmF5c3lhZGVzdUBnbWFpbC5jb20p
+IOS7jg0KcmF5c3lhLmJpekBnbWFpbC5jb20g5Y+R6YCB6YKu5Lu277yaDQoNCmh0dHBzOi8vbWFp
+bC5nb29nbGUuY29tL21haWwvZi0lNUJBTkdqZEpfcTd6aUZla0Rzb2FMRlJPVW16WlZaUDJsZVpW
+ZllQWWlXUEJYMGRHX0d2WUFsbWZwclRvZlBuYzdXaE0tWG1Qd2lrclVScFZ4bW9CUXclNUQtbENo
+UTBYUDR5SExNbmZsSjh1Rnk2N0NRTklJDQoNCuWmguaenOaCqOeCueWHu+mTvuaOpeS5i+WQjuWP
+keeOsOmTvuaOpeS8vOS5juaXoOaViO+8jOivt+WwhuWFtuWkjeWItuW5tueymOi0tOWIsOaWsOea
+hOa1j+iniOWZqOeql+WPo+S4reOAgg0KDQrmhJ/osKLmgqjkvb/nlKggR21haWzvvIHnpZ3lpb3v
+vIENCg0KR21haWwg5Zui6ZifDQoNCuWmguaenOaCqOW5tuacquaPkOWHuui/meS4gOivt+axgu+8
+jOaIluS4jeW4jOacm+WwhuatpOeUteWtkOmCruS7tuWcsOWdgOa3u+WKoOWIsOaCqOeahCBHbWFp
+bCDotKblj7fvvIzliJnml6DpnIDph4flj5bku7vkvZXov5vkuIDmraXmjqrmlr3jgIINCumZpOmd
+nuaCqOeCueWHu+S4iumdoueahOmTvuaOpeehruiupOatpOivt+axgu+8jOWQpuWImSByYXlzeWFk
+ZXN1QGdtYWlsLmNvbQ0K5peg5rOV5L2/55So5oKo55qE55S15a2Q6YKu5Lu25Zyw5Z2A5Y+R6YCB
+6YKu5Lu244CC5aaC5p6c5oKo5LiN5bCP5b+D54K55Ye75LqG6K+l6ZO+5o6l77yM5L2G5YW25a6e
+5bm25LiN5oOz6K6pIHJheXN5YWRlc3VAZ21haWwuY29tDQrkvb/nlKjmgqjnmoTlnLDlnYDlj5Hp
+gIHpgq7ku7bvvIzor7fngrnlh7vku6XkuIvpk77mjqXlj5bmtojor6Xnoa7orqTvvJpodHRwczov
+L21haWwuZ29vZ2xlLmNvbS9tYWlsL2ctJTVCQU5HamRKX2VjQ3A3S0d1SnFabG9wMEpOcTFCNzdT
+WXJtRGY2RHJrQ1Z5bTQwSFdzNXpSdVZmNDFEYzV5M0ZJV0hKZUFqaHgyXy1melNibHRtSUNCJTVE
+LWxDaFEwWFA0eUhMTW5mbEo4dUZ5NjdDUU5JSQ0KDQrlpoLpnIDor6bnu4bkuobop6PmiJHku6zl
+kJHmgqjlj5HpgIHmraTpgq7ku7bnmoTljp/lm6DvvIzor7forr/pl67vvJpodHRwOi8vc3VwcG9y
+dC5nb29nbGUuY29tL21haWwvYmluL2Fuc3dlci5weT9hbnN3ZXI9MTg0OTczJmhsPXpoX0NO44CC
+DQoNCuivt+WLv+WbnuWkjeatpOmCruS7tuOAguWmguaenOaCqOaDs+iBlOezuyBHbWFpbCDlm6Lp
+mJ/vvIzor7fnmbvlvZXmgqjnmoTotKblj7fvvIzngrnlh7vku7vmhI/pobXpnaLpobbpg6jnmoTi
+gJzluK7liqnigJ3jgILnhLblkI7vvIzngrnlh7vluK7liqnkuK3lv4PlupXpg6jnmoTigJzkuI7m
+iJHku6zogZTns7vigJ3jgIINCg==
