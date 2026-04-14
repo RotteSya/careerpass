@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
+import Waitlist from "@/pages/Waitlist";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -34,6 +36,37 @@ function Router() {
 }
 
 function App() {
+  const [isBypassed, setIsBypassed] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("bypass") === "true" || params.get("admin") === "true") {
+      localStorage.setItem("admin_bypass", "true");
+      // Clean up URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setIsBypassed(true);
+    } else {
+      setIsBypassed(localStorage.getItem("admin_bypass") === "true");
+    }
+    setIsChecking(false);
+  }, []);
+
+  if (isChecking) return null;
+
+  if (!isBypassed) {
+    return (
+      <ErrorBoundary>
+        <ThemeProvider defaultTheme="light">
+          <TooltipProvider>
+            <Toaster />
+            <Waitlist />
+          </TooltipProvider>
+        </ThemeProvider>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">

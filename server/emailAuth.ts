@@ -221,3 +221,28 @@ export async function changePassword(
     .set({ passwordHash: newHash, updatedAt: new Date() })
     .where(eq(emailAuth.id, record.id));
 }
+
+// ── Waitlist Email ──────────────────────────────────────────────────────────
+export async function sendWaitlistEmail(email: string) {
+  try {
+    await resend.emails.send({
+      from: "no-reply@careerpass.co", // Replace with actual verified domain if needed
+      to: email,
+      subject: "先行リストへのご登録ありがとうございます！",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>日本就活。全自动。</h2>
+          <p>この度は、CareerPassの先行リストにご登録いただき、誠にありがとうございます。</p>
+          <p>サービスが公開され次第、いち早くご案内いたします。</p>
+          <p>もうしばらくお待ちください。</p>
+          <br/>
+          <p>CareerPass チーム</p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send waitlist email:", error);
+    return false;
+  }
+}

@@ -78,6 +78,20 @@
       "when": 1775903600000,
       "tag": "0010_migrate_legacy_job_statuses",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1776172666869,
+      "tag": "0011_military_the_anarchist",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1776176570388,
+      "tag": "0012_complete_silver_centurion",
+      "breakpoints": true
     }
   ]
 }
