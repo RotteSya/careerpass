@@ -35,6 +35,7 @@ import {
   Trash2,
   User,
   XCircle,
+  Download,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -1020,10 +1021,40 @@ export default function Dashboard() {
                   <p className="text-[14px] text-[var(--color-warm-gray-500)]">
                     全部企業一覧 — 公司名称 / 申请状态 / 职位名称 / 締切 / 联系方式 / 优先级
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
+                  <div className="mt-3 flex flex-wrap gap-2 text-[12px] items-center">
                     <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
                       企業数 {jobs.length}
                     </span>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-7 text-xs bg-transparent"
+                      onClick={() => {
+                        const header = "公司名称,申请状态,职位名称,締切,联系方式,优先级\n";
+                        const csv = jobs.map(c => {
+                          const name = `"${(c.job.companyNameJa ?? '').replace(/"/g, '""')}"`;
+                          const status = `"${(c.job.status ?? '').replace(/"/g, '""')}"`;
+                          const position = `"${(c.job.position ?? '').replace(/"/g, '""')}"`;
+                          const deadline = `"${c.job.nextActionAt ? new Date(c.job.nextActionAt).toLocaleDateString('ja-JP') : ''}"`;
+                          const contact = `"${(c.job.contactInfo ?? '').replace(/"/g, '""')}"`;
+                          const priority = `"${(c.job.priority ?? '').replace(/"/g, '""')}"`;
+                          return `${name},${status},${position},${deadline},${contact},${priority}`;
+                        }).join("\n");
+                        
+                        // Add BOM for Excel UTF-8 support
+                        const blob = new Blob(["\ufeff" + header + csv], { type: "text/csv;charset=utf-8;" });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.setAttribute("download", "job_applications.csv");
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                    >
+                      <Download className="w-3 h-3 mr-1" />
+                      导出 CSV
+                    </Button>
                   </div>
                 </div>
               </div>

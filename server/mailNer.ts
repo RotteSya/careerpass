@@ -43,7 +43,10 @@ const FREE_MAIL_DOMAINS_NER = new Set([
 ]);
 
 const NON_COMPANY_PATTERNS =
-  /(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster)/i;
+  /^(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster|mail|me|cs|job|job-s27|reply)$/i;
+
+const AD_TITLE_PATTERNS =
+  /^(外国人留学生必見|.*の知識を活かせます|.*向け|.*卒|1次|2次|3次|最終|面接|選考|説明会|セミナー|エントリー|案内|結果|通知|お知らせ|重要|緊急|締切|ご連絡|ご案内|就活|速報|オファー|スカウト|メッセージ|おすすめ|ピックアップ|特集|キャンペーン|ランキング|本人確認|会員登録|利用規約|退会フォーム)$/i;
 
 const HR_SUFFIXES = /(採用担当|採用チーム|人事部|人事課|リクルート|Recruiting|recruit|HR|人材|キャリア|新卒採用|中途採用|採用事務局|運営事務局|事務局|マイページ|team|Team|採用|新卒)$/i;
 
@@ -90,7 +93,10 @@ export function extractOrgCandidates(subject: string, from: string, body: string
       !/^(新卒|中途|採用|人事)$/.test(c) &&
       !/^(株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s*(新卒|中途|採用|人事)?$/.test(c)
     ) {
-      candidates.push({ name: c, source, confidence: conf });
+      const valid = isValidExtractedCompany(c);
+      if (valid) {
+        candidates.push({ name: valid, source, confidence: conf });
+      }
     }
   };
 
@@ -240,7 +246,25 @@ function normalizeOrgName(raw: string): string | null {
   if (isDateLikeOrgName(c)) return null;
   if (PLATFORM_NAME_HINTS.test(c)) return null;
   if (NON_COMPANY_PATTERNS.test(c)) return null;
+  if (AD_TITLE_PATTERNS.test(c)) return null;
+  if (c.length < 2) return null;
   return c;
+}
+
+export function isValidExtractedCompany(name: string | null | undefined): string | null {
+  if (!name) return null;
+  let c = name.replace(/^(【|「|\[|\()(.+?)(】|」|\]|\))$/, "$2").trim();
+  c = c.replace(/\)$/, "").replace(/）$/, "").trim(); // fix trailing parenthesis
+  
+  // Reject obvious sentences or long descriptive texts
+  if (c.length > 40) return null;
+  if (/[!！?？。、]/.test(c)) return null;
+  
+  // Reject if it's likely a person's name or user name
+  if (/^(佘|余|SHE|She)\s*(令|Ling|LING)?\s*(釗|Zhao|ZHAO)?$/.test(c)) return null;
+  if (c === "佘令釗" || c === "余令釗" || c === "シャレイショウ レイ" || c === "シャレイショウ") return null;
+
+  return normalizeOrgName(c);
 }
 
 /**

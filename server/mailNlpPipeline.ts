@@ -15,6 +15,7 @@ import {
   detectInterviewRound,
   getDomainReputation,
   calculateNegativeSignalPenalty,
+  isValidExtractedCompany,
   type DomainReputation,
   type InterviewRound,
 } from "./mailNer";
@@ -216,7 +217,9 @@ function normalizeCompanyName(name: string | null | undefined): string | null {
     .replace(/(株式会社|（株）|\(株\))/g, "株式会社")
     .replace(/(採用|採用担当|採用事務局|人事部|人事|HR|Recruiting|recruit)$/i, "")
     .trim();
-  if (cleaned.length < 2) return null;
+  
+  // Use robust valid check from mailNer
+  if (!isValidExtractedCompany(cleaned)) return null;
   if (JOB_PLATFORM_HINTS.test(cleaned)) return null;
   return cleaned;
 }
@@ -352,13 +355,13 @@ export function runRecruitingNlpPipeline(
     PLATFORM_NEWSLETTER_HINTS.test(lowerText) &&
     !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${input.body}`) &&
     !(/【[^】]{2,40}】/.test(input.subject) && /面接のご案内|選考のご案内|書類選考/.test(input.subject)) &&
-    !/一次|二次|最終|書類選考|適性検査|合否/.test(input.subject);
+    !/一次|二次|最終面接|最終選考|書類選考|適性検査|合否/.test(input.subject);
   // If it's a platform promo, but the subject contains strong words like "面接攻略" or "就活講座", 
   // it might be misclassified as a real interview.
   const isPlatformSeminarPromo =
     (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText) || /人材紹介/.test(lowerText)) &&
     /セミナー|就活講座|攻略法|合同説明会|合説|就活イベント|本人確認|会員登録/.test(input.subject) &&
-    !/一次|二次|最終|書類選考|適性検査|合否/.test(input.subject);
+    !/一次|二次|最終面接|最終選考|書類選考|適性検査|合否/.test(input.subject);
 
   if (isPlatformNewsletter || isPlatformSeminarPromo) {
     return {
