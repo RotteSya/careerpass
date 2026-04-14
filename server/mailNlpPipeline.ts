@@ -81,7 +81,7 @@ const PLATFORM_SURVEY_HINTS =
 const PLATFORM_INCENTIVE_HINTS =
   /(抽選|当たります|プレゼント|ギフトカード|ギフトコード|amazon\s*ギフト|amazonギフト)/i;
 const PLATFORM_NEWSLETTER_HINTS =
-  /(マイナビメール|ピックアップ|おすすめ企業|新着求人|求人をお届け|特集|キャンペーン|ランキング)/i;
+  /(マイナビメール|ピックアップ|おすすめ企業|新着求人|求人をお届け|特集|キャンペーン|ランキング|就活講座|就活準備講座|就活対策|セミナー開催|合同説明会|合説|就活イベント|就活セミナー)/i;
 const PLATFORM_MESSAGE_NOTIFICATION_HINTS =
   /(メッセージが届きました|新着メッセージ|企業から.*メッセージ|メッセージ受信)/i;
 const PLATFORM_ACTIONABLE_RELAY_HINTS =
@@ -350,8 +350,17 @@ export function runRecruitingNlpPipeline(
   const isPlatformNewsletter =
     (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText)) &&
     PLATFORM_NEWSLETTER_HINTS.test(lowerText) &&
-    !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${input.body}`);
-  if (isPlatformNewsletter) {
+    !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${input.body}`) &&
+    !(/【[^】]{2,40}】/.test(input.subject) && /面接のご案内|選考のご案内|書類選考/.test(input.subject)) &&
+    !/一次|二次|最終|書類選考|適性検査|合否/.test(input.subject);
+  // If it's a platform promo, but the subject contains strong words like "面接攻略" or "就活講座", 
+  // it might be misclassified as a real interview.
+  const isPlatformSeminarPromo =
+    (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText) || /人材紹介/.test(lowerText)) &&
+    /セミナー|就活講座|攻略法|合同説明会|合説|就活イベント/.test(input.subject) &&
+    !/一次|二次|最終|書類選考|適性検査|合否/.test(input.subject);
+
+  if (isPlatformNewsletter || isPlatformSeminarPromo) {
     return {
       isJobRelated: false,
       confidence: 0.96,
