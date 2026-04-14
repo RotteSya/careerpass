@@ -57,7 +57,7 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   const displayName = from.split("<")[0]?.trim() ?? "";
 
   const addCandidate = (raw: string, source: string, conf: number) => {
-    let c = raw.replace(/株式会社|合同会社|有限会社|一般社団法人|一般財団法人|（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
+    let c = raw.replace(/（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
     c = c.replace(/\)$/, "").trim(); // fix trailing parenthesis
     // Also remove trailing names if possible (often after a space)
     c = c.replace(/\s+[^\s]+$/, "").trim();
