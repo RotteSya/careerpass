@@ -270,12 +270,3 @@ export const billingNotifications = mysqlTable("billing_notifications", {
 
 export type BillingNotification = typeof billingNotifications.$inferSelect;
 export type InsertBillingNotification = typeof billingNotifications.$inferInsert;
-
-// ─── Waitlist ─────────────────────────────────────────────────────────────────
-export const waitlist = mysqlTable("waitlist", {
-  id: int("id").autoincrement().primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-export type Waitlist = typeof waitlist.$inferSelect;
-export type InsertWaitlist = typeof waitlist.$inferInsert;

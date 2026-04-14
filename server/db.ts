@@ -21,7 +21,6 @@ import {
   billingAccounts,
   billingCompanyLedger,
   billingNotifications,
-  waitlist,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
@@ -687,26 +686,4 @@ export async function updateAgentSession(
     .update(agentSessions)
     .set({ ...data, updatedAt: new Date() })
     .where(eq(agentSessions.userId, userId));
-}
-
-// ─── Waitlist ─────────────────────────────────────────────────────────────────
-export async function joinWaitlist(email: string): Promise<{ success: boolean; alreadyJoined: boolean }> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  try {
-    await db.insert(waitlist).values({ email: email.toLowerCase().trim() });
-    return { success: true, alreadyJoined: false };
-  } catch (err: any) {
-    if (err?.message?.includes("Duplicate entry")) {
-      return { success: true, alreadyJoined: true };
-    }
-    throw err;
-  }
-}
-
-export async function getWaitlistCount(): Promise<number> {
-  const db = await getDb();
-  if (!db) return 0;
-  const [row] = await db.select({ value: count() }).from(waitlist);
-  return row?.value ?? 0;
 }
