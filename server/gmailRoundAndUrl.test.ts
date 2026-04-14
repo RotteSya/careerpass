@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   __buildMeetingUrlSearchQueriesForTests,
   __extractMeetingUrlFromTextForTests,
-  __inferInterviewStatusFromTextForTests,
 } from "./gmail";
+import { detectInterviewRound } from "./mailNer";
 
 describe("gmail helpers", () => {
-  it("maps 2次選考 to interview_2 when interview context exists", () => {
-    const status = __inferInterviewStatusFromTextForTests("2次選考ご予約 Web面接（30～60分）");
-    expect(status).toBe("interview_2");
+  it("maps 2次面接 to 2nd", () => {
+    const round = detectInterviewRound("2次面接のご案内");
+    expect(round).toBe("2nd");
   });
 
-  it("maps 最終選考 to interview_final when selection context exists", () => {
-    const status = __inferInterviewStatusFromTextForTests("最終選考のご案内 オンライン面接");
-    expect(status).toBe("interview_final");
+  it("maps 最終選考 to final when selection context exists", () => {
+    const round = detectInterviewRound("最終選考のご案内 オンライン面接");
+    expect(round).toBe("final");
   });
 
   it("extracts meeting urls from text", () => {
