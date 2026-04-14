@@ -208,7 +208,7 @@ function normalizeEventType(v: string | null | undefined): MailEventType {
  * Legacy company-name normalizer (kept for backward compat with LLM output).
  * For rule-based extraction, prefer `extractBestCompanyName` from mailNer.
  */
-function normalizeCompanyName(name: string | null | undefined): string | null {
+function normalizeCompanyName(name: string | null | undefined, recipientNames: string[] = []): string | null {
   const raw = (name ?? "").trim();
   if (!raw) return null;
   const cleaned = raw
@@ -219,7 +219,7 @@ function normalizeCompanyName(name: string | null | undefined): string | null {
     .trim();
   
   // Use robust valid check from mailNer
-  if (!isValidExtractedCompany(cleaned)) return null;
+  if (!isValidExtractedCompany(cleaned, recipientNames)) return null;
   if (JOB_PLATFORM_HINTS.test(cleaned)) return null;
   return cleaned;
 }
@@ -311,6 +311,22 @@ export function runRecruitingNlpPipeline(
   // ① Domain reputation
   const domainRep = getDomainReputation(input.from);
 
+  // Dynamically extract recipient names from the top of the email body to prevent them from being misidentified as company names
+  const recipientNames: string[] = [];
+  const topLines = input.body.split('\n').slice(0, 10);
+  for (const line of topLines) {
+    // Match common Japanese name greetings: e.g. "田中 様", "山田さん", "鈴木 殿"
+    const m = line.match(/^[\s　]*([^\s　]+)[\s　]+(様|さん|殿|氏)/);
+    if (m && m[1] && m[1].length >= 2 && m[1].length <= 20) {
+      recipientNames.push(m[1].trim());
+    }
+    // Match exact without space: "田中様"
+    const m2 = line.match(/^[\s　]*([^様さん殿氏\s　]{2,20})(様|さん|殿|氏)/);
+    if (m2 && m2[1]) {
+      recipientNames.push(m2[1].trim());
+    }
+  }
+
   // ② Platform noise gate (unchanged behavior)
   const obviousPlatformNoise = JOB_PLATFORM_HINTS.test(lowerText) && !PROCESS_HINTS.test(lowerText);
   if (obviousPlatformNoise) {
@@ -388,8 +404,8 @@ export function runRecruitingNlpPipeline(
     
   if (isPlatformMessageNotification) {
     // Try to extract company name from subject or body snippet if possible
-    const nerCompany = extractBestCompanyName(input.subject, input.from, input.body, domainRep.tier);
-    const cleanedCompanyName = nerCompany.name?.replace(/\)$/, "").trim() || null;
+    const nerCompany = extractBestCompanyName(input.subject, input.from, input.body, domainRep.tier, recipientNames);
+    const cleanedCompanyName = normalizeCompanyName(nerCompany.name?.replace(/\)$/, "").trim() || null, recipientNames);
     
     return {
       isJobRelated: true,
@@ -435,7 +451,7 @@ export function runRecruitingNlpPipeline(
   const rule = pickBestRuleSignal(ruleSignals);
 
   // ⑤ NER: company name (pass domain tier so platform emails don't extract from body)
-  const nerCompany = extractBestCompanyName(input.subject, input.from, input.body, domainRep.tier);
+  const nerCompany = extractBestCompanyName(input.subject, input.from, input.body, domainRep.tier, recipientNames);
 
   // ⑥ NER: date/time
   const nerDateTime = extractBestDateTime(text);
@@ -489,11 +505,11 @@ export function runRecruitingNlpPipeline(
     : mergedEventType !== "other" || (domainRep.score >= 0.8 && !!input.fallbackDate);
 
   // ⑫ Company name: NER result > LLM > rule-extracted
-  const llmCompany = normalizeCompanyName(llmDecision?.companyName ?? null);
+  const llmCompany = normalizeCompanyName(llmDecision?.companyName ?? null, recipientNames);
   const mergedCompany =
     (nerCompany.confidence >= 0.70 ? nerCompany.name : null) ??
     llmCompany ??
-    (nerCompany.name);
+    (nerCompany.confidence >= 0.40 ? nerCompany.name : null);
 
   // ⑬ Date/time: LLM > NER > fallback
   const mergedDate = llmDecision?.eventDate ?? nerDateTime.date ?? input.fallbackDate;

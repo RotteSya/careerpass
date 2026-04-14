@@ -70,13 +70,19 @@ function isDateLikeOrgName(name: string): boolean {
   return false;
 }
 
-export function extractOrgCandidates(subject: string, from: string, body: string, fromDomainTier?: DomainTier): OrgCandidate[] {
+export function extractOrgCandidates(subject: string, from: string, body: string, fromDomainTier?: DomainTier, recipientNames: string[] = []): OrgCandidate[] {
   const candidates: OrgCandidate[] = [];
   const displayName = from.split("<")[0]?.trim() ?? "";
 
   const addCandidate = (raw: string, source: string, conf: number) => {
     let c = raw.replace(/（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
     c = c.replace(/御中|様$/, "").replace(/\)$/, "").trim();
+
+    // Dynamically filter out extracted recipient names
+    if (recipientNames.length > 0 && recipientNames.some(n => c === n || (c.includes(n) && c.length - n.length <= 4))) {
+       return;
+    }
+
     if (LEGAL_ENTITY_PREFIX.test(c) && /\s/.test(c)) {
       const parts = c.split(/\s+/);
       const last = parts[parts.length - 1] ?? "";
@@ -251,7 +257,7 @@ function normalizeOrgName(raw: string): string | null {
   return c;
 }
 
-export function isValidExtractedCompany(name: string | null | undefined): string | null {
+export function isValidExtractedCompany(name: string | null | undefined, recipientNames: string[] = []): string | null {
   if (!name) return null;
   let c = name.replace(/^(【|「|\[|\()(.+?)(】|」|\]|\))$/, "$2").trim();
   c = c.replace(/\)$/, "").replace(/）$/, "").trim(); // fix trailing parenthesis
@@ -260,9 +266,10 @@ export function isValidExtractedCompany(name: string | null | undefined): string
   if (c.length > 40) return null;
   if (/[!！?？。、]/.test(c)) return null;
   
-  // Reject if it's likely a person's name or user name
-  if (/^(佘|余|SHE|She)\s*(令|Ling|LING)?\s*(釗|Zhao|ZHAO)?$/.test(c)) return null;
-  if (c === "佘令釗" || c === "余令釗" || c === "シャレイショウ レイ" || c === "シャレイショウ") return null;
+  // Dynamically reject if it's likely the recipient's name
+  if (recipientNames.length > 0 && recipientNames.some(n => c === n || (c.includes(n) && c.length - n.length <= 4))) {
+    return null;
+  }
 
   return normalizeOrgName(c);
 }
@@ -275,10 +282,11 @@ export function extractBestCompanyName(
   subject: string,
   from: string,
   body: string,
-  fromDomainTier?: DomainTier
+  fromDomainTier?: DomainTier,
+  recipientNames: string[] = []
 ): { name: string | null; confidence: number } {
   // Extract candidates using multi-strategy approach
-  const candidates = extractOrgCandidates(subject, from, body, fromDomainTier);
+  const candidates = extractOrgCandidates(subject, from, body, fromDomainTier, recipientNames);
   const normalized = candidates
     .map((c) => ({ ...c, name: normalizeOrgName(c.name) ?? "" }))
     .filter((c) => c.name.length >= 2);
