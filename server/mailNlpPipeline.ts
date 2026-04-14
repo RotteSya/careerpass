@@ -329,7 +329,7 @@ export function runRecruitingNlpPipeline(
   // ③ Negative signal penalty
   const negPenalty = calculateNegativeSignalPenalty(lowerText);
   const isPlatformSurveyPromo =
-    domainRep.tier === "recruiting_platform" &&
+    (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText)) &&
     PLATFORM_SURVEY_HINTS.test(lowerText) &&
     PLATFORM_INCENTIVE_HINTS.test(lowerText);
   if (isPlatformSurveyPromo) {
@@ -348,7 +348,7 @@ export function runRecruitingNlpPipeline(
     };
   }
   const isPlatformNewsletter =
-    domainRep.tier === "recruiting_platform" &&
+    (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText)) &&
     PLATFORM_NEWSLETTER_HINTS.test(lowerText) &&
     !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${input.body}`);
   if (isPlatformNewsletter) {
@@ -399,7 +399,7 @@ export function runRecruitingNlpPipeline(
     (/【[^】]{2,40}】/.test(input.subject) && PROCESS_HINTS.test(input.subject));
   const isLikelyNoise =
     negPenalty <= -0.4 &&
-    (domainRep.tier === "noise_platform" || domainRep.tier === "recruiting_platform") &&
+    (domainRep.tier === "noise_platform" || domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText)) &&
     !hasActionableProcessHints;
   if (isLikelyNoise) {
     return {
