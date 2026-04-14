@@ -693,6 +693,7 @@ import { waitlistUsers } from "../drizzle/schema";
 
 export async function addToWaitlist(email: string) {
   const db = await getDb();
+  if (!db) throw new Error("Database not available");
   try {
     await db.insert(waitlistUsers).values({ email });
     return true;
@@ -707,6 +708,7 @@ export async function addToWaitlist(email: string) {
 
 export async function getWaitlistCount() {
   const db = await getDb();
+  if (!db) return 0;
   const [row] = await db
     .select({ count: count() })
     .from(waitlistUsers);
