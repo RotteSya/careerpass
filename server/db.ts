@@ -687,3 +687,28 @@ export async function updateAgentSession(
     .set({ ...data, updatedAt: new Date() })
     .where(eq(agentSessions.userId, userId));
 }
+
+// ─── Waitlist ─────────────────────────────────────────────────────────────
+import { waitlistUsers } from "../drizzle/schema";
+
+export async function addToWaitlist(email: string) {
+  const db = await getDb();
+  try {
+    await db.insert(waitlistUsers).values({ email });
+    return true;
+  } catch (error: any) {
+    // Ignore duplicate entries (e.g. duplicate email)
+    if (error.code === "ER_DUP_ENTRY") {
+      return true;
+    }
+    throw error;
+  }
+}
+
+export async function getWaitlistCount() {
+  const db = await getDb();
+  const [row] = await db
+    .select({ count: count() })
+    .from(waitlistUsers);
+  return Number(row?.count || 0);
+}

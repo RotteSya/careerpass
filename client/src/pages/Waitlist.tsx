@@ -1,20 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 export default function Waitlist() {
   const [email, setEmail] = useState("");
   const [count, setCount] = useState(28);
 
+  const { data: countData } = trpc.waitlist.getCount.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (countData && countData.count > 0) {
+      // If we have some actual count, start from the higher of 28 or real count
+      setCount(Math.max(28, countData.count));
+    }
+  }, [countData]);
+
+  const joinMutation = trpc.waitlist.join.useMutation({
+    onSuccess: (data) => {
+      toast.success("先行リストに参加しました！");
+      setCount(Math.max(28, data.count));
+      setEmail("");
+    },
+    onError: (error) => {
+      toast.error(error.message || "エラーが発生しました。");
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-
-    // Simulate joining waitlist
-    toast.success("先行リストに参加しました！");
-    setCount(prev => prev + 1);
-    setEmail("");
+    joinMutation.mutate({ email });
   };
 
   return (
@@ -54,9 +73,10 @@ export default function Waitlist() {
           />
           <Button
             type="submit"
-            className="w-full h-16 text-lg font-bold rounded-2xl bg-[#1a1a1a] hover:bg-black text-white"
+            disabled={joinMutation.isPending}
+            className="w-full h-16 text-lg font-bold rounded-2xl bg-[#1a1a1a] hover:bg-black text-white disabled:opacity-50"
           >
-            先行リストに参加する
+            {joinMutation.isPending ? "送信中..." : "先行リストに参加する"}
           </Button>
         </form>
 
