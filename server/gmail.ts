@@ -240,8 +240,8 @@ async function fetchInboxMessageIds(params: {
     // Broad pull (without hard keyword gate). Actual job-related decision is delegated to monitor agent.
     // First full scan removes time window so we can reconstruct the board from the entire inbox.
     const q = fullMailbox
-      ? "-category:social -category:promotions"
-      : "newer_than:5d -category:social -category:promotions";
+      ? "-category:social"
+      : "newer_than:30d -category:social";
 
     while (maxResults === null || messageIds.length < maxResults) {
       const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
@@ -1981,11 +1981,15 @@ export async function monitorGmailAndSync(
   }
 
   const state = await getGoogleAccountSyncState(userId);
-  const fullMailboxScan = options?.fullMailboxScan ?? !state?.lastHistoryId;
+  let fullMailboxScan = options?.fullMailboxScan ?? !state?.lastHistoryId;
+  if (options?.fullMailboxScan === undefined) {
+    const existing = await getJobApplications(userId);
+    if (existing.length === 0) fullMailboxScan = true;
+  }
   const ids = await fetchInboxMessageIds({
     accessToken,
     fullMailbox: fullMailboxScan,
-    maxResults: fullMailboxScan ? null : 50,
+    maxResults: fullMailboxScan ? null : 200,
   });
 
   const result = await processGmailMessageIds({

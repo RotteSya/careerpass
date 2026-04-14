@@ -52,16 +52,44 @@ const PLATFORM_NAME_HINTS =
 
 const LEGAL_ENTITY_PREFIX = /(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)/;
 
+const ORG_DATE_LIKE =
+  /(?:\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}|\d{1,2}月\d{1,2}日|\d{1,2}月|\d{1,2}日|\d{1,2}時|\d{1,2}:\d{2})/;
+const ORG_DEADLINE_HINT = /(〆切|締切|締め切り|期限|応募締切|申込期限)/;
+const ORG_TRAILING_PERSON_TOKEN = /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]{2,4}$/u;
+
+function isDateLikeOrgName(name: string): boolean {
+  const s = name.replace(/[\s　]+/g, "");
+  if (!s) return true;
+  if (LEGAL_ENTITY_PREFIX.test(s)) return false;
+  if (ORG_DEADLINE_HINT.test(s)) return true;
+  if (/^\d/.test(s) && ORG_DATE_LIKE.test(s)) return true;
+  if (ORG_DATE_LIKE.test(s) && /(開催|日時)/.test(s)) return true;
+  return false;
+}
+
 export function extractOrgCandidates(subject: string, from: string, body: string, fromDomainTier?: DomainTier): OrgCandidate[] {
   const candidates: OrgCandidate[] = [];
   const displayName = from.split("<")[0]?.trim() ?? "";
 
   const addCandidate = (raw: string, source: string, conf: number) => {
     let c = raw.replace(/（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
-    c = c.replace(/\)$/, "").trim(); // fix trailing parenthesis
-    // Also remove trailing names if possible (often after a space)
-    c = c.replace(/\s+[^\s]+$/, "").trim();
-    if (c.length >= 2 && !NON_COMPANY_PATTERNS.test(c) && !PLATFORM_NAME_HINTS.test(c) && !/^(新卒|中途|採用|人事)$/.test(c) && !/^(株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s*(新卒|中途|採用|人事)?$/.test(c)) {
+    c = c.replace(/御中|様$/, "").replace(/\)$/, "").trim();
+    if (LEGAL_ENTITY_PREFIX.test(c) && /\s/.test(c)) {
+      const parts = c.split(/\s+/);
+      const last = parts[parts.length - 1] ?? "";
+      if (ORG_TRAILING_PERSON_TOKEN.test(last)) {
+        parts.pop();
+        c = parts.join(" ").trim();
+      }
+    }
+    if (
+      c.length >= 2 &&
+      !isDateLikeOrgName(c) &&
+      !NON_COMPANY_PATTERNS.test(c) &&
+      !PLATFORM_NAME_HINTS.test(c) &&
+      !/^(新卒|中途|採用|人事)$/.test(c) &&
+      !/^(株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s*(新卒|中途|採用|人事)?$/.test(c)
+    ) {
       candidates.push({ name: c, source, confidence: conf });
     }
   };
@@ -209,6 +237,7 @@ export function extractOrgCandidates(subject: string, from: string, body: string
 function normalizeOrgName(raw: string): string | null {
   const c = normalizeCompanyDisplayName(raw);
   if (!c) return null;
+  if (isDateLikeOrgName(c)) return null;
   if (PLATFORM_NAME_HINTS.test(c)) return null;
   if (NON_COMPANY_PATTERNS.test(c)) return null;
   return c;
@@ -259,6 +288,9 @@ export function extractBestCompanyName(
     }
   }
 
+  if (best.name && (body.includes(`${best.name}様`) || body.includes(`${best.name} 様`))) {
+    return { name: null, confidence: 0 };
+  }
   return best;
 }
 
