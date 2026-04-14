@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 export default function Waitlist() {
   const [email, setEmail] = useState("");
+  const [count, setCount] = useState(28);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -12,6 +13,7 @@ export default function Waitlist() {
 
     // Simulate joining waitlist
     toast.success("先行リストに参加しました！");
+    setCount(prev => prev + 1);
     setEmail("");
   };
 
@@ -64,7 +66,7 @@ export default function Waitlist() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00A86B] opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-[#00A86B]"></span>
           </span>
-          <span className="text-base font-semibold">すでに 28 人が参加しています</span>
+          <span className="text-base font-semibold">すでに {count} 人が参加しています</span>
         </div>
       </div>
     </div>
