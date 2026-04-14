@@ -1,0 +1,808 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:6012:b0:32f:2baf:8ecc with SMTP id l18csp186866lkl;
+        Fri, 3 Apr 2026 13:46:44 -0700 (PDT)
+X-Received: by 2002:a05:620a:4802:b0:8cd:8785:eff4 with SMTP id af79cd13be357-8d41c0c75e9mr615004985a.15.1775249204250;
+        Fri, 03 Apr 2026 13:46:44 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1775249204; cv=none;
+        d=google.com; s=arc-20240605;
+        b=PTf82reRefM6QVO34oMlN3EoHc9LRckVPNymjOwzW6ESwquNaKSa2Wak6X7F/vx067
+         CAOed4dQ38rWzWDTPV3NJYLZByygLmnhSC36yPgdtRdxItfIKt3ULMztMxHIpLKCvOnc
+         vSdcu0XMVXIUuXe5N/GYAiZkE5Kd+DC6jXzgKgxehF/QyAHNrGbQcbs27TG250P46jbO
+         H112hAVFZXeVA9Qh2f7aUG7SeaJGhgy4efJpa9h1H0yoNHmD8RYKU6K9W4aV7rY1LaL5
+         M8/8c5nR7/XonHdPWLK389qVT1I0aXlqZuOof3p0mgAzL53SfQTEVEzAItg6LFp22Las
+         1l+A==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=message-id:feedback-id:list-unsubscribe:reply-to
+         :list-unsubscribe-post:to:from:subject:mime-version:date:sender
+         :dkim-signature:dkim-signature;
+        bh=iSHaUOdLwWj3mLHBKqeh8Eb640GB8wk8KkxI4E+vbGA=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=f1KEQ/7umLEFTbhUanS6PygzA4/3Q+HxbUX0YDRfXVkwyY1eHZwpfLqf0bqFwWS6DR
+         W2pyzwYN1qoPB0AppHpmUeIAxhST3Sq1MTiTcWUZ2cJaogoZX3cI0UFORg/EDTTpOdVS
+         sstqjri6J1uaefpP7LJ3axPczg3cmE7jeA1ugiqIZlUN4VL0qav/vp7VuoIjUurec4mM
+         WeDVSkDYw4fnr5bkXbpI9MjA8Tiv+CrK1vWaPrvrWcb1SUj3Bvm/8v9oNjaMGEBGxsAM
+         LZ24K4C8K3ncdfeBj9JLODJAsdDkJtNkDnhpY2064dCDCbFKH2NCjAdGdq5j4prQD/6x
+         AAGQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@news.manus.im header.s=k1 header.b="gG4/yosR";
+       dkim=pass header.i=@mailgun.org header.s=mg header.b=T+IXzLru;
+       spf=pass (google.com: domain of bounce+d19fd6.581611-raysya.biz=gmail.com@news.manus.im designates 204.220.170.154 as permitted sender) smtp.mailfrom="bounce+d19fd6.581611-raysya.biz=gmail.com@news.manus.im";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=manus.im
+Return-Path: <bounce+d19fd6.581611-raysya.biz=gmail.com@news.manus.im>
+Received: from h154.h22bf2b1.use4.send.mailgun.net (h154.h22bf2b1.use4.send.mailgun.net. [204.220.170.154])
+        by mx.google.com with UTF8SMTPS id af79cd13be357-8d2a98ee380si925484485a.411.2026.04.03.13.46.43
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Fri, 03 Apr 2026 13:46:44 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounce+d19fd6.581611-raysya.biz=gmail.com@news.manus.im designates 204.220.170.154 as permitted sender) client-ip=204.220.170.154;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@news.manus.im header.s=k1 header.b="gG4/yosR";
+       dkim=pass header.i=@mailgun.org header.s=mg header.b=T+IXzLru;
+       spf=pass (google.com: domain of bounce+d19fd6.581611-raysya.biz=gmail.com@news.manus.im designates 204.220.170.154 as permitted sender) smtp.mailfrom="bounce+d19fd6.581611-raysya.biz=gmail.com@news.manus.im";
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=manus.im
+DKIM-Signature: a=rsa-sha256; v=1; c=relaxed/relaxed; d=news.manus.im; q=dns/txt; s=k1; t=1775249203; x=1775256403;
+ h=Message-Id: List-Unsubscribe: Reply-To: List-Unsubscribe-Post: X-Feedback-Id: To: To: From: From: Subject: Subject: Content-Type: Mime-Version: Date: Sender: Sender: X-Feedback-Id;
+ bh=iSHaUOdLwWj3mLHBKqeh8Eb640GB8wk8KkxI4E+vbGA=;
+ b=gG4/yosREJAYkW+jWKRVW7ynAz/tW03f+VH0ui944vdbxuCRWH0gtsQe+ozPOx7J27znYxU+aGH+Y+4gQNbKS+XzqbddqJOzSRkfFHKnF6t60G5HnTr1f/A9DhTZV939PxxQxGmIyPBK6fYdJzt0kBohOMueGdz3lGAWWZmC4cc=
+DKIM-Signature: a=rsa-sha256; v=1; c=relaxed/relaxed; d=mailgun.org; q=dns/txt; s=mg; t=1775249203; x=1775256403;
+ h=Message-Id: List-Unsubscribe: Reply-To: List-Unsubscribe-Post: X-Feedback-Id: To: To: From: From: Subject: Subject: Content-Type: Mime-Version: Date: Sender: Sender: X-Feedback-Id;
+ bh=iSHaUOdLwWj3mLHBKqeh8Eb640GB8wk8KkxI4E+vbGA=;
+ b=T+IXzLru3t+6tTg3q9udKCzkRF3IyK9DygSsToqHvC5d67ClRccKe9u6Rd8hYTiPgbLyQbymuDh+76uA/x+dcEpewtJvmc6qvaRne/ZAvHu9ZAQe5vWwGUM1Im+g++mu/LxbHVL2aWOkHDyM1/2zOHmu3qT8cShAMSptqSquPRU=
+X-Mailgun-Sid: WyIyOTY3MiIsInJheXN5YS5iaXpAZ21haWwuY29tIiwiNTgxNjExIl0=
+X-Feedback-Id: info@news.manus.im::67dc7f27f883721953844aa8:mailgun
+Received: by 1cd2fc99c95bda4d05358a47f3fd1900656d8022fe8c5a3aee86b8ba3082cc57 with HTTP
+ id 69d026e09007a2d4875f7e45; Fri, 03 Apr 2026 20:45:20 GMT
+X-Mailgun-Sending-Ip-Pool-Name: monica_mktg
+X-Mailgun-Sending-Ip-Pool: 67bf33189cf65355a09fa0df
+X-Mailgun-Sending-Ip: 204.220.170.154
+Sender: info@news.manus.im
+Date: Fri, 03 Apr 2026 20:45:20 +0000
+Mime-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="48a50079ba5db0577e1a595e00647257da9aef7b8202a8ece07790fbc470"
+Subject: Meet Manus Slides: Presentations Made Effortless
+From: Manus Team <info@news.manus.im>
+To: raysya.biz@gmail.com
+X-Feedback-Id: 18340282:14039101:120341:iterable
+X-Campaign-Id: 14039101
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+Reply-To: contact@manus.im
+List-Unsubscribe: <https://links.iterable.com/s/uh/X9Tf_jB-baJaumBdXB3YQKTEIp4RP_qiD_Dc6XCRwraRNLtPGQ4MQ589Xnx1TkDawKtDim6_CBOSIFIEtYi9l4meKxStacm-uM8EUtih09-vbjvrgrK_erRm60CmpkVkcfMiBQcMsW_2C2ja7VYqk4ePLxclOueBgufAdlzh7XIMIlYAqxD4CNlHI-o6FDUd_ccVR9mPHEbGljaC/xdXtWzmdtBDDLM7deuv9P-NuGnAPeNEC/19>,<mailto:unsubscribe+14039101+18340282@unsubscribe.iterable.com>
+Return-Path: bounces@news.manus.im
+X-Message-Id: 7aff6a0ace0d4d32a63f3e41da922df1
+Feedback-Id: 18340282:14039101:120341:iterable
+X-Mailgun-Variables: {"metadata":
+ "{\"messageId\":\"7aff6a0ace0d4d32a63f3e41da922df1\",\"templateId\":18340282,\"projectId\":27049,\"campaignId\":14039101}"}
+Message-Id: <20260403204520.ce70f91f41e7b24d@news.manus.im>
+
+--48a50079ba5db0577e1a595e00647257da9aef7b8202a8ece07790fbc470
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset="utf-8"
+
+Simply describe what you need and watch as tailored presentations come to l=
+ife.=20
+
+
+
+
+
+
+Meet Manus Slides
+
+=E2=80=8A=20
+
+We listened, and we delivered!
+
+Creating stunning presentations has never been easier. Simply tell Manus wh=
+at=20
+you need=E2=80=94"Help me create a slide about sustainable energy"=E2=80=94=
+and watch as Manus=20
+crafts slides perfectly tailored to your specific needs.
+
+Whether you're delivering boardroom pitches, classroom lectures, or virtual=
+=20
+presentations, Manus ensures your ideas captivate audiences through=20
+crystal-clear visuals and compelling content. Make real-time edits=20
+effortlessly, then export seamlessly to Google Slides or PowerPoint with=20
+complete formatting integrity.
+
+=E2=80=8A=20
+
+
+=E2=80=8A=20
+
+Create your first presentation <https://manus.im/playbook/slide-generator>=
+=20
+=E2=80=8A=20
+=E2=80=8A=20
+
+See Manus Slides in action
+
+=E2=80=8A=20
+
+
+=E2=80=8A=20
+
+Professional keynotes
+
+
+Craft powerful, stage-ready presentations that captivate audiences and deli=
+ver=20
+your message with impact.
+
+=E2=80=8A=20
+
+
+=E2=80=8A=20
+
+Adventure deck creation
+
+
+Turn your travel dreams into stunning presentation decks that inspire=20
+wanderlust and adventure.
+
+=E2=80=8A=20
+
+
+=E2=80=8A=20
+
+Educational lectures
+
+
+Transform complex topics into clear, engaging presentations that make learn=
+ing=20
+effortless.
+
+=E2=80=8A=20
+
+Ready to get started?
+
+=E2=80=8A=20
+
+Try Manus Slides now <https://manus.im/playbook/slide-generator>=20
+
+
+
+
+
+
+ <https://x.com/Manusai>=20
+
+ <https://www.instagram.com/manus>=20
+
+ <https://www.youtube.com/@Manus-AI>=20
+
+ <https://www.linkedin.com/company/manus-im/>=20
+
+ <http://www.tiktok.com/@manusaiofficial>=20
+
+Manus, derived from the Latin word for "hand",=20
+
+is a general AI agent that turns your thoughts into actions.
+
+=C2=A9 2026 Manus AI
+
+Privacy Policy <https://manus.im/privacy> Terms of Service=20
+<https://manus.im/terms> Unsubscribe =20
+<https://links.manus.im/s/u/RxJVc_weA_ahl1_dico9eP6yfd_MUh4Jvm5l3SHzLECXd6s=
+9cwtSVLjtW7zVCiN6X_Nxp1yCjZWJEsTWAui7-jHjqqsfap630cdbbnDCFr0-7mWSZo-6jW2IQE=
+4LTR-E0dSs8PiKbli2fBvIemlHp6oSFtAU9N9uwRAm2GiGr4uUU4EkssYOASP-Gd25fmsQxWUKL=
+-YSo7v2UNLA/Ecg4bnbAw-pQzfytvBIRIneBgi21_Kmv/19>
+
+--48a50079ba5db0577e1a595e00647257da9aef7b8202a8ece07790fbc470
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset="utf-8"
+
+<!doctype html> <html lang=3D"en" dir=3D"auto" xmlns=3D"http://www.w3.org/1=
+999/xhtml" xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:o=3D"urn:schemas=
+-microsoft-com:office:office"> <head> <title></title> <!--[if !mso]><!--> <=
+meta http-equiv=3D"X-UA-Compatible" content=3D"IE=3Dedge"> <!--<![endif]-->=
+ <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3DUTF-8"> =
+<meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D1"=
+> <style type=3D"text/css">#outlook a{padding:0}body{margin:0;padding:0;-we=
+bkit-text-size-adjust:100%;-ms-text-size-adjust:100%}table,td{border-collap=
+se:collapse;mso-table-lspace:0;mso-table-rspace:0}img{border:0;height:auto;=
+line-height:100%;outline:0;text-decoration:none;-ms-interpolation-mode:bicu=
+bic}p{display:block;margin:0}</style> <!--[if mso]><noscript><xml><o:Office=
+DocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:Offi=
+ceDocumentSettings></xml></noscript><![endif]--> <!--[if lte mso 11]><style=
+ type=3D"text/css">.h{width:100%!important}</style><![endif]--> <!--[if !ms=
+o]><!--> <link href=3D"https://fonts.googleapis.com/css?family=3DLibre Bask=
+erville:700" rel=3D"stylesheet" type=3D"text/css"> <link href=3D"https://fo=
+nts.googleapis.com/css?family=3DInter:400,600,700" rel=3D"stylesheet" type=
+=3D"text/css"> <!--<![endif]--> <style type=3D"text/css">@media only screen=
+ and (min-width:599px){.f{width:504px!important;max-width:504px}}</style> <=
+style media=3D"screen and (min-width:599px)">.moz-text-html .f{width:504px!=
+important;max-width:504px}</style> <style type=3D"text/css">@media only scr=
+een and (max-width:598px){table.mq{width:100%!important}td.mq{width:auto!im=
+portant}}noinput.mn-checkbox{display:block!important;max-height:none!import=
+ant;visibility:visible!important}</style> <style type=3D"text/css">u+.email=
+ify .g-screen{background:#000;mix-blend-mode:screen;display:inline-block;pa=
+dding:0;margin:0}u+.emailify .g-diff{background:#000;mix-blend-mode:differe=
+nce;display:inline-block;padding:0;margin:0}body{-webkit-font-smoothing:ant=
+ialiased;-moz-osx-font-smoothing:grayscale}a[x-apple-data-detectors]{color:=
+inherit!important;text-decoration:none!important}u+.emailify a{color:inheri=
+t!important;text-decoration:none!important}#MessageViewBody a{color:inherit=
+!important;text-decoration:none!important}@media only screen and (max-width=
+:599px){.emailify{height:100%!important;margin:0!important;padding:0!import=
+ant;width:100%!important}td.x{padding-left:0!important;padding-right:0!impo=
+rtant}.mq img{max-width:100%!important;height:auto!important}td.b td{backgr=
+ound-size:cover!important}div.r>table>tbody>tr>td{direction:ltr!important}i=
+mg{background-color:transparent!important}div.r.e>table>tbody>tr>td,div.r.e=
+>div>table>tbody>tr>td{padding-right:16px!important}div.r.y>table>tbody>tr>=
+td,div.r.y>div>table>tbody>tr>td{padding-left:16px!important}.qk td{-webkit=
+-transform:perspective(1px) translateZ(0);transform:perspective(1px) transl=
+ateZ(0);box-shadow:0 0 1px rgba(0,0,0,0);-webkit-transition-duration:.3s;tr=
+ansition-duration:.3s;-webkit-transition-property:transform;transition-prop=
+erty:transform}.qk td:hover,.qk td:focus,.qk td:active{-webkit-transform:sc=
+ale(1.1);transform:scale(1.1)}td.v.c>div.i>a.l.m{padding-right:8px!importan=
+t}}.qk td{-webkit-transform:perspective(1px) translateZ(0);transform:perspe=
+ctive(1px) translateZ(0);box-shadow:0 0 1px rgba(0,0,0,0);-webkit-transitio=
+n-duration:.3s;transition-duration:.3s;-webkit-transition-property:transfor=
+m;transition-property:transform}.qk td:hover,.qk td:focus,.qk td:active{-we=
+bkit-transform:scale(1.1);transform:scale(1.1)}</style> <meta name=3D"forma=
+t-detection" content=3D"telephone=3Dno, date=3Dno, address=3Dno, email=3Dno=
+, url=3Dno"> <meta name=3D"x-apple-disable-message-reformatting"> <meta nam=
+e=3D"color-scheme" content=3D"light dark"> <meta name=3D"supported-color-sc=
+hemes" content=3D"light dark"> <!--[if gte mso 9]><style>a:link{mso-style-p=
+riority:99;color:inherit;text-decoration:none}a:visited{mso-style-priority:=
+99;color:inherit;text-decoration:none}li{margin-left:-1em!important}table,t=
+d,p,div,span,ul,ol,li,a,h1,h2,h3,h4,h5,h6{mso-hyphenate:none}sup,sub{font-s=
+ize:100%!important}img{background-color:transparent!important}</style><![en=
+dif]--> <!--[if mso]><style>.co{background:transparent!important;background=
+-color:transparent!important;mso-padding-alt:0;!important;padding:0!importa=
+nt;border:0!important;border-top:0!important;border-right:0!important;borde=
+r-bottom:0!important;border-left:0!important}</style><![endif]--> </head> <=
+body lang=3D"en" link=3D"#DD0000" vlink=3D"#DD0000" class=3D"emailify" styl=
+e=3D"margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-a=
+djust: 100%; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: =
+grayscale; mso-line-height-rule: exactly; mso-hyphenate: none; word-spacing=
+: normal; background-color: #f5f5f5;"><span style=3D"color:transparent;visi=
+bility:hidden;display:none;opacity:0;height:0;width:0;font-size:0;">Simply =
+describe what you need and watch as tailored presentations come to life.</s=
+pan><img src=3D"https://links.manus.im/s/eo/FNOSM52J_tGOOnOIy9xNNmlNE3bK6x5=
+unkLXlDQRvp68dfZkrqM6FmjK7bZtnUF96ct2OptRNh-zyfiJvG3ZMjFqpP5AHSzeg-iq1srkPk=
+FAMqQOnNaitwPZlktxTBUTepxMmd6TPNNHpRGfdOgkeT6G2XIHlSlBxa51AOCUAH1hqK-QoaoBr=
+jxYYuGg2JT5vNbAJW9CLgtmYjh1lJ1RbzbOrDlvCgVztwvj/WeY33Oj-n1DP5mfT1O73dlMa8_P=
+mmb90/19" style=3D"border:0;width:1px;height:1px;border-width:0px!important=
+;display:none!important;line-height:0!important;" width=3D"1" height=3D"1"/=
+> <div dir=3D"auto" lang=3D"en" style=3D"background-color: #f5f5f5;"><!--[i=
+f mso | IE]><table align=3D"center" border=3D"0" cellpadding=3D"0" cellspac=
+ing=3D"0" role=3D"presentation" style=3D"width:600px;" width=3D"600"><tr><t=
+d style=3D"line-height:0;font-size:0;mso-line-height-rule:exactly;"><![endi=
+f]--> <div class=3D"r e y" style=3D"background: transparent; margin: 0px au=
+to; max-width: 600px;"> <table align=3D"center" border=3D"0" cellpadding=3D=
+"0" cellspacing=3D"0" role=3D"presentation" style=3D"border-collapse: colla=
+pse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background: transparent;=
+ width: 100%;" width=3D"100%"> <tbody> <tr> <td style=3D"border-collapse: c=
+ollapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; border: none; direct=
+ion: ltr; font-size: 0; padding: 16px 48px 16px 48px; text-align: left;" al=
+ign=3D"left"><!--[if mso | IE]><table role=3D"presentation" border=3D"0" ce=
+llpadding=3D"0" cellspacing=3D"0"><tr></tr></table><![endif]--></td> </tr> =
+</tbody> </table> </div> <!--[if mso | IE]></td></tr></table> <table align=
+=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presen=
+tation" style=3D"width:600px;" width=3D"600"><tr><td style=3D"line-height:0=
+;font-size:0;mso-line-height-rule:exactly;"><![endif]--> <div class=3D"r e =
+y" style=3D"background: #fffffe; background-color: #fffffe; margin: 0px aut=
+o; max-width: 600px;"> <table align=3D"center" border=3D"0" cellpadding=3D"=
+0" cellspacing=3D"0" role=3D"presentation" style=3D"border-collapse: collap=
+se; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background: #fffffe; back=
+ground-color: #fffffe; width: 100%;" width=3D"100%" bgcolor=3D"#fffffe"> <t=
+body> <tr> <td style=3D"border-collapse: collapse; mso-table-lspace: 0pt; m=
+so-table-rspace: 0pt; border: none; direction: ltr; font-size: 0; padding: =
+16px 48px 16px 48px; text-align: left;" align=3D"left"><!--[if mso | IE]><t=
+able role=3D"presentation" border=3D"0" cellpadding=3D"0" cellspacing=3D"0"=
+><tr><td style=3D"vertical-align:middle;width:504px;"><![endif]--> <div cla=
+ss=3D"f h" style=3D"font-size: 0; text-align: left; direction: ltr; display=
+: inline-block; vertical-align: middle; width: 100%;"> <table border=3D"0" =
+cellpadding=3D"0" cellspacing=3D"0" role=3D"presentation" style=3D"border-c=
+ollapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; border: no=
+ne; vertical-align: middle;" width=3D"100%" valign=3D"middle"> <tbody> <tr>=
+ <td align=3D"center" style=3D"border-collapse: collapse; mso-table-lspace:=
+ 0pt; mso-table-rspace: 0pt; font-size: 0; padding: 0; word-break: break-wo=
+rd;"> <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"prese=
+ntation" style=3D"mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-coll=
+apse: collapse; border-spacing: 0;"> <tbody> <tr> <td style=3D"border-colla=
+pse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 112px;"=
+ width=3D"112"><img alt=3D"manus" src=3D"https://library.iterable.com/3517/=
+27049/d29ede232e0d4478b7ef71a718ea9e15-manus-logo-lockup-inline-black-2.png=
+" style=3D"line-height: 100%; -ms-interpolation-mode: bicubic; border: 0; b=
+order-radius: 4px 4px 4px 4px; display: block; outline: none; text-decorati=
+on: none; height: auto; width: 100%; font-size: 13px;" width=3D"112"></td> =
+</tr> </tbody> </table> </td> </tr> </tbody> </table> </div> <!--[if mso | =
+IE]></td></tr></table><![endif]--></td> </tr> </tbody> </table> </div> <!--=
+[if mso | IE]></td></tr></table> <table align=3D"center" border=3D"0" cellp=
+adding=3D"0" cellspacing=3D"0" role=3D"presentation" style=3D"width:600px;"=
+ width=3D"600"><tr><td style=3D"line-height:0;font-size:0;mso-line-height-r=
+ule:exactly;"><![endif]--> <div class=3D"r e y" style=3D"background: #fffff=
+e; background-color: #fffffe; margin: 0px auto; max-width: 600px;"> <table =
+align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"p=
+resentation" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso=
+-table-rspace: 0pt; background: #fffffe; background-color: #fffffe; width: =
+100%;" width=3D"100%" bgcolor=3D"#fffffe"> <tbody> <tr> <td style=3D"border=
+-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; border: =
+none; direction: ltr; font-size: 0; padding: 48px 48px 0px 48px; text-align=
+: left;" align=3D"left"><!--[if mso | IE]><table role=3D"presentation" bord=
+er=3D"0" cellpadding=3D"0" cellspacing=3D"0"><tr><td style=3D"vertical-alig=
+n:middle;width:504px;"><![endif]--> <div class=3D"f h" style=3D"font-size: =
+0; text-align: left; direction: ltr; display: inline-block; vertical-align:=
+ middle; width: 100%;"> <table border=3D"0" cellpadding=3D"0" cellspacing=
+=3D"0" role=3D"presentation" style=3D"border-collapse: collapse; mso-table-=
+lspace: 0pt; mso-table-rspace: 0pt; border: none; vertical-align: middle;" =
+width=3D"100%" valign=3D"middle"> <tbody> <tr> <td align=3D"center" class=
+=3D"x m" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-tab=
+le-rspace: 0pt; font-size: 0; padding-bottom: 8px; word-break: break-word;"=
+> <div style=3D"text-align: center;"> <p style=3D"display: block; margin: 0=
+; mso-line-height-alt: 48px;"><span style=3D"font-size: 32px; font-family: =
+'Libre Baskerville','Georgia',serif; font-weight: bold; color: #262626; lin=
+e-height: 150%; mso-line-height-alt: 48px;">Meet Manus Slides</span></p> </=
+div> </td> </tr> <tr> <td class=3D"m" style=3D"border-collapse: collapse; m=
+so-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; padding: 0; padd=
+ing-bottom: 8px; word-break: break-word;" aria-hidden=3D"true"> <div style=
+=3D"height: 8px; line-height: 8px;">=E2=80=8A</div> </td> </tr> <tr> <td al=
+ign=3D"left" class=3D"x m" style=3D"border-collapse: collapse; mso-table-ls=
+pace: 0pt; mso-table-rspace: 0pt; font-size: 0; padding-bottom: 8px; word-b=
+reak: break-word;"> <div style=3D"text-align: left;"> <p style=3D"display: =
+block; margin: 0; mso-line-height-alt: 24px;"><span style=3D"font-size: 16p=
+x; font-family: 'Inter','Arial',sans-serif; font-weight: 400; color: #53535=
+0; line-height: 150%; mso-line-height-alt: 24px;">We listened, and we deliv=
+ered!</span></p> <p style=3D"display: block; margin: 8px 0 0 0; mso-line-he=
+ight-alt: 24px;"><span style=3D"font-size: 16px; font-family: 'Inter','Aria=
+l',sans-serif; font-weight: 400; color: #535350; line-height: 150%; mso-lin=
+e-height-alt: 24px;">Creating stunning presentations has never been easier.=
+ Simply tell Manus what you need&mdash;"Help me create a slide about sustai=
+nable energy"&mdash;and watch as Manus crafts slides perfectly tailored to =
+your specific needs.</span></p> <p style=3D"display: block; margin: 8px 0 0=
+ 0; mso-line-height-alt: 24px;"><span style=3D"font-size: 16px; font-family=
+: 'Inter','Arial',sans-serif; font-weight: 400; color: #535350; line-height=
+: 150%; mso-line-height-alt: 24px;">Whether you're delivering boardroom pit=
+ches, classroom lectures, or virtual presentations, Manus ensures your idea=
+s captivate audiences through crystal-clear visuals and compelling content.=
+ Make real-time edits effortlessly, then export seamlessly to Google Slides=
+ or PowerPoint with complete formatting integrity.</span></p> </div> </td> =
+</tr> <tr> <td class=3D"m" style=3D"border-collapse: collapse; mso-table-ls=
+pace: 0pt; mso-table-rspace: 0pt; font-size: 0; padding: 0; padding-bottom:=
+ 8px; word-break: break-word;" aria-hidden=3D"true"> <div style=3D"height: =
+16px; line-height: 16px;">=E2=80=8A</div> </td> </tr> <tr> <td align=3D"cen=
+ter" class=3D"m" style=3D"border-collapse: collapse; mso-table-lspace: 0pt;=
+ mso-table-rspace: 0pt; font-size: 0; padding: 0; padding-bottom: 8px; word=
+-break: break-word;"> <table border=3D"0" cellpadding=3D"0" cellspacing=3D"=
+0" class=3D"mq" role=3D"presentation" style=3D"mso-table-lspace: 0pt; mso-t=
+able-rspace: 0pt; border-collapse: collapse; border-spacing: 0;"> <tbody> <=
+tr> <td class=3D"mq" style=3D"border-collapse: collapse; mso-table-lspace: =
+0pt; mso-table-rspace: 0pt; width: 504px;" width=3D"504"><img alt height=3D=
+"auto" src=3D"https://e.hypermatic.com/22615e61efda4d3ff27c2dceab3ee2e6.gif=
+" style=3D"line-height: 100%; -ms-interpolation-mode: bicubic; border: 0; b=
+order-radius: 12px 12px 12px 12px; display: block; outline: none; text-deco=
+ration: none; height: auto; width: 100%; font-size: 13px;" width=3D"504"></=
+td> </tr> </tbody> </table> </td> </tr> <tr> <td class=3D"m" style=3D"borde=
+r-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-si=
+ze: 0; padding: 0; padding-bottom: 8px; word-break: break-word;" aria-hidde=
+n=3D"true"> <div style=3D"height: 16px; line-height: 16px;">=E2=80=8A</div>=
+ </td> </tr> <tr> <td align=3D"center" class=3D"b qk m" style=3D"border-col=
+lapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0=
+; padding: 0; padding-bottom: 8px; word-break: break-word;"> <table border=
+=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentation" style=3D"m=
+so-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: separate; wid=
+th: 250px; line-height: 100%;" width=3D"250"> <tbody> <tr> <td align=3D"cen=
+ter" bgcolor=3D"#1a1a19" class=3D"co" role=3D"presentation" style=3D"border=
+-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; -webkit-=
+transform: perspective(1px) translateZ(0); transform: perspective(1px) tran=
+slateZ(0); box-shadow: 0 0 1px rgba(0,0,0,0); -webkit-transition-duration: =
+0.3s; transition-duration: 0.3s; -webkit-transition-property: transform; tr=
+ansition-property: transform; background: #1a1a19; border: none; border-rad=
+ius: 8px 8px 8px 8px; cursor: auto; mso-padding-alt: 14px 0px 14px 0px; ver=
+tical-align: middle;" valign=3D"middle"><!--[if mso]><v:roundrect style=3D"=
+width:250px;height:45px;v-text-anchor:middle;" arcsize=3D"36%" fill=3D"t" s=
+troke=3D"f" xmlns:v=3D"urn:schemas-microsoft-com:vml" xmlns:w=3D"urn:schema=
+s-microsoft-com:office:word"><w:anchorlock/><v:fill type=3D"solid" color=3D=
+"#1a1a19"/><v:textbox inset=3D"0,0,0,0"><center><![endif]--> <a class=3D"co=
+" href=3D"https://links.manus.im/s/c/F4Ns63XBcQzaTjOY0KdU6pLbRmZHVZw0khG_re=
+yni29kdMXkObKmAeglv4zOPG0975f960OygeHvhgnoiWSiF5r8vPvyvEUxD2JLx29QbBD7HZ5Th=
+RRy2_eBB6QTwFHyN6PvWurcfmkaIIWYn30kTRA-OYs54ha10661OPtfXA08R6aVjdcvNuNP0ofv=
+TCAn1BM2PTi9hrCHUT62YDmBlRf-9KASzI8y1TXler2Q3u_N8ZEFLADhMszSSJFTXY4PXbqAu5a=
+7l3FsmnqzVBqipRcy0eyqclKlJdKJo54vip2XexCK_fjLGEpICTPHCVD9-wRL6rOCfnkcjkiEsf=
+BInmpwj_j6HyhzYaQX3fIAzhEoQXgQRlcNR8W9Syydn1BLcLThXVXxMGuYBoG9/viMXwmW4l2uF=
+OP-WpYOLqa1W7RMXGIQj/19" rel=3D"noopener" style=3D"display: inline-block; w=
+idth: 250px; background-color: #1a1a19; color: #ffffff; font-family: 'Inter=
+','Arial',sans-serif; font-size: 13px; font-weight: normal; line-height: 10=
+0%; margin: 0; text-decoration: none; text-transform: none; padding: 14px 0=
+px 14px 0px; mso-padding-alt: 0; border-radius: 8px 8px 8px 8px;" target=3D=
+"_blank"> <span style=3D"font-size: 14px; font-family: 'Inter','Arial',sans=
+-serif; font-weight: 600; color: #ffffff; line-height: 121%; mso-line-heigh=
+t-alt: 17px;">Create your first presentation</span></a> <!--[if mso]></cent=
+er></v:textbox></v:roundrect><![endif]--></td> </tr> </tbody> </table> </td=
+> </tr> <tr> <td class=3D"m" style=3D"border-collapse: collapse; mso-table-=
+lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; padding: 0; padding-botto=
+m: 8px; word-break: break-word;" aria-hidden=3D"true"> <div style=3D"height=
+: 16px; line-height: 16px;">=E2=80=8A</div> </td> </tr> <tr> <td class=3D"m=
+" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspa=
+ce: 0pt; font-size: 0; padding: 0; padding-bottom: 8px; word-break: break-w=
+ord;" aria-hidden=3D"true"> <div style=3D"height: 32px; line-height: 32px;"=
+>=E2=80=8A</div> </td> </tr> <tr> <td align=3D"center" class=3D"x m" style=
+=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt=
+; font-size: 0; padding-bottom: 8px; word-break: break-word;"> <div style=
+=3D"text-align: center;"> <p style=3D"display: block; margin: 0; mso-line-h=
+eight-alt: 48px;"><span style=3D"font-size: 32px; font-family: 'Libre Baske=
+rville','Georgia',serif; font-weight: bold; color: #262626; line-height: 15=
+0%; mso-line-height-alt: 48px;">See Manus Slides in action</span></p> </div=
+> </td> </tr> <tr> <td class=3D"m" style=3D"border-collapse: collapse; mso-=
+table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; padding: 0; padding=
+-bottom: 8px; word-break: break-word;" aria-hidden=3D"true"> <div style=3D"=
+height: 16px; line-height: 16px;">=E2=80=8A</div> </td> </tr> <tr> <td alig=
+n=3D"center" class=3D"m" style=3D"border-collapse: collapse; mso-table-lspa=
+ce: 0pt; mso-table-rspace: 0pt; font-size: 0; padding: 0; padding-bottom: 8=
+px; word-break: break-word;"> <table border=3D"0" cellpadding=3D"0" cellspa=
+cing=3D"0" class=3D"mq" role=3D"presentation" style=3D"mso-table-lspace: 0p=
+t; mso-table-rspace: 0pt; border-collapse: collapse; border-spacing: 0;"> <=
+tbody> <tr> <td class=3D"mq" style=3D"border-collapse: collapse; mso-table-=
+lspace: 0pt; mso-table-rspace: 0pt; width: 504px;" width=3D"504"><img alt h=
+eight=3D"auto" src=3D"https://e.hypermatic.com/3547c1f57aecac290bc8be788475=
+d8e0.gif" style=3D"line-height: 100%; -ms-interpolation-mode: bicubic; bord=
+er: 0; border-radius: 12px 12px 12px 12px; display: block; outline: none; t=
+ext-decoration: none; height: auto; width: 100%; font-size: 13px;" width=3D=
+"504"></td> </tr> </tbody> </table> </td> </tr> <tr> <td class=3D"m" style=
+=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt=
+; font-size: 0; padding: 0; padding-bottom: 8px; word-break: break-word;" a=
+ria-hidden=3D"true"> <div style=3D"height: 8px; line-height: 8px;">=E2=80=
+=8A</div> </td> </tr> <tr> <td align=3D"left" class=3D"x m" style=3D"border=
+-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-siz=
+e: 0; padding-bottom: 8px; word-break: break-word;"> <div style=3D"text-ali=
+gn: left;"> <p style=3D"display: block; margin: 0; mso-line-height-alt: 30p=
+x;"><span style=3D"font-size: 20px; font-family: 'Inter','Arial',sans-serif=
+; font-weight: bold; color: #34322d; line-height: 150%; mso-line-height-alt=
+: 30px;">Professional keynotes</span></p> </div> </td> </tr> <tr> <td align=
+=3D"left" class=3D"x m" style=3D"border-collapse: collapse; mso-table-lspac=
+e: 0pt; mso-table-rspace: 0pt; font-size: 0; padding-bottom: 8px; word-brea=
+k: break-word;"> <div style=3D"text-align: left;"> <p style=3D"display: blo=
+ck; margin: 0; mso-line-height-alt: 24px;"><span style=3D"font-size: 16px; =
+font-family: 'Inter','Arial',sans-serif; font-weight: 400; color: #535350; =
+line-height: 150%; mso-line-height-alt: 24px;">Craft powerful, stage-ready =
+presentations that captivate audiences and deliver your message with impact=
+=2E</span></p> </div> </td> </tr> <tr=
+> <td class=3D"m" style=3D"border-collap=
+se: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; p=
+adding: 0; padding-bottom: 8px; word-break: break-word;" aria-hidden=3D"tru=
+e"> <div style=3D"height: 32px; line-height: 32px;">=E2=80=8A</div> </td> <=
+/tr> <tr> <td align=3D"center" class=3D"m" style=3D"border-collapse: collap=
+se; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; padding: 0;=
+ padding-bottom: 8px; word-break: break-word;"> <table border=3D"0" cellpad=
+ding=3D"0" cellspacing=3D"0" class=3D"mq" role=3D"presentation" style=3D"ms=
+o-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; bord=
+er-spacing: 0;"> <tbody> <tr> <td class=3D"mq" style=3D"border-collapse: co=
+llapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 504px;" width=
+=3D"504"><img alt height=3D"auto" src=3D"https://e.hypermatic.com/4567a4a0f=
+50185e0593d7ba84a48dc02.gif" style=3D"line-height: 100%; -ms-interpolation-=
+mode: bicubic; border: 0; border-radius: 12px 12px 12px 12px; display: bloc=
+k; outline: none; text-decoration: none; height: auto; width: 100%; font-si=
+ze: 13px;" width=3D"504"></td> </tr> </tbody> </table> </td> </tr> <tr> <td=
+ class=3D"m" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso=
+-table-rspace: 0pt; font-size: 0; padding: 0; padding-bottom: 8px; word-bre=
+ak: break-word;" aria-hidden=3D"true"> <div style=3D"height: 8px; line-heig=
+ht: 8px;">=E2=80=8A</div> </td> </tr> <tr> <td align=3D"left" class=3D"x m"=
+ style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspac=
+e: 0pt; font-size: 0; padding-bottom: 8px; word-break: break-word;"> <div s=
+tyle=3D"text-align: left;"> <p style=3D"display: block; margin: 0; mso-line=
+-height-alt: 30px;"><span style=3D"font-size: 20px; font-family: 'Inter','A=
+rial',sans-serif; font-weight: bold; color: #34322d; line-height: 150%; mso=
+-line-height-alt: 30px;">Adventure deck creation</span></p> </div> </td> </=
+tr> <tr> <td align=3D"left" class=3D"x m" style=3D"border-collapse: collaps=
+e; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; padding-bott=
+om: 8px; word-break: break-word;"> <div style=3D"text-align: left;"> <p sty=
+le=3D"display: block; margin: 0; mso-line-height-alt: 24px;"><span style=3D=
+"font-size: 16px; font-family: 'Inter','Arial',sans-serif; font-weight: 400=
+; color: #535350; line-height: 150%; mso-line-height-alt: 24px;">Turn your =
+travel dreams into stunning presentation decks that inspire wanderlust and =
+adventure.</span></p> </div> </td> </tr> <tr> <td class=3D"m" style=3D"bord=
+er-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-s=
+ize: 0; padding: 0; padding-bottom: 8px; word-break: break-word;" aria-hidd=
+en=3D"true"> <div style=3D"height: 32px; line-height: 32px;">=E2=80=8A</div=
+> </td> </tr> <tr> <td align=3D"center" class=3D"m" style=3D"border-collaps=
+e: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; pa=
+dding: 0; padding-bottom: 8px; word-break: break-word;"> <table border=3D"0=
+" cellpadding=3D"0" cellspacing=3D"0" class=3D"mq" role=3D"presentation" st=
+yle=3D"mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: colla=
+pse; border-spacing: 0;"> <tbody> <tr> <td class=3D"mq" style=3D"border-col=
+lapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 504px=
+;" width=3D"504"><img alt height=3D"auto" src=3D"https://e.hypermatic.com/0=
+e9119ea03c53cdf890cd9ffde3750f9.gif" style=3D"line-height: 100%; -ms-interp=
+olation-mode: bicubic; border: 0; border-radius: 12px 12px 12px 12px; displ=
+ay: block; outline: none; text-decoration: none; height: auto; width: 100%;=
+ font-size: 13px;" width=3D"504"></td> </tr> </tbody> </table> </td> </tr> =
+<tr> <td class=3D"m" style=3D"border-collapse: collapse; mso-table-lspace: =
+0pt; mso-table-rspace: 0pt; font-size: 0; padding: 0; padding-bottom: 8px; =
+word-break: break-word;" aria-hidden=3D"true"> <div style=3D"height: 8px; l=
+ine-height: 8px;">=E2=80=8A</div> </td> </tr> <tr> <td align=3D"left" class=
+=3D"x m" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-tab=
+le-rspace: 0pt; font-size: 0; padding-bottom: 8px; word-break: break-word;"=
+> <div style=3D"text-align: left;"> <p style=3D"display: block; margin: 0; =
+mso-line-height-alt: 30px;"><span style=3D"font-size: 20px; font-family: 'I=
+nter','Arial',sans-serif; font-weight: bold; color: #34322d; line-height: 1=
+50%; mso-line-height-alt: 30px;">Educational lectures</span></p> </div> </t=
+d> </tr> <tr> <td align=3D"left" class=3D"x m" style=3D"border-collapse: co=
+llapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; padding=
+-bottom: 8px; word-break: break-word;"> <div style=3D"text-align: left;"> <=
+p style=3D"display: block; margin: 0; mso-line-height-alt: 24px;"><span sty=
+le=3D"font-size: 16px; font-family: 'Inter','Arial',sans-serif; font-weight=
+: 400; color: #535350; line-height: 150%; mso-line-height-alt: 24px;">Trans=
+form complex topics into clear, engaging presentations that make learning e=
+ffortless.</span></p> </div> </td> </tr> <tr> <td class=3D"m" style=3D"bord=
+er-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-s=
+ize: 0; padding: 0; padding-bottom: 8px; word-break: break-word;" aria-hidd=
+en=3D"true"> <div style=3D"height: 32px; line-height: 32px;">=E2=80=8A</div=
+> </td> </tr> <tr> <td align=3D"center" class=3D"x m" style=3D"border-colla=
+pse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; =
+padding-bottom: 8px; word-break: break-word;"> <div style=3D"text-align: ce=
+nter;"> <p style=3D"display: block; margin: 0; mso-line-height-alt: 48px;">=
+<span style=3D"font-size: 32px; font-family: 'Libre Baskerville','Georgia',=
+serif; font-weight: bold; color: #262626; line-height: 150%; mso-line-heigh=
+t-alt: 48px;">Ready to get started?</span></p> </div> </td> </tr> <tr> <td =
+class=3D"m" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-=
+table-rspace: 0pt; font-size: 0; padding: 0; padding-bottom: 8px; word-brea=
+k: break-word;" aria-hidden=3D"true"> <div style=3D"height: 16px; line-heig=
+ht: 16px;">=E2=80=8A</div> </td> </tr> <tr> <td align=3D"center" class=3D"b=
+ qk" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-r=
+space: 0pt; font-size: 0; padding: 0; padding-bottom: 0; word-break: break-=
+word;"> <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"pre=
+sentation" style=3D"mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-co=
+llapse: separate; width: 198px; line-height: 100%;" width=3D"198"> <tbody> =
+<tr> <td align=3D"center" bgcolor=3D"#1a1a19" class=3D"co" role=3D"presenta=
+tion" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-=
+rspace: 0pt; -webkit-transform: perspective(1px) translateZ(0); transform: =
+perspective(1px) translateZ(0); box-shadow: 0 0 1px rgba(0,0,0,0); -webkit-=
+transition-duration: 0.3s; transition-duration: 0.3s; -webkit-transition-pr=
+operty: transform; transition-property: transform; background: #1a1a19; bor=
+der: none; border-radius: 8px 8px 8px 8px; cursor: auto; mso-padding-alt: 1=
+4px 0px 14px 0px; vertical-align: middle;" valign=3D"middle"><!--[if mso]><=
+v:roundrect style=3D"width:198px;height:45px;v-text-anchor:middle;" arcsize=
+=3D"36%" fill=3D"t" stroke=3D"f" xmlns:v=3D"urn:schemas-microsoft-com:vml" =
+xmlns:w=3D"urn:schemas-microsoft-com:office:word"><w:anchorlock/><v:fill ty=
+pe=3D"solid" color=3D"#1a1a19"/><v:textbox inset=3D"0,0,0,0"><center><![end=
+if]--> <a class=3D"co" href=3D"https://links.manus.im/s/c/U3uQdvr8_i4bX3is0=
+0KCk_iYrKgdbchtflhvMJfQAYqTxeA1Aq5KmIgb_nSG6Ib0EiYUTkG4eC4m52qzmYfs1eAiSWSn=
+ma-vasgV6nM0957pwqdO3eBA4uX84W3iLLHCGFANuYO3MUgI5ixRszJ6mSYPvpL7c9I9zaYuEZc=
+PMNfV5b-aUbpFR0SVYn6qfIjrB4xG7qDzNuZGMvjgwW31WNJaSuYa4LYaHuiOWis9Z_rEWINcQ6=
+9YdlmYwzZUV6puL1awx70mSrk2gZmpGGvF9Kpx86EQwzK6hjTzOs1vXdFWenY3Lx3v6asatCHe5=
+NVp8g7RS_unIchagNeRfV0ZjB0xOHkSDniDYC6r_a7F9SS7VCG6QRAJEOxbq-LbRD67ZhsCTpkr=
+osFdb6ul/kayh2vZoND6moE6BxClR0Sw2skcIQDgX/19" rel=3D"noopener" style=3D"dis=
+play: inline-block; width: 198px; background-color: #1a1a19; color: #ffffff=
+; font-family: 'Inter','Arial',sans-serif; font-size: 13px; font-weight: no=
+rmal; line-height: 100%; margin: 0; text-decoration: none; text-transform: =
+none; padding: 14px 0px 14px 0px; mso-padding-alt: 0; border-radius: 8px 8p=
+x 8px 8px;" target=3D"_blank"> <span style=3D"font-size: 14px; font-family:=
+ 'Inter','Arial',sans-serif; font-weight: 600; color: #ffffff; line-height:=
+ 121%; mso-line-height-alt: 17px;">Try Manus Slides now</span></a> <!--[if =
+mso]></center></v:textbox></v:roundrect><![endif]--></td> </tr> </tbody> </=
+table> </td> </tr> </tbody> </table> </div> <!--[if mso | IE]></td></tr></t=
+able><![endif]--></td> </tr> </tbody> </table> </div> <!--[if mso | IE]></t=
+d></tr></table> <table align=3D"center" border=3D"0" cellpadding=3D"0" cell=
+spacing=3D"0" role=3D"presentation" style=3D"width:600px;" width=3D"600"><t=
+r><td style=3D"line-height:0;font-size:0;mso-line-height-rule:exactly;"><![=
+endif]--> <div class=3D"r e y" style=3D"background: #fffffe; background-col=
+or: #fffffe; margin: 0px auto; max-width: 600px;"> <table align=3D"center" =
+border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentation" styl=
+e=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0p=
+t; background: #fffffe; background-color: #fffffe; width: 100%;" width=3D"1=
+00%" bgcolor=3D"#fffffe"> <tbody> <tr> <td style=3D"border-collapse: collap=
+se; mso-table-lspace: 0pt; mso-table-rspace: 0pt; border: none; direction: =
+ltr; font-size: 0; padding: 48px 48px 48px 48px; text-align: left;" align=
+=3D"left"><!--[if mso | IE]><table role=3D"presentation" border=3D"0" cellp=
+adding=3D"0" cellspacing=3D"0"><tr><td style=3D"vertical-align:middle;width=
+:504px;"><![endif]--> <div class=3D"f h" style=3D"font-size: 0; text-align:=
+ left; direction: ltr; display: inline-block; vertical-align: middle; width=
+: 100%;"> <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"p=
+resentation" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso=
+-table-rspace: 0pt; border: none; vertical-align: middle;" width=3D"100%" v=
+align=3D"middle"> <tbody> <tr> <td align=3D"center" class=3D"m" style=3D"bo=
+rder-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font=
+-size: 0; padding: 0; padding-bottom: 48px; word-break: break-word;"> <p st=
+yle=3D"display: block; border-top: solid 1px #ededed; font-size: 1px; margi=
+n: 0px auto; width: 100%;"></p> <!--[if mso | IE]><table align=3D"center" b=
+order=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"border-top:solid 1=
+px #ededed;font-size:1px;margin:0px auto;width:504px;" role=3D"presentation=
+" width=3D"504px"><tr><td style=3D"height:0;line-height:0;"> &nbsp; </td></=
+tr></table><![endif]--></td> </tr> <tr> <td align=3D"center" class=3D"m" st=
+yle=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: =
+0pt; font-size: 0; padding: 0; padding-bottom: 48px; word-break: break-word=
+;"><!--[if mso | IE]><table align=3D"center" border=3D"0" cellpadding=3D"0"=
+ cellspacing=3D"0" role=3D"presentation"><tr><td><![endif]--> <table align=
+=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presen=
+tation" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-tabl=
+e-rspace: 0pt; float: none; display: inline-table;"> <tbody> <tr class=3D"m=
+"> <td style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table=
+-rspace: 0pt; padding: 0 16px 0 0; vertical-align: middle;" valign=3D"middl=
+e"> <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"present=
+ation" style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table=
+-rspace: 0pt; width: 24px; height: 24px;" width=3D"24" height=3D"24"> <tbod=
+y> <tr style=3D"height: 24px;"> <td style=3D"border-collapse: collapse; mso=
+-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; height: 24px; vert=
+ical-align: middle; width: 24px;" width=3D"24" height=3D"24" valign=3D"midd=
+le"><a href=3D"https://links.manus.im/s/c/7oem4UiAcLKqMbh3459qgbVPa6OFt-Igq=
+l8U-x7irHTkBl3sZJxx5g53jfuDykS2N3bv4wDn2HPCBl4xxR7Oz2DCKR2GB-jqPwa2VeSQVC4h=
+qPK2CEcCMa8Fhhngbn-Sf_Kso9CKZwuCcdqvbnMPQjjRakmR91g7-AZO8A4hJ1NgLhmQ60SnHp3=
+PbaHw6hhQierA68cdsKQZ-bWiCo3NLVIVEnX9wQLpjLaTBUzx4Bna1HIHjTYE0EfvkPG7JZypPe=
+70QDAIeCvKAdAjOZRQ8mKUHn00kjp6SAHLsBGeTP0j7-r2WVOrVVmXUCA76NxeRUWS5uvfnZFLM=
+47n9iqJvAU_ELqiJcJ1TdXSt87W_OrZo5gG9RHaKlGpV8iGtWOkaeWgbnSrhi1n37ru-JWfpzwL=
+8lhqeJnk0epHCgYIE1tVMXFXPA81pm8hxX1l2AYzMFtEWi2fVVGZA6md8A/RnQiDeruP5VmZNHg=
+qV_YJW9BeO0kraP6/19" rel=3D"noopener" target=3D"_blank"> <img alt=3D"X" hei=
+ght=3D"24" src=3D"https://files.manuscdn.com/edm/20250410/d7901242aa9cdbd08=
+2711ab4b235b8fd.png" style=3D"border: 0; height: auto; line-height: 100%; o=
+utline: none; text-decoration: none; -ms-interpolation-mode: bicubic; displ=
+ay: block;" width=3D"24"></a></td> </tr> </tbody> </table> </td> </tr> </tb=
+ody> </table> <!--[if mso | IE]></td><td><![endif]--> <table align=3D"cente=
+r" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentation" s=
+tyle=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace:=
+ 0pt; float: none; display: inline-table;"> <tbody> <tr class=3D"m"> <td st=
+yle=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: =
+0pt; padding: 0 16px 0 0; vertical-align: middle;" valign=3D"middle"> <tabl=
+e border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"presentation" st=
+yle=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: =
+0pt; width: 24px;" width=3D"24"> <tbody> <tr> <td style=3D"border-collapse:=
+ collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; heig=
+ht: 24px; vertical-align: middle; width: 24px;" width=3D"24" height=3D"24" =
+valign=3D"middle"><a href=3D"https://links.manus.im/s/c/FdImsxjMCi9jR8zjfMf=
+uzO3NB_6j4P7sXCkd74t0Kpzq7vYLyJpR_FR1mMPUQNnrrZ71dFG2wmb9D9nHxY4Rx1UppUR5UI=
+TAZFb8tn2QYpuZc0SVXRM6yoO48pzZCn8ZwE3PR9SyynjzaiQLJwTn_tsSLPf_LT0aJ9N8wu148=
+8fp0RUZJKZQ4QC32m0kyXYlxj4T1aQMisnyau0975u5ZHDVpbib7SUwd2FHvvWsnjbgY5xwcI8a=
+RoWYmJpmiyGxO_ONcUvPhsn77TMD1KDb0R0_1eAnDkgB0KUTxcPx1BmnvZN_pTNfkfgippseEiK=
+lSD1ajZ7oZO9LRt7Dkm3WcKcHUNMGqi9_yholtQ33_rnE2Gpxx8yFyUabjSy9gX3rHs4lcG5tvJ=
+Kq64ekVHUSM1jC8VgQdgX3F-vfANBfghtkWcdZD0Tq5lNCpgYi67FqEy-41c4Zcorly6nrPGy7M=
+Zu7vYnbh8Hs3xC9EMqQwmQs/Vu4-dXDN5ZvY1gFPCGnqHFrr45K_IsNM/19" rel=3D"noopene=
+r" target=3D"_blank"> <img alt=3D"Instagram" height=3D"24" src=3D"https://f=
+iles.manuscdn.com/edm/20250410/624f45539e7c1501fc2621e166104869.png" style=
+=3D"border: 0; height: auto; line-height: 100%; outline: none; text-decorat=
+ion: none; -ms-interpolation-mode: bicubic; display: block;" width=3D"24"><=
+/a></td> </tr> </tbody> </table> </td> </tr> </tbody> </table> <!--[if mso =
+| IE]></td><td><![endif]--> <table align=3D"center" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" role=3D"presentation" style=3D"border-collapse: c=
+ollapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; float: none; display=
+: inline-table;"> <tbody> <tr class=3D"m"> <td style=3D"border-collapse: co=
+llapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; padding: 0 16px 0 0; =
+vertical-align: middle;" valign=3D"middle"> <table border=3D"0" cellpadding=
+=3D"0" cellspacing=3D"0" role=3D"presentation" style=3D"border-collapse: co=
+llapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 24px;" width=
+=3D"24"> <tbody> <tr> <td style=3D"border-collapse: collapse; mso-table-lsp=
+ace: 0pt; mso-table-rspace: 0pt; font-size: 0; height: 24px; vertical-align=
+: middle; width: 24px;" width=3D"24" height=3D"24" valign=3D"middle"><a hre=
+f=3D"https://links.manus.im/s/c/YkaXvWCCnZ-voIzh5tNTFTmR1B6VS5xakhNSby0IfbA=
+h-parVeTGkDNSbn-nAqsxJYIRCwAOjzZsRrPailDoKCumHufd8N9OJ7YQRo-Tc3G-iUWnGKw_It=
+vBkzS3VwTyQwRXnYvF15mI6vhu7uFtdJBORGmkpibCtKArTwIxI0P39OGmLMc-194Ou95Vz_m0P=
+oX7-fp3Z1ICcTk0xdwOPSe4gF5GrlWR1u-zqqZMWnsoK-UZpXr8WNLlkLXshqkVeFxjpo_55hWn=
+JL13geYPjq9QE1JBgxGgfigzPgJ0JU-04eE9Jayz1SXX71Z43nzxFAaUkS2aLeugN-ngxfaKYq9=
+YkOjMfno561n-X96BHi_ramr8lbinUXkN8qWrb6cwoABRA8Fteg20SPxnfDjLFG85iK4SKT0UWE=
+9HpFEHfSZJ193lW9U-eo8VO7_evRiqzUtw7p32m0Pwzv2edUOTtha20MblCVU0m16dWxNfpZg_e=
+4OtNhS1/DLWfIfBnlCHuKEl9v2JSE_G4BuGPLKJF/19" rel=3D"noopener" target=3D"_bl=
+ank"> <img alt=3D"YouTube" height=3D"24" src=3D"https://files.manuscdn.com/=
+edm/20250410/ebb4f1dc14099083946931cd69c15c45.png" style=3D"border: 0; heig=
+ht: auto; line-height: 100%; outline: none; text-decoration: none; -ms-inte=
+rpolation-mode: bicubic; display: block;" width=3D"24"></a></td> </tr> </tb=
+ody> </table> </td> </tr> </tbody> </table> <!--[if mso | IE]></td><td><![e=
+ndif]--> <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=
+=3D"0" role=3D"presentation" style=3D"border-collapse: collapse; mso-table-=
+lspace: 0pt; mso-table-rspace: 0pt; float: none; display: inline-table;"> <=
+tbody> <tr class=3D"m"> <td style=3D"border-collapse: collapse; mso-table-l=
+space: 0pt; mso-table-rspace: 0pt; padding: 0 16px 0 0; vertical-align: mid=
+dle;" valign=3D"middle"> <table border=3D"0" cellpadding=3D"0" cellspacing=
+=3D"0" role=3D"presentation" style=3D"border-collapse: collapse; mso-table-=
+lspace: 0pt; mso-table-rspace: 0pt; width: 24px;" width=3D"24"> <tbody> <tr=
+> <td style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table-=
+rspace: 0pt; font-size: 0; height: 24px; vertical-align: middle; width: 24p=
+x;" width=3D"24" height=3D"24" valign=3D"middle"><a href=3D"https://links.m=
+anus.im/s/c/FkMW-RMKSR-psVLZ1iw0CGrZRCcjab9uoMU3VJu8ae0OaQhex3hVL9xVIlOAE5K=
+oMQXdW80q_Hxnxe0Tzq9_a3GyTHqHO_1MdWBCgODeXhOV65BMLIAi4gT9MaeUygJhkj2sL9ylVN=
+5vu4GWsw9ViY6EQcdcVHp_ufan6FqVRhM_dSbYuSxQKBp6ktdx89sX6jZbEFT0yrOzEpDs3g30w=
+s3ReKN-8Ws0AK434-uWX_P4VMoxd-V_kvrMaffUwzpyxYpo8IgfJTNkKj7WtcGfxwvCztvu40A0=
+yXb45sOaFcczmLbbZRaSzd_PYyEcnCVOP1doRiWozc9w5BV_D_ZSDd2p4iAnyVREJ64KW6Qk2-j=
+nbsReBU7Lpm3hcfbI2bDUcEkOv3rR17qHVqdLTN8EI3FgMSjUUrsJNl4DmaJjc8jhIKDMzCVZ2H=
+Rvl05-7FuAo3IwNNwqi1S4vvGtlb50FUQdhNrRUNvVmqE3xrX44YqA0BAsOp6Gk4SGpVFZahSsh=
+F02qZH1pzKZ/Efyjveuwy-nhA3LiXEVEibq9M1YEbDWp/19" rel=3D"noopener" target=3D=
+"_blank"> <img alt=3D"linkedin" height=3D"24" src=3D"https://files.manuscdn=
+=2Ecom/edm/20250410/047b443dc8f5a8aed9=
+b416345bc51c74.png" style=3D"border: 0;=
+ height: auto; line-height: 100%; outline: none; text-decoration: none; -ms=
+-interpolation-mode: bicubic; display: block;" width=3D"24"></a></td> </tr>=
+ </tbody> </table> </td> </tr> </tbody> </table> <!--[if mso | IE]></td><td=
+><![endif]--> <table align=3D"center" border=3D"0" cellpadding=3D"0" cellsp=
+acing=3D"0" role=3D"presentation" style=3D"border-collapse: collapse; mso-t=
+able-lspace: 0pt; mso-table-rspace: 0pt; float: none; display: inline-table=
+;"> <tbody> <tr> <td style=3D"border-collapse: collapse; mso-table-lspace: =
+0pt; mso-table-rspace: 0pt; padding: 0; padding-right: 0; vertical-align: m=
+iddle;" valign=3D"middle"> <table border=3D"0" cellpadding=3D"0" cellspacin=
+g=3D"0" role=3D"presentation" style=3D"border-collapse: collapse; mso-table=
+-lspace: 0pt; mso-table-rspace: 0pt; width: 24px;" width=3D"24"> <tbody> <t=
+r> <td style=3D"border-collapse: collapse; mso-table-lspace: 0pt; mso-table=
+-rspace: 0pt; font-size: 0; height: 24px; vertical-align: middle; width: 24=
+px;" width=3D"24" height=3D"24" valign=3D"middle"><a href=3D"https://links.=
+manus.im/s/c/SAef98X4R2A1Ls9CLED45bTaDSV1HHthucod839H_TF-crax6UnblfTJQg350w=
+vtoAp2SYAUMEhtqOMT4KXbLDkNDNfNAXfZvjAMJ01VH2XWu0nDRuCVNNjx0Geb6tcIntHtCzhk2=
+IV-tBa94zZGuzyF4Q8YJFtpF0qJ0UnBYKhnSpfS9GiSECZ_HtHcWWjPDmc6q_KXcH27yENRF5LG=
+d8YlzD5uMgP_OUXijJy3FdBx4-OsnIWdmbTbBokFn__4WpADllaJRYosrSp65wybDf0TweEIz8p=
+_r0SUlLJlPlfDgsV-SMwcvvlYP6EIbefHEdnOfBfZ0OlteBrMI44FMta4zrAlWCCcz86r3-ZNCo=
+QphpAw8aD-IfOGVyunq4-seYh9hh2dGRwhVlzUeKwU2gJYaCQY_BNR6_LXK18XY2AknywL__EF9=
+wTtxyEDRfvLeaIhbZ4DgnAelw_lHELKKdaxUwI0EQTXTH1xCBsxXpFxjucz4oEQiG0QBqgiy7KY=
+Ew/yIqK9H7qo1-YDl_IGU0tx-ZAy2UBgTit/19" rel=3D"noopener" target=3D"_blank">=
+ <img alt=3D"Tiktok" height=3D"24" src=3D"https://files.manuscdn.com/edm/20=
+250410/douyin.png" style=3D"border: 0; height: auto; line-height: 100%; out=
+line: none; text-decoration: none; -ms-interpolation-mode: bicubic; display=
+: block;" width=3D"24"></a></td> </tr> </tbody> </table> </td> </tr> </tbod=
+y> </table> <!--[if mso | IE]></td></tr></table><![endif]--></td> </tr> <tr=
+> <td align=3D"center" class=3D"x m" style=3D"border-collapse: collapse; ms=
+o-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; padding-bottom: 4=
+8px; word-break: break-word;"> <div style=3D"text-align: center;"> <p style=
+=3D"display: block; margin: 0; mso-line-height-alt: 18px;"><span style=3D"f=
+ont-size: 12px; font-family: 'Inter','Arial',sans-serif; font-weight: 400; =
+color: #858481; line-height: 150%; mso-line-height-alt: 18px;">Manus, deriv=
+ed from the Latin word for "hand", </span></p> <p style=3D"display: block; =
+margin: 0; mso-line-height-alt: 18px;"><span style=3D"font-size: 12px; font=
+-family: 'Inter','Arial',sans-serif; font-weight: 400; color: #858481; line=
+-height: 150%; mso-line-height-alt: 18px;">is a general AI agent that turns=
+ your thoughts into actions.</span></p> <p style=3D"display: block; margin:=
+ 0; mso-line-height-alt: 18px;"><span style=3D"font-size: 12px; font-family=
+: 'Inter','Arial',sans-serif; font-weight: 400; color: #858481; line-height=
+: 150%; mso-line-height-alt: 18px;">&copy; 2026 Manus AI</span></p> </div> =
+</td> </tr> <tr> <td align=3D"center" class=3D"v c" style=3D"border-collaps=
+e: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; font-size: 0; pa=
+dding-bottom: 0; word-break: break-word;"> <div class=3D"i"><!--[if mso | I=
+E]><table role=3D"presentation" border=3D"0" cellpadding=3D"0" cellspacing=
+=3D"0" align=3D"center"><tr><td style=3D"padding:0;padding-top:0;padding-le=
+ft:0;padding-right:16px;padding-bottom:0;"><![endif]--> <a class=3D"l m" hr=
+ef=3D"https://links.manus.im/s/c/keY6EfUYR1fs2f7x7o5bj4w3PY3YH_9nX_mEsKIAz1=
+g0d1qT8dmWwQOj0oDzx8TBQMopJDFs_3qtfZw-epVPm8aq6fsC2C9t9qsJ7MeUSFCr-HsyM0tS0=
+nSIFENxYyiy3h4Ybk9w6vaD2HXmpaMzmCdsY1h8EZZlPHHIjvbSoq9cFKzXn0bdABj4rD7YTuhn=
+jDRGbLji0feKnrwLeOQAax6mF0iQYsJcwfuELHD9z842nrkYrDEi0RQwoZAOirtstCVftsrhHeA=
+6MkqghC2kyPjGB9CgdBkvS6SKiSUr8SUB-1Aoga_on8s27JCr16ILTWklBJEawKn7Vy5g1Ue9bz=
+0yRex41ot5u1X4-PIMwjnMpENgZ8-bMGl-xyQKkcF-ph8r7Bc8KbgOgYvSTXzLlh5RrN2VniKiA=
+JqpXdkixDsG-Uaf7ILg0EbIT6vxC0Z1maLCNH0_4wV2mwsbpWpBqtyLSw/7tFE_2Z6q12RNdoJO=
+K1HHJUL_KwHIen_/19" rel=3D"noopener" style=3D"display: inline-block; color:=
+ #000000; font-family: 'Inter','Arial',sans-serif; font-size: 13px; font-we=
+ight: normal; line-height: 0; text-decoration: none; text-transform: none; =
+padding: 0 16px 0 0;" target=3D"_blank"> <span style=3D"font-size: 12px; fo=
+nt-family: 'Inter','Arial',sans-serif; font-weight: 400; color: #858481; li=
+ne-height: 125%; text-decoration: underline; mso-line-height-alt: 15px;">Pr=
+ivacy Policy</span></a> <!--[if mso | IE]></td><td style=3D"padding:0;paddi=
+ng-top:0;padding-left:0;padding-right:16px;padding-bottom:0;"><![endif]--> =
+<a class=3D"l m" href=3D"https://links.manus.im/s/c/SeMtu69WdLzabPmxn0uxfXh=
+u8T8iN_hse7ido6DfpoH8pJb9vzyBb7hoUxcGseps5bj1Mlg5z_WHlMR6shWGFBoKQIix3uqGts=
+DFF6qON7wCdDdIj2TIiV1FNlHBQ38P9MGJlZgD415IpyrfdPojDCPSHhF0lCJIrhW_xGWTtyP3Q=
+U8uXWbcVa9j66KeMAVak8PGUeekQgDnPL6mewK1BfylwUBqKrbZoHTl-LOCP8bTZYSNGi3dN1Ql=
+0FuTJagTK7ATh_kHf91Cb4Tz_049Gk14DCJQ524BHahPYrpvBMh9-M5TuCSZXxpiI8kAqk5VpN1=
+3THzZI6sKjjluijAgb_5NjhgbODS-7o8L0PW9AAab_IATVXtrQLKos2_cd73TJzF2My5Xy2sdfL=
+EZrfHiNSxFersMcEb_r216xLIkIcktTF9WDDdweac6D78Q2Tl-Mb1ArSuyc-wQj9ATeiSh/mCV0=
+fhAhLBjjNBJYWGhkkPJLCVbY7-Nf/19" rel=3D"noopener" style=3D"display: inline-=
+block; color: #000000; font-family: 'Inter','Arial',sans-serif; font-size: =
+13px; font-weight: normal; line-height: 0; text-decoration: none; text-tran=
+sform: none; padding: 0 16px 0 0;" target=3D"_blank"> <span style=3D"font-s=
+ize: 12px; font-family: 'Inter','Arial',sans-serif; font-weight: 400; color=
+: #858481; line-height: 125%; text-decoration: underline; mso-line-height-a=
+lt: 15px;">Terms of Service</span></a> <!--[if mso | IE]></td><td style=3D"=
+padding:0;padding-top:0;padding-left:0;padding-right:0;padding-bottom:0;"><=
+![endif]--> <a class=3D"l" href=3D"https://links.manus.im/s/u/RxJVc_weA_ahl=
+1_dico9eP6yfd_MUh4Jvm5l3SHzLECXd6s9cwtSVLjtW7zVCiN6X_Nxp1yCjZWJEsTWAui7-jHj=
+qqsfap630cdbbnDCFr0-7mWSZo-6jW2IQE4LTR-E0dSs8PiKbli2fBvIemlHp6oSFtAU9N9uwRA=
+m2GiGr4uUU4EkssYOASP-Gd25fmsQxWUKL-YSo7v2UNLA/Ecg4bnbAw-pQzfytvBIRIneBgi21_=
+Kmv/19" rel=3D"noopener" style=3D"display: inline-block; color: #000000; fo=
+nt-family: 'Inter','Arial',sans-serif; font-size: 13px; font-weight: normal=
+; line-height: 0; text-decoration: none; text-transform: none; padding: 0;"=
+ target=3D"_blank"> <span style=3D"font-size: 12px; font-family: 'Inter','A=
+rial',sans-serif; font-weight: 400; color: #858481; line-height: 125%; text=
+-decoration: underline; mso-line-height-alt: 15px;">Unsubscribe</span> </a>=
+ <!--[if mso | IE]></td></tr></table><![endif]--></div> </td> </tr> </tbody=
+> </table> </div> <!--[if mso | IE]></td></tr></table><![endif]--></td> </t=
+r> </tbody> </table> </div> <!--[if mso | IE]></td></tr></table> <table ali=
+gn=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" role=3D"pres=
+entation" style=3D"width:600px;" width=3D"600"><tr><td style=3D"line-height=
+:0;font-size:0;mso-line-height-rule:exactly;"><![endif]--> <div class=3D"r =
+e y" style=3D"background: transparent; margin: 0px auto; max-width: 600px;"=
+> <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" =
+role=3D"presentation" style=3D"border-collapse: collapse; mso-table-lspace:=
+ 0pt; mso-table-rspace: 0pt; background: transparent; width: 100%;" width=
+=3D"100%"> <tbody> <tr> <td style=3D"border-collapse: collapse; mso-table-l=
+space: 0pt; mso-table-rspace: 0pt; border: none; direction: ltr; font-size:=
+ 0; padding: 16px 48px 16px 48px; text-align: left;" align=3D"left"><!--[if=
+ mso | IE]><table role=3D"presentation" border=3D"0" cellpadding=3D"0" cell=
+spacing=3D"0"><tr></tr></table><![endif]--></td> </tr> </tbody> </table> </=
+div> <!--[if mso | IE]></td></tr></table><![endif]--></div> </body> </html>
+--48a50079ba5db0577e1a595e00647257da9aef7b8202a8ece07790fbc470--

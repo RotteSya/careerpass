@@ -1,0 +1,114 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:aa6:d00a:0:b0:32f:2baf:8ecc with SMTP id xr10csp844990lkb;
+        Thu, 2 Apr 2026 06:43:16 -0700 (PDT)
+X-Received: by 2002:a05:6a20:1584:b0:398:8d38:c60c with SMTP id adf61e73a8af0-39ef7761a9bmr8412967637.55.1775137396212;
+        Thu, 02 Apr 2026 06:43:16 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1775137396; cv=none;
+        d=google.com; s=arc-20240605;
+        b=UwMyQO/pgesBhF30uKxQEqdfZrYPGoMLSHiRMu9lJTfsaY9hbEltTBGPe7zVJikfNL
+         FHpUpCwWCea2dx5vVHveyx8k0Ws6yOc9+UP7fH5K0fT/lApJClrWjgYf2szleIVVbJkR
+         +ZNj6BH99K+xQfIuptkv9j+M6b7CAuqGUeWlYYrWcCT4QluuJx7KJbkvE2SaLt9U+ay/
+         2uE43TjsTNPXNXS846B/DaPYk4hd24waMCeC0DhJbyTzBIv7N0wEJpraYBckoJr+Ud+C
+         LLm6mHW7Tf+32OV6FcCLgAQsbJR/1mh6ukj5e8WeOrj9iUw7Tv4E6rxudl5yGTzh8Mee
+         7sAg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:reply-to:mime-version:message-id:from:errors-to:date
+         :content-transfer-encoding:dkim-signature;
+        bh=QA+pWcLyhOPTtah1i02oz0gXHVk9Swm6zBJ2n+qDX7c=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=WTVAu5936E9P2Niu23YNOC3urRAm39APndKjyNg0nuLws9kqINcWsM/z7URMR/MYL0
+         tQg841RFbf57UwKXYLWarhUTSp23P+NZZ6zqWFXJQPzBjP86ouQ6AvrQ76BlqHoRTaIw
+         ZX2REYB9YfHHU+tjDnCRckUN7EGXZw7W4p4Uy3HxvIuAWQkvMhwdUXwDBv7rA2Bc4hIo
+         iCmmNmXnQtZ1xRIU6CG+cuDt8niScJ758x48yaO0K/cejKWAXNyUSNhZJO5NIw03UNTV
+         5dOoBhEnFsB9X/NbVSIJlc1BwhL1ff3PL/MaRKQ7UgFGEVipt7igSJ3meCUbxLHhhmWq
+         RalQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@mb.mynavi.jp header.s=cuenote20191226 header.b=UVfqpn11;
+       spf=pass (google.com: domain of bounce-2026040222-00000504aedd@srs3435.cuenote.jp designates 194.223.151.222 as permitted sender) smtp.mailfrom=bounce-2026040222-00000504aedd@srs3435.cuenote.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=mynavi.jp
+Return-Path: <bounce-2026040222-00000504aedd@srs3435.cuenote.jp>
+Received: from srs3435-a.cuenote.jp (srs3435-a.cuenote.jp. [194.223.151.222])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c76c65cc046si5947856a12.243.2026.04.02.06.43.15
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256);
+        Thu, 02 Apr 2026 06:43:16 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounce-2026040222-00000504aedd@srs3435.cuenote.jp designates 194.223.151.222 as permitted sender) client-ip=194.223.151.222;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@mb.mynavi.jp header.s=cuenote20191226 header.b=UVfqpn11;
+       spf=pass (google.com: domain of bounce-2026040222-00000504aedd@srs3435.cuenote.jp designates 194.223.151.222 as permitted sender) smtp.mailfrom=bounce-2026040222-00000504aedd@srs3435.cuenote.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=mynavi.jp
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=mb.mynavi.jp;
+	s=cuenote20191226; t=1775137382; x=1775742182;
+	bh=QA+pWcLyhOPTtah1i02oz0gXHVk9Swm6zBJ2n+qDX7c=;
+	h=Date:From:reply-to:Subject:To;
+	b=UVfqpn11rKZ5DpCc7RLBjTgm8AlnuoDsDcfgnmzmcAUzXNuzOlkcxb1NieuG
+	 LGDsJ+EBu2k6YHUWI9VBDA3TT43E6iuOLsMJAGzLGvRdXKzytSrZfOcuz4UjU
+	 ajdOogPOwX7UsHRm3tsbj15gm12QlmPhJjfOezOhZ8lICaZFEo=
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=ISO-2022-JP
+Date: Thu, 02 Apr 2026 22:43:02 +0900
+Errors-To: =?ISO-2022-JP?B?GyRCJV4lJCVKJVMlNSVdITwlSCVHJTklLxsoQiA8aW5m?=
+ =?ISO-2022-JP?B?by1qb2JAbWl3cy5teW5hdmkuanA+?=
+From: =?ISO-2022-JP?B?GyRCM3Q8MDJxPFIlNSVzJV4layUvJVshPCVrJUclIyVzGyhC?=
+ =?ISO-2022-JP?B?GyRCJTAlORsoQg==?= <info-job@miws.mynavi.jp>
+Message-ID: <c0b2f78f-a1ea-4533-9364-fb53827a7d81@srs3435.cuenote.jp>
+MIME-Version: 1.0
+reply-to: =?ISO-2022-JP?B?GyRCM3Q8MDJxPFIlNSVzJV4layUvJVshPCVrJUcbKEI=?=
+ =?ISO-2022-JP?B?GyRCJSMlcyUwJTkbKEI=?=
+ <hd-shinsotsu-saiyou@saintmarc-gr.com>
+Subject: =?ISO-2022-JP?B?GyRCIVolNSVzJV4layUvJVshPCVrJUclIyVzJTAlOSFbGyhC?=
+ =?ISO-2022-JP?B?GyRCJSglcyVIJWohPCU3ITwlSCQ0RHM9UCROOGZOaRsoQg==?=
+To: raysya.biz@gmail.com
+
+=1B$B"($3$N%a!<%k$O%^%$%J%S$,Ds6!$9$k1~Jg<T4IM}%7%9%F%`$rMxMQ$7$FAw?.$5$l$F=
+$$$^$9"(=1B(B
+=1B$B"(Aw?.@lMQ$N$?$aJV?.$O$*<u$1$G$-$^$;$s!#=1B(B
+
+=1B$B#S#H#E=1B(B =1B$B#L#I#N#G#Z#H#A#OMM=1B(B
+
+=1B$B3t<02q<R%5%s%^%k%/%[!<%k%G%#%s%0%9$N;3K\$G$9!#=1B(B
+=1B$B$3$NEY$O!"%(%s%H%j!<%7!<%H$NDs=3DP$r$$$?$@$-$"$j$,$H$&$4$6$$$^$7$?!#=
+=1B(B
+
+=1B$B!Z:#8e$N%9%1%8%e!<%k$K$D$$$F![=1B(B
+=1B$B!&%+%8%e%"%kLLCL=1B(B(Web)
+=1B$B!&E,@58!::=1B(B
+=1B$B!&LL@\=1B(B(=1B$B8DJL=1B(B)
+=1B$B!&FbDj=1B(B
+
+=1B$B%+%8%e%"%kLLCL$NF|;~$K$D$-$^$7$F$O!"2~$a$F$4O"Mm$5$;$F$$$?$@$-$^$9!#=
+=1B(B
+=1B$B$h$m$7$/$*4j$$$7$^$9!#=1B(B
+
+=1B$B3t<02q<R%5%s%^%k%/%[!<%k%G%#%s%0%9=1B(B
+=1B$B?M:`3+H/<<!!;3K\9@;J=1B(B
+
+
+=1B$B(,(,(,(,(,(,(,(,(,(,(,(,(,(,(,(,=1B(B
+=1B$BK\%a!<%k$O!"<u<h?M$N$?$a$N5!L)>pJs$r4^$s$G$$$^$9!#=1B(B
+=1B$B!cCm0U!d=1B(B
+=1B$BK\%a!<%k$NFbMF$K?4Ev$?$j$,$J$$>l9g!"$"$J$?$,H/?.<T$N0U?^$7$?<u<h?M$G$O=
+$J$$2DG=3D@-$,$4$6$$$^$9!#=1B(B
+=1B$B?4Ev$?$j$,$J$$>l9g$O!"@?$K$*<j?t$G$9$,!"2<5-$*Ld$$9g$o$;@h$h$j$4O"Mm$/=
+$@$5$$!#=1B(B
+=1B$B!&K\%a!<%k$K4^$^$l$k>pJs$N:~=3DP$7!"J#<L!"N.I[$O$*95$($/$@$5$$!#=1B(B
+=1B$B!&J;$;$F!"K\%a!<%k$rGK4~$$$?$@$-$^$9$h$&$*4j$$$$$?$7$^$9!#=1B(B
+
+=1B$BDs=3DP%j%/%(%9%H=1B(BURL=1B$B$NA+0\@h$,%(%i!<$N>l9g!"=1B(B
+URL=1B$BFb$KH>3Q%9%Z!<%9$,:.F~$7!"Ds=3DP%j%/%(%9%H$,3NG'$G$-$J$$>uBV$H$J$C$=
+F$$$k2DG=3D@-$,$4$6$$$^$9!#=1B(B
+=1B$BH>3Q%9%Z!<%9$r=3D|$$$?=1B(BURL=1B$B$r%V%i%&%6$XF~NO$$$?$@$/$H!"@5$7$$D=
+s=3DP%j%/%(%9%H$,3NG'$G$-$^$9$N$G$*;n$7$/$@$5$$!#=1B(B
+
+=1B$BK\%5!<%S%9$NMxMQ$K$*$$$F$4ITL@$JE@$,$4$6$$$^$7$?$i!"2<5-%Z!<%8$N$*Ld$$=
+9g$o$;@h$h$j$4O"Mm$/$@$5$$!#=1B(B
+=1B$B!c$h$/$"$k<ALd!&$*Ld$$9g$o$;$O$3$A$i!d=1B(B
+https://mcbox.mynavi.jp/help/guide/
+=1B$B!c$4MxMQ%,%$%I$O$3$A$i!d=1B(B
+https://mcbox.mynavi.jp/common/user/how-to-use.html
+=1B$B"'H/9T!!%^%$%J%S=1B(B - =1B$B3X@88~$1=3D"?&3hF0!J=3D"3h!K!&=3D"?&>pJs%=
+5%$%H=1B(B
+https://job.mynavi.jp/

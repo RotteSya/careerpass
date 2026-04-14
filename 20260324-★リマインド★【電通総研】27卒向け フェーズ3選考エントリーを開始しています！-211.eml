@@ -1,0 +1,130 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:4189:b0:32f:2baf:8ecc with SMTP id xu9csp1289150lkb;
+        Mon, 23 Mar 2026 23:53:50 -0700 (PDT)
+X-Received: by 2002:a17:90b:3dcc:b0:359:91a0:98fc with SMTP id 98e67ed59e1d1-35bd2c6f1f9mr11575771a91.21.1774335229655;
+        Mon, 23 Mar 2026 23:53:49 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1774335229; cv=none;
+        d=google.com; s=arc-20240605;
+        b=Uu0RvIyi0g0pY1CAIukF58oH50Td8HIWNnebrxwmnwnqMe+4TIO3hnKzhlb80cEdGz
+         7HEin18yAW99kM39gWnyZcjLY/YetMOI2sRrR1aFY+7vizOTZgaEVVbDwCkRmP9Q6OIv
+         Pw7dC7UfL5zWt01v9TkJTOYzdg8NEFvS2sLuKD2F8KP672QehDRJeOLT1m+LZJ7c1kHd
+         YENiuLPo/5S7l4XZHoV41xoBvwt1GWydMMyRKtXGfyP/VRnaRhTpXmApyAKrpHv4s8or
+         gR3DL09ZlgzJY+b3Lq91bPKMXlnMIkNhQOhe2DaMYvwc9qsPV6xbsCPyj6xBYrDrLIv4
+         kSQg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=precedence:content-transfer-encoding:mime-version:subject
+         :message-id:to:from:date:dkim-signature:dkim-filter;
+        bh=yt10AqQrD+Fxv6qLimhwmdH5mmeIZzpzba3XB2fc8Bw=;
+        fh=Lvpg8AvcahSwC4qrKCLDLAsJm3ez1eow9vwg5drRyRo=;
+        b=YeA1KatDJHbBicjdIHHo1shyBmP9Bc4smYzMPewIBtlk73C0HE1EWQj1MwqQc0tVz6
+         giKa7RO7Z5u4+eliQJT00UDNySSirIfjz3JCvjJf4Z7UeiL7yoZYYy9GbhYjMFvARhrN
+         e22ae2RQ0OZYmfdD8UztHFeNzrDALgSlzRYMXEdAQ9ml9geB0TgheM61S+oX+NasZy0X
+         2dNXN05LTB9PjDDUfsLRd58gQWcV2kgj5wQnZ/Jo5MI2jdcIAGTskEpH0a3ugKO81Pcl
+         ngNZX5K0ADOrrI5ZDtHsDGjUG7EgM/lgaOiON0NCaveZhCxiQwIlUfscdINjks5Z448y
+         ZhNg==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@dentsusoken.com header.s=hm20240116 header.b=FgpS0P4q;
+       spf=pass (google.com: domain of i-helper-admin@saiyo.jp designates 202.222.81.104 as permitted sender) smtp.mailfrom=i-helper-admin@saiyo.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=dentsusoken.com
+Return-Path: <i-helper-admin@saiyo.jp>
+Received: from smtp12.humanage.co.jp (smtp12.humanage.co.jp. [202.222.81.104])
+        by mx.google.com with ESMTPS id 41be03b00d2f7-c7473c8ff20si16179427a12.410.2026.03.23.23.53.49
+        for <raysya.biz@gmail.com>
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384 bits=256/256);
+        Mon, 23 Mar 2026 23:53:49 -0700 (PDT)
+Received-SPF: pass (google.com: domain of i-helper-admin@saiyo.jp designates 202.222.81.104 as permitted sender) client-ip=202.222.81.104;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@dentsusoken.com header.s=hm20240116 header.b=FgpS0P4q;
+       spf=pass (google.com: domain of i-helper-admin@saiyo.jp designates 202.222.81.104 as permitted sender) smtp.mailfrom=i-helper-admin@saiyo.jp;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=dentsusoken.com
+Received: from vMLbat1002 (_gateway [10.13.39.254])
+	by smtp12.humanage.co.jp (Postfix) with ESMTP id 20663106F094
+	for <raysya.biz@gmail.com>; Tue, 24 Mar 2026 15:53:48 +0900 (JST)
+DKIM-Filter: OpenDKIM Filter v2.11.0 smtp12.humanage.co.jp 20663106F094
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=dentsusoken.com;
+	s=hm20240116; t=1774335228;
+	bh=yt10AqQrD+Fxv6qLimhwmdH5mmeIZzpzba3XB2fc8Bw=;
+	h=Date:From:To:Subject:From;
+	b=FgpS0P4qWNZa8kUy6H0mgWRVGITybpCrReXKwXs59fRFHNqLRFjFZKK4q9JubK7VR
+	 +5ha2LenarKoBbf9ahIwMlBiNOecS0DR4dB7Sw6MDHLbRGzNNYAJdRnM0HUOTPP/lg
+	 sELlLG9VeSKhUpFoA2vP9tcKrq8GbwxDuNPje3ifVieDBULmDJoZcS52DLy016jP7u
+	 XWBPF/Ch2eQ/mYYsIu7tcH2t+a1tPYimmcSsCgN+1Eflc5BiYwATHEnDI8yZjcRexP
+	 9/itZqcB6SJoOkGurNr8FJcDx/TE+cO1oSYIgrNM7JhpTcP6+td4v0t3Ep7FxV5efF
+	 qupE6EkvlFCSQ==
+Date: Tue, 24 Mar 2026 15:53:48 +0900 (JST)
+From: =?UTF-8?B?6Zu76YCa57eP56CU?= <public-fresh@dentsusoken.com>
+To: raysya.biz@gmail.com
+Message-ID: <235260435.11252489.1774335228125@vMLbat1002>
+Subject: =?UTF-8?B?4piF44Oq44Oe44Kk44Oz44OJ4piF44CQ6Zu76YCa?=
+ =?UTF-8?B?57eP56CU44CRMjfljZLlkJHjgZEg44OV?=
+ =?UTF-8?B?44Kn44O844K6M+mBuOiAg+OCqOODs+ODiOODqg==?=
+ =?UTF-8?B?44O844KS6ZaL5aeL44GX44Gm44GE44G+44GZ77yB?=
+MIME-Version: 1.0
+Content-Type: text/plain;charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Precedence: bulk
+
+=EF=BC=B3=EF=BC=A8=EF=BC=A5=E3=80=80=EF=BC=AC=EF=BC=A9=EF=BC=AE=EF=BC=A7=EF=
+=BC=BA=EF=BC=A8=EF=BC=A1=EF=BC=AF=E3=81=95=E3=82=93
+
+=E3=81=93=E3=82=93=E3=81=AB=E3=81=A1=E3=81=AF=E3=80=82
+=E9=9B=BB=E9=80=9A=E7=B7=8F=E7=A0=94=E3=80=80=E6=96=B0=E5=8D=92=E6=8E=A1=E7=
+=94=A8=E6=8B=85=E5=BD=93=E3=81=A7=E3=81=99=E3=80=82
+
+=E3=83=9E=E3=82=A4=E3=83=9A=E3=83=BC=E3=82=B8=E3=81=AB=E3=80=8C2027=E5=B9=
+=B44=E6=9C=88=E5=85=A5=E7=A4=BE=E5=B8=8C=E6=9C=9B=E8=80=85=E5=AF=BE=E8=B1=
+=A1 =E3=83=95=E3=82=A7=E3=83=BC=E3=82=BA3 =E6=8E=A1=E7=94=A8=E9=81=B8=E8=80=
+=83=E3=80=8D=E3=81=AE=E3=81=94=E6=A1=88=E5=86=85=E3=82=92=E6=8E=B2=E8=BC=89=
+=E3=81=97=E3=81=A6=E3=81=8A=E3=82=8A=E3=81=BE=E3=81=99=E3=80=82
+=E5=8A=A0=E3=81=88=E3=81=A6=E3=80=81=E5=BD=93=E3=82=A8=E3=83=B3=E3=83=88=E3=
+=83=AA=E3=83=BC=E3=81=AE=E7=B7=A0=E3=82=81=E5=88=87=E3=82=8A =E3=80=904/2=
+=EF=BC=88=E6=9C=A8=EF=BC=8912:00=E3=80=91 =E3=81=8C=E8=BF=91=E3=81=A5=E3=81=
+=84=E3=81=A6=E3=81=84=E3=82=8B=E3=81=9F=E3=82=81=E3=80=81
+=E8=88=88=E5=91=B3=E3=81=AE=E3=81=82=E3=82=8B=E6=96=B9=E3=81=AF=E3=80=81=E3=
+=83=9E=E3=82=A4=E3=83=9A=E3=83=BC=E3=82=B8=E3=81=B8=E3=83=AD=E3=82=B0=E3=82=
+=A4=E3=83=B3=E3=81=AE=E4=B8=8A=E3=80=81=E3=83=A1=E3=83=83=E3=82=BB=E3=83=BC=
+=E3=82=B8=E3=82=92=E3=81=94=E7=A2=BA=E8=AA=8D=E3=81=84=E3=81=9F=E3=81=A0=E3=
+=81=8D=E3=80=81
+=E6=97=A9=E3=82=81=E3=81=AE=E3=82=A8=E3=83=B3=E3=83=88=E3=83=AA=E3=83=BC=E3=
+=82=92=E3=81=8A=E3=81=99=E3=81=99=E3=82=81=E3=81=84=E3=81=9F=E3=81=97=E3=81=
+=BE=E3=81=99=E3=80=82
+
+=E3=81=BE=E3=81=9F=E3=80=81=E6=9C=9F=E6=97=A5=E7=9B=B4=E5=89=8D=E3=81=AB=E3=
+=81=AA=E3=82=8A=E3=81=BE=E3=81=99=E3=81=A8 SPI=E3=81=AE=E5=8F=97=E9=A8=93=
+=E7=94=B3=E8=BE=BC=E3=81=8C=E9=96=93=E3=81=AB=E5=90=88=E3=82=8F=E3=81=AA=E3=
+=81=84=E5=8F=AF=E8=83=BD=E6=80=A7 =E3=81=8C=E3=81=82=E3=82=8A=E3=81=BE=E3=
+=81=99=E3=80=82
+=E3=81=9D=E3=81=AE=E3=81=9F=E3=82=81=E3=80=81=E3=82=A8=E3=83=B3=E3=83=88=E3=
+=83=AA=E3=83=BC=E3=82=B7=E3=83=BC=E3=83=88=E6=8F=90=E5=87=BA=E3=81=8A=E3=82=
+=88=E3=81=B3 SPI=E4=BA=88=E7=B4=84=E3=81=AF=E3=80=81=E4=BD=99=E8=A3=95=E3=
+=82=92=E6=8C=81=E3=81=A3=E3=81=A6=E9=80=B2=E3=82=81=E3=81=A6=E3=81=84=E3=81=
+=9F=E3=81=A0=E3=81=91=E3=82=8C=E3=81=B0=E5=B9=B8=E3=81=84=E3=81=A7=E3=81=99=
+=E3=80=82
+
+=E3=83=9E=E3=82=A4=E3=83=9A=E3=83=BC=E3=82=B8URL=EF=BC=9A https://mypage.30=
+10.i-webs.jp/ds2027/
+=EF=BC=B3=EF=BC=A8=EF=BC=A5 =E3=81=95=E3=82=93=E3=81=AEID=EF=BC=9A ds605730
+
+=E4=BB=A5=E4=B8=8A=E3=80=81=E3=81=94=E5=BF=9C=E5=8B=9F=E3=82=92=E3=81=8A=E5=
+=BE=85=E3=81=A1=E3=81=97=E3=81=A6=E3=81=8A=E3=82=8A=E3=81=BE=E3=81=99=EF=BC=
+=81
+
+=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81
+=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE=E9=9B=BB=E9=80=9A=E7=B7=8F=E7=A0=94=E3=
+=80=80=E6=96=B0=E5=8D=92=E6=8E=A1=E7=94=A8=E6=8B=85=E5=BD=93
+=E2=80=BB2024=E5=B9=B41=E6=9C=881=E6=97=A5=E3=82=88=E3=82=8A=E6=A0=AA=E5=BC=
+=8F=E4=BC=9A=E7=A4=BE=E9=9B=BB=E9=80=9A=E7=B7=8F=E7=A0=94=E3=81=AB=E5=95=86=
+=E5=8F=B7=E5=A4=89=E6=9B=B4=E3=81=97=E3=81=BE=E3=81=97=E3=81=9F
+
+ADDRESS=E3=80=80=E3=80=92108-0075 =E6=9D=B1=E4=BA=AC=E9=83=BD=E6=B8=AF=E5=
+=8C=BA=E6=B8=AF=E5=8D=972-17-1
+URL https://www.dentsusoken.com/saiyo/
+MAIL public-fresh@dentsusoken.com
+=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=
+=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=
+=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81=E2=94=81

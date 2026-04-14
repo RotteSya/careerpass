@@ -1,0 +1,96 @@
+X-Mozilla-Status: 0001
+X-Mozilla-Status2: 00000000
+Delivered-To: raysya.biz@gmail.com
+Received: by 2002:a05:6520:409b:b0:32d:d2ea:2208 with SMTP id i27csp2203084lkg;
+        Tue, 10 Mar 2026 18:34:30 -0700 (PDT)
+X-Received: by 2002:a17:902:ea12:b0:2ae:6457:3099 with SMTP id d9443c01a7336-2aeae8919d3mr7910885ad.26.1773192869911;
+        Tue, 10 Mar 2026 18:34:29 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1773192869; cv=none;
+        d=google.com; s=arc-20240605;
+        b=A5gocnk5A4vX/1A7agOnkLo4etqcjdywkW0i8JREA6Sgc4KrYgi1l+KEIOoribZ3vi
+         FK8Hq6kr3IXTj6tw55syrUh6d9MEUAzZIzQa0ZRGdFhc6Vkn93qdHuzXPXPmcj+4Hz//
+         AnmMjd25Trq2FbxbhDuog86TVWpWcPj3eeLmw80MYfDZwMC8pUn/FHeDPIc+erOLGTX+
+         PHVQU95yMFLfeQMag+rJ2EJn1NYqEIY346Bkr7oEKOoIV0Au0GOZtwjjGmi40oR1TCzB
+         sV6Jz/yhzx3OnSG/eGJU/ov1ZeoCYoMaahhWr44f1FqGAMAnsfmZSXyy+gug3bTlX4TB
+         EBPA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=content-transfer-encoding:subject:date:to:from:mime-version
+         :message-id:dkim-signature;
+        bh=1aEXB9oAszajsLlCjaeOebwLgNjAqPe2Rklu95tKmz8=;
+        fh=up0snWP8xFpbeO5hv7qnvj+9Zw/nsd0djSzi34sli8A=;
+        b=iG4c9bTKoQJVmLXI/jE7MIlP6hJXKQyPO9iYsAk8duD6rlUMOGdiH2zxgenKoP75Qa
+         Agk+IKnP3yGeYck60V9zJx0p5bunlB6iZsNA7XHpQSSs5XTpC/1o4sLeLLRGs44LoTNT
+         zAwxbPXq9Zf3h50+QQit5RhZYCc8GQIViKH6Qx8VUTAVzup5cuzufvfmQMd6nA0S0U9y
+         0jbP2RqgbFBRG0tLanwOv5ZvS13zPWQsID2HYfqcHAkzrSt3bPx+NHHR8scJzddgfGSJ
+         6joUYbIoMopPUIF7pm+pE68aivxMrEtH3PGX/KC21HTl3M3DoSbYTeigqTyK9vg7fEVf
+         +CIQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@snar.jp header.s=s1693802379223 header.b=y8fPtO+L;
+       spf=pass (google.com: domain of thankslab@snar.jp designates 153.125.134.137 as permitted sender) smtp.mailfrom=thankslab@snar.jp;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=snar.jp
+Return-Path: <thankslab@snar.jp>
+Received: from mta061.snar.smtps.jp (mta061.snar.smtps.jp. [153.125.134.137])
+        by mx.google.com with ESMTPS id d9443c01a7336-2aeae339981si12430645ad.108.2026.03.10.18.34.29
+        for <raysya.biz@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Tue, 10 Mar 2026 18:34:29 -0700 (PDT)
+Received-SPF: pass (google.com: domain of thankslab@snar.jp designates 153.125.134.137 as permitted sender) client-ip=153.125.134.137;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@snar.jp header.s=s1693802379223 header.b=y8fPtO+L;
+       spf=pass (google.com: domain of thankslab@snar.jp designates 153.125.134.137 as permitted sender) smtp.mailfrom=thankslab@snar.jp;
+       dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=snar.jp
+X-Persimmon: [%%^KrdO/c/7m6zZhqI8hqT/Ig==$%%]
+   [%%^XZZNZChRDkyXZMFM2BVzDg==$%%]
+   [%%^GyMCnbD7Gu+bvLCkgWbN4QVuc9hsMOHWZ8Z4W/4I/lTvWwe5bE1zPEJMeZO1pYQOfXHj0d9DkprwBUUprdXA3ALnNd7qe+ntCuXd3zh2QBY=$%%]
+   [%%^LzfiA1B0G3Hf9QaKS+g+bg==$%%]
+   [%%^6yWExNZb2oLDgur+bki3SnlSC72XTcUHJYTkmnKp8zAewAnFFCZ3/0+1TO3yWfcl$%%]
+   [%%^qh+7WYuCNNIsJPGhs4FBuA==$%%]
+   [%%^77jlwevHuG0Klz5h9IF4kkFZ+e8zZkkn/5ZjlITSyAs=$%%]
+   [%%^bNBrdFP4I9riIHVVPDXh6NsGVA7kidUQb0amFY6a3Ac=$%%]
+   [%%^yJPNeOZ18HY0FNgN1b5AMQ==$%%]
+DKIM-Signature: v=1; a=rsa-sha256;c=relaxed/relaxed;
+   d=snar.jp; s=s1693802379223; t=1773192867;
+   h=message-id:mime-version:from:to:date:subject
+   :content-type:content-transfer-encoding;
+   bh=1aEXB9oAszajsLlCjaeOebwLgNjAqPe2Rklu95tKmz8=;
+   b=y8fPtO+LvhVBtUy2VpXXoCs/k+9EMcjuTMZFg6s9wwhLsQoH5ZAFJrhmRPebz0Fg
+   +T/l23bE5lTjv1iaTYtUzRllslzxNrWxZn9he79rJWuNqAhbDk8y6pzoiXihzo0v
+   uOKvCHhhfqxtpU39yQX4wxiKCdwm46gGHFrgY5gjJxY=
+Message-Id: <719e49c0-1cea-11f1-9168-9ca3ba3096ca@mta06.snar.smtps.jp>
+Received: from rd2818789d0b22 by mta06.snar.smtps.jp (without TLS);
+   Wed, 11 Mar 2026 10:34:27 +0900
+MIME-Version: 1.0
+From: =?utf-8?Q?=E3=82=B5=E3=83=B3=E3=82=AF=E3=82=B9=E3=83=A9=E3=83=9C?=
+ =?utf-8?Q?=E6=A0=AA=E5=BC=8F=E4=BC=9A=E7=A4=BE?= <thankslab@snar.jp>
+To: raysya.biz@gmail.com, raysyadesu@gmail.com
+Date: 11 Mar 2026 01:34:27 +0000
+Subject: =?utf-8?B?44CQ44K144Oz44Kv44K544Op44Oc5qCq5byP5Lya56S+44CR?=
+ =?utf-8?B?44GU5LqI57SE44GC44KK44GM44Go44GG44GU44GW44GE44G+44GZ?=
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: base64
+
+4oC744GT44Gh44KJ44Gu44Oh44O844Or44Gv6YCB5L+h5bCC55So44Gn44GZCgpTSEXm
+p5gKCuOCteODs+OCr+OCueODqeODnOagquW8j+S8muekviDmjqHnlKjmi4XlvZPjgafj
+gZnjgIIKCuOBk+OBruW6puOBr+OAgeS8muekvuiqrOaYjuS8muOBq+OBlOS6iOe0hOOC
+kuOBhOOBn+OBoOOBjeOAgeOBguOCiuOBjOOBqOOBhuOBlOOBluOBhOOBvuOBl+OBn+OA
+ggpTSEXjgZXjgpPjga7jgZTkuojntITjgpLlj5fjgZHku5jjgZHjgb7jgZfjgZ/jga7j
+gafjgIHjgYrnn6XjgonjgZvjgYTjgZ/jgZfjgb7jgZnjgIIKCuOBlOS6iOe0hOOBruWG
+heWuuQotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgrkvJrnpL7oqqzm
+mI7kvJoK6ZaL5YKs5pel5pmC77yaMjAyNi8wMy8xNiAxNjowMO+9ngrkvJrloLTvvJpo
+dHRwczovL3RlYW1zLm1pY3Jvc29mdC5jb20vbC9tZWV0dXAtam9pbi8xOSUzYW1lZXRp
+bmdfWmpjd01qVTRZakF0TXpReFppMDBOREl4TFdKallXSXRZMkV5TnprMlpEWTFaalUx
+JTQwdGhyZWFkLnYyLzA/Y29udGV4dD0lN2IlMjJUaWQlMjIlM2ElMjIzZDU0MGQ0Mi1i
+MGZkLTRhNTUtYjg0Zi1iNTFhNGE2ZGE1YTMlMjIlMmMlMjJPaWQlMjIlM2ElMjIxZDZh
+ZjFlZC0zYzI5LTRiMzgtYjk0NS00NTI0MDdjNWUxMWUlMjIlN2QKCgoKLS0tLS0tLS0t
+LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQoK44GU5LqI57SE44Gu5aSJ5pu044O744Kt
+44Oj44Oz44K744Or44Gv44CB5LiL6KiYVVJM44KI44KK44GK6aGY44GE44GE44Gf44GX
+44G+44GZ44CCCmh0dHBzOi8vdGhhbmtzbGFiLnNuYXIuanAvdjIvaW5kZXguYXNweD9w
+YXJhbT1uc0lxOVpUeVNrdzZSVUZHZWZNMVRZS3NhRkdqNlh5NHB4cF9CVlMxSXhUNVB0
+QURUZlhVS2RYREozY2R3WUhnMWdSaE1QMF9ibzIxcVNkSS1nUEU2ZwoK44Gd44KM44Gn
+44Gv44CB5b2T5pel44GK5Lya44GE44Gn44GN44KL44Gu44KS5qW944GX44G/44Gr44GX
+44Gm44GK44KK44G+44GZ44CCCj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09
+PT0KCuKAlOKAlOKAlOKAlOKAlOKAlOKAlOKAlOKAlOKAlOKAlOKAlOKAlOKAlOKAlOKA
+lOKAlOKAlOKAlOKAlOKAlArjgrXjg7Pjgq/jgrnjg6njg5zmoKrlvI/kvJrnpL7mjqHn
+lKjmi4XlvZM=
+
