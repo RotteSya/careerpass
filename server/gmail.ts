@@ -905,9 +905,6 @@ function jobStatusLabelZh(status: JobStatus): string {
   return status;
 }
 
-function normalizeCompanyName(name: string | null | undefined): string | null {
-  return resolveCanonicalCompanyName(name);
-}
 
 function nextStepsZh(status: JobStatus): string[] {
   if (status === "researching") return ["确认投递岗位与截止时间", "准备 ES 的两段核心素材（志望动机/自己PR）"];
@@ -1090,18 +1087,7 @@ function senderDomainScore(from: string): number {
   return 0.6;
 }
 
-function extractCompanyName(from: string, subject: string): string | null {
-  // Extract from email domain
-  const domainMatch = from.match(/@([^.>]+)\./);
-  if (domainMatch) {
-    const domain = domainMatch[1];
-    // Skip common email providers
-    if (!["gmail", "yahoo", "hotmail", "outlook", "icloud"].includes(domain)) {
-      return domain;
-    }
-  }
-  return null;
-}
+
 
 function extractDate(text: string): { date: string | null; time: string | null } {
   let date: string | null = null;
@@ -1352,7 +1338,7 @@ async function runCareerpassmailAgent(input: {
     confidence: fallback.confidence,
     reason: `fallback-pipeline:${fallback.reason}`,
     eventType: fallback.eventType,
-    companyName: fallback.companyName ?? extractCompanyName(input.from, input.subject),
+    companyName: fallback.companyName,
     eventDate: fallback.eventDate,
     eventTime: fallback.eventTime,
     location: fallback.location,
@@ -1703,10 +1689,7 @@ async function processGmailMessageIds(params: {
         : rawEventType;
       const date = decision.eventDate ?? null;
       const time = decision.eventTime ?? null;
-      const companyName =
-        normalizeCompanyName(decision.companyName) ??
-        normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
-        null;
+      const companyName = decision.companyName ?? null;
 
       let location = decision.location ?? null;
       if (eventType === "interview" && detail.threadId) {
