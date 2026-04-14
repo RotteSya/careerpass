@@ -469,6 +469,103 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.isJobRelated).toBe(false);
   });
 
+  it("blocks mynavi survey + incentive mails even if they include a deadline", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "【4月18日〆切】抽選で500名にAmazonギフトカード500円分が当たります！ ◆◇2027年卒大学生業界イメージ調査◇◆ご協力のお願い",
+      body:
+        "こんにちは。こちらはマイナビアンケート事務局です。\n" +
+        "業界イメージに関するアンケートの、ご協力のお願いです。\n" +
+        "回答者の中から抽選でAmazonギフトコードをプレゼントいたします！\n" +
+        "【回答〆切】4月18日（土）23：59\n" +
+        "配信の停止 https://job.mynavi.jp/27/pc/jump?key=xxx\n" +
+        "回答フォームはこちら https://questant.jp/q/HDK0QA4K",
+      from: "マイナビ2027 <job-s27@mynavi.jp>",
+      domainSignal: 0.7,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(false);
+    expect(d.eventType).toBe("other");
+  });
+
+  it("blocks mynavi pickup newsletters that look like ads even if they mention briefing/selection words", () => {
+    const d = runRecruitingNlpPipeline({
+      subject:
+        "初任給30万円×年休126日へ待遇UP■60分WEB説明会のご案内！人を笑顔にするなら、自分も楽しく！【マイナビメール2027ピックアップ 4/11】",
+      body:
+        "━━━マイナビメール2027[ピックアップ]━\n" +
+        "初めまして！ダイナム採用担当です。\n" +
+        "WEB説明会のご案内です。\n" +
+        "選考フロー 1次選考→2次選考→最終選考→内々定\n" +
+        "配信の停止 https://job.mynavi.jp/27/pc/jump?key=xxx",
+      from: "マイナビ2027 <job-s27@mynavi.jp>",
+      domainSignal: 0.7,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(false);
+    expect(d.eventType).toBe("other");
+  });
+
+  it("detects hrmos rejection mail correctly (オロ)", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "【オロ】選考結果のご連絡｜ＳＨＥ ＬＩＮＧＺＨＡＯ様",
+      body:
+        "株式会社オロ 人事採用チームです。\n" +
+        "この度は選考に参加いただき、誠にありがとうございました。\n" +
+        "その結果、残念ながらＳＨＥ様の採用をお見送りとさせていただくことになりました。",
+      from: "株式会社オロ 採用担当 <2245720181511430144.candidate@orocoltd.n-ats.hrmos.co>",
+      domainSignal: 0.9,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(true);
+    expect(d.eventType).toBe("rejection");
+    expect(d.companyName).toBe("株式会社オロ");
+  });
+
+  it("detects rejection for 希望に添いかねる result phrasing (メイテックフィルダーズ)", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "【メイテックフィルダーズ】【重要】一次選考結果のご連絡",
+      body:
+        "この度は一次面接へのご参加、ありがとうございました。\n" +
+        "慎重かつ厳正に検討させていただきました結果、今回は誠に残念ながらご希望に添いかねる結果となりました。",
+      from: "メイテックフィルダーズ新卒採用 <meitecgr-recruit@snar.jp>",
+      domainSignal: 0.8,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(true);
+    expect(d.eventType).toBe("rejection");
+    expect(d.companyName).toContain("メイテックフィルダーズ");
+  });
+
+  it("extracts interview datetime + company from hito-link web interview confirmation (テクバン)", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "<最終確認> 2次選考ご予約 ※事前に履歴書をご提出ください【テクバン株式会社 新卒採用担当】",
+      body:
+        "テクバン株式会社 新卒採用担当です。\n" +
+        "開催日時\n2026/03/26　11:00 ～ 12:00\n" +
+        "■選考内容\nWeb面接（30～60分）\n" +
+        "Teamsアプリのダウンロードを事前に行っていただく必要があります。",
+      from: "テクバン(株)新卒採用担当 <techvan-saiyo@hito-link.jp>",
+      domainSignal: 0.85,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.shouldSkipLlm).toBe(true);
+    expect(d.isJobRelated).toBe(true);
+    expect(d.eventType).toBe("interview");
+    expect(d.companyName).toContain("テクバン");
+    expect(d.eventDate).toBe("2026-03-26");
+    expect(d.eventTime).toBe("11:00");
+    expect(d.location).toContain("Web");
+  });
+
   it("keeps actionable mynavi process mail as job-related instead of noise", () => {
     const d = runRecruitingNlpPipeline({
       subject: "【サンプルホールディングス】エントリーシート提出の御礼",

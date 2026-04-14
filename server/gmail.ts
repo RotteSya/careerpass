@@ -278,6 +278,17 @@ type GmailPayloadPart = {
   parts?: GmailPayloadPart[];
 };
 
+function extractMeetingUrlFromText(text: string): string | null {
+  const m = text.match(
+    /(https?:\/\/(?:[a-zA-Z0-9-]+\.)?(?:zoom\.us|teams\.microsoft\.com|meet\.google\.com|webex\.com)\/[^\s　<>"]{10,200})/i
+  );
+  return m?.[1] ?? null;
+}
+
+export function __extractMeetingUrlFromTextForTests(text: string): string | null {
+  return extractMeetingUrlFromText(text);
+}
+
 function decodeGmailBase64Url(input: string): string {
   const normalized = input.replace(/-/g, "+").replace(/_/g, "/");
   const padLength = (4 - (normalized.length % 4)) % 4;
@@ -291,6 +302,87 @@ function collectTextPlainBodies(part: GmailPayloadPart | undefined, out: string[
     out.push(decodeGmailBase64Url(part.body.data));
   }
   for (const child of part.parts ?? []) collectTextPlainBodies(child, out);
+}
+
+function collectTextHtmlBodies(part: GmailPayloadPart | undefined, out: string[]): void {
+  if (!part) return;
+  if (part.mimeType?.toLowerCase() === "text/html" && part.body?.data) {
+    out.push(decodeGmailBase64Url(part.body.data));
+  }
+  for (const child of part.parts ?? []) collectTextHtmlBodies(child, out);
+}
+
+function decodeHtmlEntities(input: string): string {
+  const named = input
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'");
+  return named
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m, h: string) => {
+      const code = parseInt(h, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&#(\d+);/g, (_m, d: string) => {
+      const code = parseInt(d, 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    });
+}
+
+function htmlToText(html: string): string {
+  const stripped = html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|tr|td|th|h1|h2|h3|h4|h5|h6)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+  return decodeHtmlEntities(stripped)
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function cleanMailTextForAi(input: string): string {
+  const text = input.replace(/\r\n/g, "\n");
+  const lines = text.split("\n");
+  const out: string[] = [];
+  const stopPatterns = [
+    /^\s*-{2,}\s*original message\s*-{2,}\s*$/i,
+    /^\s*-{2,}\s*forwarded message\s*-{2,}\s*$/i,
+    /^\s*-{2,}\s*転送メッセージ\s*-{2,}\s*$/i,
+    /^\s*-{2,}\s*元のメッセージ\s*-{2,}\s*$/i,
+    /^\s*on .+ wrote:\s*$/i,
+  ];
+  const headerLike = [
+    /^(from|to|cc|bcc|subject|date)\s*:/i,
+    /^(差出人|送信者|宛先|件名|日時)\s*[:：]/,
+  ];
+  const dropLine = [
+    /^\s*>/,
+    /(配信停止|配信解除|unsubscribe|opt[\s-]?out)/i,
+    /(このメールは送信専用|送信専用アドレス|返信できません)/i,
+    /(privacy policy|プライバシー|個人情報|confidential)/i,
+    /(all rights reserved|copyright)/i,
+  ];
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i] ?? "";
+    const line = raw.trim();
+    if (!line) continue;
+    if (stopPatterns.some((re) => re.test(line))) break;
+    if (dropLine.some((re) => re.test(line))) continue;
+    if (headerLike.some((re) => re.test(line)) && i > 3) break;
+    out.push(line);
+    if (out.length >= 120) break;
+  }
+
+  const merged = out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return merged.slice(0, 8000);
 }
 
 function decodeGmailHeaderValue(value: string): string {
@@ -317,16 +409,26 @@ export function __extractGmailBodyFromPayloadForTests(payload: GmailPayloadPart,
   collectTextPlainBodies(payload, plainBodies);
   if (plainBodies.length > 0) {
     body = plainBodies.join("\n");
-  } else if (payload?.body?.data) {
-    body = decodeGmailBase64Url(payload.body.data);
+  } else {
+    const htmlBodies: string[] = [];
+    collectTextHtmlBodies(payload, htmlBodies);
+    if (htmlBodies.length > 0) {
+      body = htmlToText(htmlBodies.join("\n"));
+    } else if (payload?.body?.data) {
+      body = decodeGmailBase64Url(payload.body.data);
+    }
   }
   return body.slice(0, 8000);
+}
+
+export function __extractCleanMailTextFromGmailPayloadForTests(payload: GmailPayloadPart, snippet = ""): string {
+  return cleanMailTextForAi(__extractGmailBodyFromPayloadForTests(payload, snippet));
 }
 
 async function fetchEmailDetail(
   accessToken: string,
   messageId: string
-): Promise<{ subject: string; from: string; date: string; body: string } | null> {
+): Promise<{ subject: string; from: string; date: string; body: string; threadId: string | null } | null> {
   try {
     const res = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
@@ -337,6 +439,7 @@ async function fetchEmailDetail(
     const data = (await res.json()) as {
       payload?: GmailPayloadPart & { headers?: Array<{ name: string; value: string }> };
       snippet?: string;
+      threadId?: string;
     };
 
     const headers = data.payload?.headers ?? [];
@@ -348,12 +451,217 @@ async function fetchEmailDetail(
     const date = decodeGmailHeaderValue(dateRaw);
 
     // Extract body text
-    const body = data.payload ? __extractGmailBodyFromPayloadForTests(data.payload, data.snippet ?? "") : (data.snippet ?? "");
+    const body = data.payload
+      ? __extractCleanMailTextFromGmailPayloadForTests(data.payload, data.snippet ?? "")
+      : cleanMailTextForAi(data.snippet ?? "");
 
-    return { subject, from, date, body };
+    return { subject, from, date, body, threadId: data.threadId ?? null };
   } catch {
     return null;
   }
+}
+
+async function fetchThreadMeetingUrl(accessToken: string, threadId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      messages?: Array<{ payload?: GmailPayloadPart; snippet?: string }>;
+    };
+    for (const msg of data.messages ?? []) {
+      const body = msg.payload
+        ? __extractCleanMailTextFromGmailPayloadForTests(msg.payload, msg.snippet ?? "")
+        : cleanMailTextForAi(msg.snippet ?? "");
+      const url = extractMeetingUrlFromText(body);
+      if (url) return url;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function buildMeetingUrlSearchQuery(params: {
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+}): string {
+  const parts: string[] = [];
+  parts.push("-category:social -category:promotions");
+  parts.push("(teams.microsoft.com OR meet.google.com OR zoom.us OR webex.com)");
+  if (params.fromDomain) parts.push(`from:${params.fromDomain}`);
+  if (params.companyName) parts.push(`(${params.companyName})`);
+  if (params.eventDate) {
+    const ymd = params.eventDate;
+    const ymdSlash = ymd.replace(/-/g, "/");
+    const md = ymd.slice(5).replace("-", "/");
+    parts.push(`(${ymd} OR ${ymdSlash} OR ${md})`);
+  }
+  parts.push("newer_than:180d");
+  return parts.join(" ");
+}
+
+export function __buildMeetingUrlSearchQueryForTests(params: {
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+}): string {
+  return buildMeetingUrlSearchQuery(params);
+}
+
+function formatYmdSlash(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}/${m}/${day}`;
+}
+
+function extractKeywordHintsFromHeaders(input: { subject: string; from: string }): string[] {
+  const out: string[] = [];
+  for (const m of input.subject.matchAll(/【([^】]{2,32})】/g)) {
+    const v = (m[1] ?? "").trim();
+    if (v) out.push(v);
+  }
+  const displayName = input.from.split("<")[0]?.trim() ?? "";
+  const cleaned = displayName
+    .replace(/新卒採用|中途採用|採用担当|採用チーム|人事|人事部|人事課|担当|事務局/gi, "")
+    .replace(/[()（）<>\[\]【】]/g, " ")
+    .trim();
+  if (cleaned && cleaned.length >= 2) out.push(cleaned);
+  return Array.from(new Set(out)).slice(0, 3);
+}
+
+function buildMeetingUrlSearchQueries(params: {
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+  mailDate: string | null;
+  subject: string;
+  from: string;
+}): string[] {
+  const queries: string[] = [];
+  const baseDomains = "(teams.microsoft.com OR meet.google.com OR zoom.us OR webex.com)";
+
+  // 1) Strict: use eventDate + companyName if present
+  queries.push(
+    buildMeetingUrlSearchQuery({
+      fromDomain: params.fromDomain,
+      companyName: params.companyName,
+      eventDate: params.eventDate,
+    })
+  );
+
+  // 2) Fallback: if eventDate missing, use a window around mail Date header
+  let afterBefore: string | null = null;
+  const mailTs = params.mailDate ? Date.parse(params.mailDate) : NaN;
+  if (Number.isFinite(mailTs)) {
+    const center = new Date(mailTs);
+    const after = new Date(center);
+    after.setDate(after.getDate() - 120);
+    const before = new Date(center);
+    before.setDate(before.getDate() + 120);
+    afterBefore = `after:${formatYmdSlash(after)} before:${formatYmdSlash(before)}`;
+  }
+
+  const hints = extractKeywordHintsFromHeaders({ subject: params.subject, from: params.from });
+  const hintQuery = hints.length > 0 ? `(${hints.map((h) => `"${h}"`).join(" OR ")})` : null;
+
+  const relaxedParts: string[] = [];
+  relaxedParts.push("-category:social -category:promotions");
+  relaxedParts.push(baseDomains);
+  if (params.fromDomain) relaxedParts.push(`from:${params.fromDomain}`);
+  if (hintQuery) relaxedParts.push(hintQuery);
+  if (afterBefore) relaxedParts.push(afterBefore);
+  relaxedParts.push("newer_than:365d");
+  queries.push(relaxedParts.join(" "));
+
+  // 3) Final fallback: if fromDomain is missing, still try with hints + date window
+  if (!params.fromDomain) {
+    const last: string[] = [];
+    last.push("-category:social -category:promotions");
+    last.push(baseDomains);
+    if (hintQuery) last.push(hintQuery);
+    if (afterBefore) last.push(afterBefore);
+    last.push("newer_than:60d");
+    queries.push(last.join(" "));
+  }
+
+  return Array.from(new Set(queries));
+}
+
+export function __buildMeetingUrlSearchQueriesForTests(params: {
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+  mailDate: string | null;
+  subject: string;
+  from: string;
+}): string[] {
+  return buildMeetingUrlSearchQueries(params);
+}
+
+async function searchGmailMessageIds(params: {
+  accessToken: string;
+  q: string;
+  maxResults: number;
+}): Promise<string[]> {
+  const { accessToken, q, maxResults } = params;
+  try {
+    const ids: string[] = [];
+    let pageToken: string | undefined;
+    while (ids.length < maxResults) {
+      const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+      url.searchParams.set("maxResults", String(Math.min(50, maxResults - ids.length)));
+      url.searchParams.set("q", q);
+      if (pageToken) url.searchParams.set("pageToken", pageToken);
+      const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
+      if (!res.ok) return ids;
+      const data = (await res.json()) as { messages?: Array<{ id: string }>; nextPageToken?: string };
+      for (const m of data.messages ?? []) {
+        if (m.id) ids.push(m.id);
+        if (ids.length >= maxResults) break;
+      }
+      if (!data.nextPageToken) break;
+      pageToken = data.nextPageToken;
+    }
+    return ids;
+  } catch {
+    return [];
+  }
+}
+
+async function fetchMeetingUrlBySearch(params: {
+  accessToken: string;
+  fromDomain: string | null;
+  companyName: string | null;
+  eventDate: string | null;
+  mailDate: string | null;
+  subject: string;
+  from: string;
+  excludeMessageId: string;
+}): Promise<string | null> {
+  const queries = buildMeetingUrlSearchQueries({
+    fromDomain: params.fromDomain,
+    companyName: params.companyName,
+    eventDate: params.eventDate,
+    mailDate: params.mailDate,
+    subject: params.subject,
+    from: params.from,
+  });
+
+  for (const q of queries) {
+    const ids = await searchGmailMessageIds({ accessToken: params.accessToken, q, maxResults: 12 });
+    for (const id of ids) {
+      if (!id || id === params.excludeMessageId) continue;
+      const detail = await fetchEmailDetail(params.accessToken, id);
+      if (!detail) continue;
+      const url = extractMeetingUrlFromText(detail.body);
+      if (url) return url;
+    }
+  }
+  return null;
 }
 
 async function fetchGmailProfileHistoryId(accessToken: string): Promise<string | null> {
@@ -538,9 +846,43 @@ function inferInterviewStatusFromText(text: string): JobStatus | null {
   if (/三次面[接談]|3次面[接談]|３次面[接談]|third\s*interview|3rd\s*interview/.test(t)) return "interview_3";
   if (/二次面[接談]|2次面[接談]|２次面[接談]|second\s*interview|2nd\s*interview/.test(t)) return "interview_2";
   if (/一次面[接談]|1次面[接談]|１次面[接談]|first\s*interview|1st\s*interview/.test(t)) return "interview_1";
+  if (
+    /(最終選考|final\s*selection)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_final";
+  }
+  if (
+    /(四次選考|4次選考|４次選考)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_4";
+  }
+  if (
+    /(三次選考|3次選考|３次選考)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_3";
+  }
+  if (
+    /(二次選考|2次選考|２次選考)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_2";
+  }
+  if (
+    /(一次選考|1次選考|１次選考)/.test(t) &&
+    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
+  ) {
+    return "interview_1";
+  }
   // Standalone round markers only when adjacent to 面接/選考 context
   if (/最終/.test(t) && /面[接談]|選考/.test(t)) return "interview_final";
   return null;
+}
+
+export function __inferInterviewStatusFromTextForTests(text: string): JobStatus | null {
+  return inferInterviewStatusFromText(text);
 }
 
 function jobStatusLabelZh(status: JobStatus): string {
@@ -851,11 +1193,11 @@ async function runCareerpassmailAgent(input: {
 
 | eventType | 含义 | 典型特征 |
 |-----------|------|----------|
-| interview | 面接/面談の案内 | 有日時/場所/Zoom URL、要求准备 |
+| interview | 面接/面談の案内 | 有日時/場所/Zoom URL、要求准备（含カジュアル面談、書類選考通過） |
 | briefing | 説明会/セミナー | 企業情報提供、无选考性质 |
-| test | Webテスト/SPI/筆記 | 含测试 URL/期限 |
+| test | Webテスト/SPI/筆記 | 含测试 URL/期限（コーディングテスト等） |
 | deadline | ES/書類提出締切 | 含明确截止日期 |
-| entry | エントリー/応募受付 | 确认报名成功 |
+| entry | エントリー/応募受付 | 确认报名成功、書類選考のご案内 |
 | offer | 内定/採用通知 | 正面结果 |
 | rejection | 不採用/お見送り | 负面结果、含"お祈り" |
 | other | 不属于上述 / 不确定 | 给低 confidence |
@@ -1221,6 +1563,8 @@ async function processGmailMessageIds(params: {
   const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
   const detectedEvents: EmailEvent[] = [];
   const isFirstForCompanyInBatch = createCompanyBatchDeduper();
+  const threadMeetingUrlCache = new Map<string, string | null>();
+  const searchMeetingUrlCache = new Map<string, string | null>();
   let calendarCount = 0;
 
   const notifyCutoffMs =
@@ -1230,7 +1574,7 @@ async function processGmailMessageIds(params: {
 
   const fetched: Array<{
     messageId: string;
-    detail: { subject: string; from: string; date: string; body: string };
+    detail: { subject: string; from: string; date: string; body: string; threadId: string | null };
     mailTs: number;
   }> = [];
   const fetchedResults = await mapWithConcurrency(messageIds, 12, async (messageId) => {
@@ -1333,6 +1677,48 @@ async function processGmailMessageIds(params: {
         normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
         null;
 
+      let location = decision.location ?? null;
+      if (eventType === "interview" && detail.threadId) {
+        const hasUrlInLocation = typeof location === "string" && /https?:\/\//i.test(location);
+        const hasUrlInBody = /https?:\/\//i.test(mailText);
+        const needsUrlHint = /(teams|zoom|webex|google\s*meet|会議に参加|参加ください|url|リンク)/i.test(mailText);
+        if (!hasUrlInLocation && !hasUrlInBody && needsUrlHint) {
+          const cached = threadMeetingUrlCache.get(detail.threadId);
+          const url =
+            cached !== undefined
+              ? cached
+              : await fetchThreadMeetingUrl(accessToken, detail.threadId).then((u) => {
+                  threadMeetingUrlCache.set(detail.threadId as string, u);
+                  return u;
+                });
+          let finalUrl = url ?? null;
+          if (!finalUrl) {
+            const senderDomain = getSenderDomain(detail.from);
+            const cacheKey = `${senderDomain ?? "unknown"}|${companyName ?? "unknown"}|${date ?? ""}|${detail.date ?? ""}`;
+            const cachedSearch = searchMeetingUrlCache.get(cacheKey);
+            finalUrl =
+              cachedSearch !== undefined
+                ? cachedSearch
+                : await fetchMeetingUrlBySearch({
+                    accessToken,
+                    fromDomain: senderDomain,
+                    companyName,
+                    eventDate: date,
+                    mailDate: detail.date ?? null,
+                    subject: detail.subject,
+                    from: detail.from,
+                    excludeMessageId: messageId,
+                  }).then((u) => {
+                    searchMeetingUrlCache.set(cacheKey, u);
+                    return u;
+                  });
+          }
+          if (finalUrl) {
+            location = location ? `${location} ${finalUrl}` : finalUrl;
+          }
+        }
+      }
+
       if (!decision.isJobRelated || !companyName) {
         console.info("[Gmail] analyze-drop", {
           userId,
@@ -1356,7 +1742,7 @@ async function processGmailMessageIds(params: {
         companyName,
         eventDate: date,
         eventTime: time,
-        location: decision.location ?? null,
+        location,
         todoItems: decision.todoItems ?? [],
         mailLink: `https://mail.google.com/mail/u/0/#inbox/${messageId}`,
       };
@@ -1418,7 +1804,7 @@ async function processGmailMessageIds(params: {
             eventType,
             eventDate: date,
             eventTime: time,
-            location: decision.location ?? null,
+            location,
             mailSubject: detail.subject,
             source: "gmail",
           });
