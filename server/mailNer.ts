@@ -45,42 +45,67 @@ const FREE_MAIL_DOMAINS_NER = new Set([
 const NON_COMPANY_PATTERNS =
   /(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster)/i;
 
-const HR_SUFFIXES =
-  /(採用担当|採用チーム|人事部|人事課|リクルート|Recruiting|recruit|HR|人材|キャリア|新卒採用|中途採用|採用事務局|運営事務局|事務局|マイページ|team|Team|採用)$/i;
+const HR_SUFFIXES = /(採用担当|採用チーム|人事部|人事課|リクルート|Recruiting|recruit|HR|人材|キャリア|新卒採用|中途採用|採用事務局|運営事務局|事務局|マイページ|team|Team|採用|新卒)$/i;
 
 const PLATFORM_NAME_HINTS =
   /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind|rikunabi|リクナビ|マイナビ|mynavi|ビズリーチ|bizreach|doda|wantedly|green|キャリタス|iroots|マスナビ|あさがくナビ)/i;
 
 const LEGAL_ENTITY_PREFIX = /(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)/;
 
-function extractOrgCandidates(subject: string, from: string, body: string, fromDomainTier?: DomainTier): OrgCandidate[] {
+export function extractOrgCandidates(subject: string, from: string, body: string, fromDomainTier?: DomainTier): OrgCandidate[] {
   const candidates: OrgCandidate[] = [];
   const displayName = from.split("<")[0]?.trim() ?? "";
 
+  const addCandidate = (raw: string, source: string, conf: number) => {
+    let c = raw.replace(/株式会社|合同会社|有限会社|一般社団法人|一般財団法人|（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
+    c = c.replace(/\)$/, "").trim(); // fix trailing parenthesis
+    // Also remove trailing names if possible (often after a space)
+    c = c.replace(/\s+[^\s]+$/, "").trim();
+    if (c.length >= 2 && !NON_COMPANY_PATTERNS.test(c) && !PLATFORM_NAME_HINTS.test(c) && !/^(新卒|中途|採用|人事)$/.test(c) && !/^(株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s*(新卒|中途|採用|人事)?$/.test(c)) {
+      candidates.push({ name: c, source, confidence: conf });
+    }
+  };
+
+  // Strategy 1: Explicit match in sender name
+  if (fromDomainTier !== "recruiting_platform" && fromDomainTier !== "noise_platform") {
+    const senderExplicit = displayName.match(new RegExp(`(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n]+)`));
+    if (senderExplicit?.[1]) {
+      addCandidate(senderExplicit[1], "sender_explicit", 0.95);
+    }
+  }
+
   // Strategy 1: Legal entity in subject (highest confidence)
   const reSubjectLegal = new RegExp(
-    `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」]{1,40})`, "g"
+    `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n]+)`, "g"
   );
   for (const m of Array.from(subject.matchAll(reSubjectLegal))) {
-    candidates.push({ name: m[1], source: "legal_subject", confidence: 0.95 });
+    addCandidate(m[1], "legal_subject", 0.95);
   }
 
   // Strategy 2: Inverted legal entity in subject (サンプル株式会社)
   const reInvertedSubject = new RegExp(
-    `([^\\s【】\\[\\]<>「」]{2,20})\\s*(?:${LEGAL_ENTITY_PREFIX.source})`, "g"
+    `([^\\s【】\\[\\]<>「」/／\\n]+)\\s*(?:${LEGAL_ENTITY_PREFIX.source})`, "g"
   );
   for (const m of Array.from(subject.matchAll(reInvertedSubject))) {
-    candidates.push({ name: m[0], source: "legal_subject_inv", confidence: 0.94 });
+    // If it's something like "FIDIA SOLUTIONS株式会社 分銅", the match might be "FIDIA SOLUTIONS株式会社"
+    // Let's capture the whole thing including prefix if possible
+    const fullMatch = m[0];
+    const prefixMatch = subject.substring(0, m.index).match(/([a-zA-Z0-9\s]+)$/);
+    if (prefixMatch) {
+       addCandidate(prefixMatch[1] + fullMatch, "legal_subject_inv", 0.94);
+    } else {
+       addCandidate(fullMatch, "legal_subject_inv", 0.94);
+    }
   }
 
   // Strategy 3: Legal entity in sender display name
   const combinedFromSubject = `${displayName}\n${subject}`;
   const reFromLegal = new RegExp(
-    `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\n【】\\[\\]<>「」]{1,40})`
+    `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\n【】\\[\\]<>「」/／\\n]+)`
   );
   const fromLegal = combinedFromSubject.match(reFromLegal);
   if (fromLegal?.[1] && !subject.includes(fromLegal[1])) {
-    candidates.push({ name: fromLegal[1], source: "legal_from", confidence: 0.93 });
+    addCandidate(fromLegal[1], "legal_from", 0.93);
   }
 
   // Strategy 4: Display name with HR suffix → strip suffix to get company
@@ -95,6 +120,20 @@ function extractOrgCandidates(subject: string, from: string, body: string, fromD
     if (msgMatch?.[1] && msgMatch[1].length <= 40) {
       const cleanMsg = msgMatch[1].replace(/株式会社|（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
       if (cleanMsg) candidates.push({ name: cleanMsg, source: "platform_subject", confidence: 0.85 });
+    }
+  }
+
+  // Strategy 4.6: "XXX / YYY" pattern in subject
+  const splitMatch = subject.split(/[\/／]/);
+  if (splitMatch.length > 1) {
+    const lastPart = splitMatch[splitMatch.length - 1].trim();
+    if (lastPart.length >= 2 && lastPart.length <= 30 && !NON_COMPANY_PATTERNS.test(lastPart)) {
+      // Avoid cases where the last part is a person's name or generic text
+      if (!/様$/.test(lastPart) && !PLATFORM_NAME_HINTS.test(lastPart)) {
+        const cleanSplit = lastPart.replace(/株式会社|（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
+        // Slightly lower confidence as it could be just a department or generic text
+        if (cleanSplit) candidates.push({ name: cleanSplit, source: "subject_split", confidence: 0.65 });
+      }
     }
   }
 
@@ -113,6 +152,15 @@ function extractOrgCandidates(subject: string, from: string, body: string, fromD
     candidates.push({ name: subjectLead[1], source: "subject_lead", confidence: 0.75 });
   }
 
+  // Strategy 6.5: Fallback pattern matching in body
+  const fallbackMatches = Array.from(body.matchAll(/(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s*([^\s【】\\[\\]<>「」\n]{2,20})/g));
+  for (const m of fallbackMatches) {
+    const clean = m[1].replace(HR_SUFFIXES, "").replace(/御中|様$/, "").trim();
+    if (clean.length >= 2 && !NON_COMPANY_PATTERNS.test(clean) && !PLATFORM_NAME_HINTS.test(clean) && !/^(新卒|中途)$/.test(clean)) {
+      candidates.push({ name: `株式会社 ${clean}`, source: "body_fallback", confidence: 0.5 });
+    }
+  }
+
   // Strategies 7-9 are suppressed when the sender is a recruiting/noise platform,
   // because body text and domain SLD would reference promoted companies, not the sender.
   const isFromPlatform =
@@ -122,23 +170,24 @@ function extractOrgCandidates(subject: string, from: string, body: string, fromD
   if (!isFromPlatform) {
     const bodyPrefix = body.slice(0, 500);
     const reBodyLegal = new RegExp(
-      `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」\\n]{1,40})`
+      `(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n]+)`
     );
     const bodyLegal = bodyPrefix.match(reBodyLegal);
     if (bodyLegal?.[1]) {
-      candidates.push({ name: bodyLegal[1], source: "body_legal", confidence: 0.70 });
+      addCandidate(bodyLegal[1].replace(/御中|様$/, ""), "body_legal", 0.70);
     }
   }
 
-  // Strategy 8: Clean display name as fallback (skip if it looks like an email)
-  if (displayName && displayName.length >= 2 && displayName.length <= 40 && !/@/.test(displayName)) {
-    const cleaned = displayName.replace(HR_SUFFIXES, "")
-      .replace(/\)$/, "") // fix trailing parenthesis often caught from platform subject templates
-      .trim();
-    if (cleaned.length >= 2 && !NON_COMPANY_PATTERNS.test(cleaned)) {
-      candidates.push({ name: cleaned, source: "display_clean", confidence: 0.55 });
+    // Strategy 8: Clean display name as fallback (skip if it looks like an email)
+    if (displayName && displayName.length >= 2 && displayName.length <= 40 && !/@/.test(displayName)) {
+      const cleaned = displayName.replace(HR_SUFFIXES, "")
+        .replace(/\)$/, "") // fix trailing parenthesis often caught from platform subject templates
+        .replace(/株式会社|合同会社|有限会社|一般社団法人|一般財団法人|（株）|\(株\)/g, "")
+        .trim();
+      if (cleaned.length >= 2 && !NON_COMPANY_PATTERNS.test(cleaned)) {
+        candidates.push({ name: cleaned, source: "display_clean", confidence: 0.55 });
+      }
     }
-  }
 
   // Strategy 9: Email domain SLD (lowest confidence) — also suppressed for platforms
   if (!isFromPlatform) {
@@ -173,8 +222,9 @@ export function extractBestCompanyName(
   subject: string,
   from: string,
   body: string,
-  fromDomainTier?: DomainTier,
+  fromDomainTier?: DomainTier
 ): { name: string | null; confidence: number } {
+  // Extract candidates using multi-strategy approach
   const candidates = extractOrgCandidates(subject, from, body, fromDomainTier);
   const normalized = candidates
     .map((c) => ({ ...c, name: normalizeOrgName(c.name) ?? "" }))
