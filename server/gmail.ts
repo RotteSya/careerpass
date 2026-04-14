@@ -815,76 +815,8 @@ function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobSta
   return null;
 }
 
-function inferHardOutcomeStatusFromText(text: string): JobStatus | null {
-  const t = text.toLowerCase();
-  if (
-    /(不採用|見送り|お見送り|選考結果.*残念|残念ながら|ご縁がなく|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|不合格|不通過)/.test(t) ||
-    /(rejected|unfortunately|we regret|not selected)/.test(t)
-  ) {
-    return "rejected";
-  }
-  if (
-    /(内定通知|内定のご連絡|内定のお知らせ|内定.*決定|採用内定|合格通知|合格のお知らせ|採用決定)/.test(t) ||
-    /(offer\s*letter|job\s*offer|we are pleased to offer)/.test(t)
-  ) {
-    return "offer";
-  }
-  return null;
-}
 
-// Subjects that unambiguously mark a post-hoc result/notification email.
-// These should never be treated as schedulable events, even if the body
-// contains a date reference (e.g., the date of the already-completed interview
-// or a reply deadline) or the LLM misclassifies them.
-function isResultNotificationSubject(subject: string): boolean {
-  return /(結果通知|選考結果|合否通知|合否のご連絡|お祈り|お見送り|不採用通知|不合格通知)/.test(subject);
-}
 
-function inferInterviewStatusFromText(text: string): JobStatus | null {
-  const t = text.toLowerCase();
-  if (/最終面接|最終選考|final\s*interview|last\s*interview/.test(t)) return "interview_final";
-  if (/四次面[接談]|4次面[接談]|４次面[接談]|fourth\s*interview|4th\s*interview/.test(t)) return "interview_4";
-  if (/三次面[接談]|3次面[接談]|３次面[接談]|third\s*interview|3rd\s*interview/.test(t)) return "interview_3";
-  if (/二次面[接談]|2次面[接談]|２次面[接談]|second\s*interview|2nd\s*interview/.test(t)) return "interview_2";
-  if (/一次面[接談]|1次面[接談]|１次面[接談]|first\s*interview|1st\s*interview/.test(t)) return "interview_1";
-  if (
-    /(最終選考|final\s*selection)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_final";
-  }
-  if (
-    /(四次選考|4次選考|４次選考)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_4";
-  }
-  if (
-    /(三次選考|3次選考|３次選考)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_3";
-  }
-  if (
-    /(二次選考|2次選考|２次選考)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_2";
-  }
-  if (
-    /(一次選考|1次選考|１次選考)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_1";
-  }
-  // Standalone round markers only when adjacent to 面接/選考 context
-  if (/最終/.test(t) && /面[接談]|選考/.test(t)) return "interview_final";
-  return null;
-}
-
-export function __inferInterviewStatusFromTextForTests(text: string): JobStatus | null {
-  return inferInterviewStatusFromText(text);
-}
 
 function jobStatusLabelZh(status: JobStatus): string {
   if (status === "researching") return "调研/准备";
@@ -1083,6 +1015,7 @@ async function runCareerpassmailAgent(input: {
   subject: string;
   body: string;
   from: string;
+  fallbackDate: string | null;
 }): Promise<CareerpassmailDecision & { _meta?: { pipelineOnly?: boolean; pipelineShouldSkipLlm?: boolean } }> {
   const domain = getSenderDomain(input.from);
   const preflight = runRecruitingNlpPipeline({
@@ -1090,7 +1023,7 @@ async function runCareerpassmailAgent(input: {
     body: input.body,
     from: input.from,
     domainSignal: 0.5, // domain reputation is now completely handled by mailNer.ts getDomainReputation
-    fallbackDate: null,
+    fallbackDate: input.fallbackDate,
     fallbackTime: null,
   });
   if (preflight.shouldSkipLlm) {
@@ -1241,7 +1174,7 @@ async function runCareerpassmailAgent(input: {
         body: input.body,
         from: input.from,
         domainSignal: 0.5,
-        fallbackDate: null,
+        fallbackDate: input.fallbackDate,
         fallbackTime: null,
         llmDecision: parsed,
       });
@@ -1274,7 +1207,7 @@ async function runCareerpassmailAgent(input: {
     body: input.body,
     from: input.from,
     domainSignal: 0.5,
-    fallbackDate: null,
+    fallbackDate: input.fallbackDate,
     fallbackTime: null,
   });
   return {
@@ -1559,39 +1492,18 @@ async function processGmailMessageIds(params: {
 
   const candidates: typeof sorted = [];
   for (const item of sorted) {
-    const detail = item.value;
-    // Hard exclude マイナビ/リクナビ-style "站内通知" mails — they carry no real content.
-    const senderDomain = (getSenderDomain(detail.from) ?? "").toLowerCase();
-    const isJobBoardSender =
-      /mynavi|rikunabi|マイナビ|リクナビ/.test(detail.from) ||
-      /mynavi|rikunabi/.test(senderDomain);
-    const inboxNoticePattern =
-      /(新着メッセージ|メッセージが届|マイページに新しい|新着のお知らせ|站内|站内信|新しいお知らせが届)/;
-    if (isJobBoardSender && inboxNoticePattern.test(`${detail.subject}\n${detail.body}`)) {
-      continue;
-    }
-
-    // Hard exclude 就活会議 / OpenWork / Vorkers / ONE CAREER — these are review/info
-    // platforms, NOT companies the user is applying to. Emails from them should
-    // never create a job application entry.
-    const isReviewPlatformSender =
-      /syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career/.test(
-        `${detail.from}\n${detail.subject}`.toLowerCase()
-      ) ||
-      /syukatsu-kaigi|syukatsukaigi|openwork|vorkers|onecareer|one-career/.test(senderDomain);
-    if (isReviewPlatformSender) {
-      continue;
-    }
     candidates.push(item);
   }
 
   const analyzed = await mapWithConcurrency(candidates, 4, async (item) => {
     try {
-      const decision = await runCareerpassmailAgent({
-        subject: item.value.subject,
-        body: item.value.body,
-        from: item.value.from,
-      });
+        const fallbackDate = item.mailTs ? new Date(item.mailTs).toISOString().split("T")[0] : null;
+        const decision = await runCareerpassmailAgent({
+          subject: item.value.subject,
+          body: item.value.body,
+          from: item.value.from,
+          fallbackDate,
+        });
       if (!decision.isJobRelated) return null;
       return { item, decision };
     } catch (err) {
@@ -1698,7 +1610,7 @@ async function processGmailMessageIds(params: {
             (decisionMeta as any).interviewRound === "3rd" ? "interview_3" :
             (decisionMeta as any).interviewRound === "4th" ? "interview_4" :
             (decisionMeta as any).interviewRound === "final" ? "interview_final" :
-            inferInterviewStatusFromText(mailText)
+            null
           : null;
       const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(eventType);
       const inferredStatus = companyName ? desiredStatus : null;

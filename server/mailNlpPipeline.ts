@@ -205,6 +205,8 @@ function normalizeEventType(v: string | null | undefined): MailEventType {
   return "other";
 }
 
+import { normalizeCompanyDisplayName } from './companyName.ts';
+
 /**
  * Legacy company-name normalizer (kept for backward compat with LLM output).
  * For rule-based extraction, prefer `extractBestCompanyName` from mailNer.
@@ -212,13 +214,9 @@ function normalizeEventType(v: string | null | undefined): MailEventType {
 function normalizeCompanyName(name: string | null | undefined, recipientNames: string[] = []): string | null {
   const raw = (name ?? "").trim();
   if (!raw) return null;
-  const cleaned = raw
-    .replace(/^(【|「|\[|\()(.+?)(】|」|\]|\))$/, "$2")
-    .replace(/^[\s\-:：|｜"'`"']+|[\s\-:：|｜"'`"']+$/g, "")
-    .replace(/(株式会社|（株）|\(株\))/g, "株式会社")
-    .replace(/(採用|採用担当|採用事務局|人事部|人事|HR|Recruiting|recruit)$/i, "")
-    .trim();
-  
+  const cleaned = normalizeCompanyDisplayName(raw);
+  if (!cleaned) return null;
+
   // Use robust valid check from mailNer
   if (!isValidExtractedCompany(cleaned, recipientNames)) return null;
   if (JOB_PLATFORM_HINTS.test(cleaned)) return null;
