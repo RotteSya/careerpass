@@ -49,6 +49,7 @@ export interface RecruitingNlpInput {
   domainSignal: number;
   fallbackDate: string | null;
   fallbackTime: string | null;
+  llmDecision?: any;
 }
 
 export interface RecruitingNlpDecision extends MailDecisionLike {
