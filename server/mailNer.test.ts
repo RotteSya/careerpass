@@ -58,6 +58,25 @@ describe("extractBestCompanyName", () => {
     expect(r.name).toBeNull();
   });
 
+  it("does not treat university career center as company", () => {
+    const r = extractBestCompanyName(
+      "WEB合同企業説明会【2026年5月21日（木）開催】确认",
+      '"RU-CareerCenter-WEB 立命館大学キャリアセンターWEB" <no-reply@zoom.us>',
+      "WEB合同企業説明会の登録確認です。",
+    );
+    expect(r.name).toBeNull();
+  });
+
+  it("does not treat global recruiting service as company", () => {
+    const r = extractBestCompanyName(
+      "★最終のご案内／申込期限間近★【27卒向け】日本就職のAtoZ",
+      '"マイナビ／グローバル人材紹介運営事務局" <global-ca@me.mynavi.jp>',
+      "外国人留学生向け就活準備講座のご案内です。",
+      "recruiting_platform",
+    );
+    expect(r.name).toBeNull();
+  });
+
   it("does not return noreply as company", () => {
     const r = extractBestCompanyName(
       "お知らせ",
