@@ -45,7 +45,7 @@ describe("startBackgroundMailScan", () => {
       events: [],
     });
 
-    startBackgroundMailScan(1);
+    startBackgroundMailScan(1, { forceFullMailboxScan: true });
     await consumeBackgroundScanResult(1);
 
     const args = gmailMocks.monitorGmailAndSync.mock.calls[0];
@@ -53,5 +53,31 @@ describe("startBackgroundMailScan", () => {
     expect(args[1]).toBeUndefined();
     expect(args[2]?.fullMailboxScan).toBe(true);
   });
-});
 
+  it("does not force full mailbox scan when forceFullMailboxScan is false/omitted", async () => {
+    dbMocks.getBillingFeatureAccess.mockResolvedValue({
+      phase: "trial",
+      autoMonitoringEnabled: true,
+      autoBoardWriteEnabled: true,
+      autoWorkflowEnabled: true,
+      dayFromTrialStart: 1,
+      trackedCompanyCount: 0,
+      trialEndsAt: new Date(),
+      graceEndsAt: new Date(),
+    });
+    dbMocks.getOauthToken.mockResolvedValue({ accessToken: "x" });
+    dbMocks.getJobApplications.mockResolvedValue([]);
+    gmailMocks.monitorGmailAndSync.mockResolvedValue({
+      scanned: 0,
+      detected: 0,
+      calendarEvents: 0,
+      events: [],
+    });
+
+    startBackgroundMailScan(1);
+    await consumeBackgroundScanResult(1);
+
+    const args = gmailMocks.monitorGmailAndSync.mock.calls[0];
+    expect(args[2]?.fullMailboxScan).toBeUndefined();
+  });
+});

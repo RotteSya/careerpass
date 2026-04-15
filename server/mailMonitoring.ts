@@ -1,4 +1,4 @@
-import { getBillingFeatureAccess, getJobApplications, getOauthToken } from "./db";
+import { getBillingFeatureAccess, getOauthToken } from "./db";
 import { monitorGmailAndSync, registerGmailPushWatch } from "./gmail";
 import type { MonitorResult } from "./gmail";
 
@@ -54,15 +54,10 @@ export async function startMailMonitoringAndCheckmail(params: {
   // Scan completion should produce only a digest summary in Telegram flow,
   // not per-mail bubbles; additionally suppress immediate push-trigger bursts.
   markRealtimeTelegramSuppressedAfterScan(params.userId);
-  const shouldForceFullMailboxScan =
-    mode === "manual" && access.autoBoardWriteEnabled
-      ? (await getJobApplications(params.userId)).length <= 3
-      : false;
   const result = await monitorGmailAndSync(params.userId, params.telegramChatId, {
     suppressTelegramItemNotifications: true,
     enableAutoBoardWrite: access.autoBoardWriteEnabled,
     enableAutoWorkflow: access.autoWorkflowEnabled,
-    ...(shouldForceFullMailboxScan ? { fullMailboxScan: true } : {}),
   });
   return {
     needsOAuth: false as const,
@@ -91,7 +86,10 @@ const BACKGROUND_SCAN_TTL_MS = 10 * 60 * 1000; // 10 minutes
  * the result is cached in-memory and can be consumed later via
  * `consumeBackgroundScanResult()`.
  */
-export function startBackgroundMailScan(userId: number): void {
+export function startBackgroundMailScan(
+  userId: number,
+  options?: { forceFullMailboxScan?: boolean }
+): void {
   // Evict stale entries
   backgroundScans.forEach((entry, uid) => {
     if (Date.now() - entry.startedAt > BACKGROUND_SCAN_TTL_MS) {
@@ -110,16 +108,12 @@ export function startBackgroundMailScan(userId: number): void {
       const token = await getOauthToken(userId, "google");
       if (!token) return null;
 
-      const shouldForceFullMailboxScan = access.autoBoardWriteEnabled
-        ? (await getJobApplications(userId)).length <= 3
-        : false;
-
       // Run without telegramChatId — we only want classification + board/calendar
       // writes.  Telegram notifications will be sent separately after the greeting.
       return await monitorGmailAndSync(userId, undefined, {
         enableAutoBoardWrite: access.autoBoardWriteEnabled,
         enableAutoWorkflow: false, // heavy workflows deferred to Telegram flow
-        ...(shouldForceFullMailboxScan ? { fullMailboxScan: true } : {}),
+        ...(options?.forceFullMailboxScan ? { fullMailboxScan: true } : {}),
       });
     } catch (err) {
       console.error("[BackgroundScan] Failed for user", userId, err);
