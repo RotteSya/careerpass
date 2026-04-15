@@ -36,8 +36,19 @@ import { createCompanyBatchDeduper, sortMailItemsByTsDesc } from "./gmail_dedup"
 import { sendTelegramMessage } from "./telegramMessaging";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
 import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
+import { getDomainReputation, extractBestDateTime } from "./mailNer";
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
+
+function getSenderDomain(from: string): string | null {
+  const match = from.match(/@([^>\s]+)/);
+  return match ? match[1] : null;
+}
+
+function extractCompanyName(from: string, subject: string): string | null {
+  const domainMatch = from.match(/@([^.>]+)\./);
+  return domainMatch ? domainMatch[1] : null;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -814,77 +825,6 @@ function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobSta
   return null;
 }
 
-function inferHardOutcomeStatusFromText(text: string): JobStatus | null {
-  const t = text.toLowerCase();
-  if (
-    /(不採用|見送り|お見送り|選考結果.*残念|残念ながら|ご縁がなく|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|不合格|不通過)/.test(t) ||
-    /(rejected|unfortunately|we regret|not selected)/.test(t)
-  ) {
-    return "rejected";
-  }
-  if (
-    /(内定通知|内定のご連絡|内定のお知らせ|内定.*決定|採用内定|合格通知|合格のお知らせ|採用決定)/.test(t) ||
-    /(offer\s*letter|job\s*offer|we are pleased to offer)/.test(t)
-  ) {
-    return "offer";
-  }
-  return null;
-}
-
-// Subjects that unambiguously mark a post-hoc result/notification email.
-// These should never be treated as schedulable events, even if the body
-// contains a date reference (e.g., the date of the already-completed interview
-// or a reply deadline) or the LLM misclassifies them.
-function isResultNotificationSubject(subject: string): boolean {
-  return /(結果通知|選考結果|合否通知|合否のご連絡|お祈り|お見送り|不採用通知|不合格通知)/.test(subject);
-}
-
-function inferInterviewStatusFromText(text: string): JobStatus | null {
-  const t = text.toLowerCase();
-  if (/最終面接|最終選考|final\s*interview|last\s*interview/.test(t)) return "interview_final";
-  if (/四次面[接談]|4次面[接談]|４次面[接談]|fourth\s*interview|4th\s*interview/.test(t)) return "interview_4";
-  if (/三次面[接談]|3次面[接談]|３次面[接談]|third\s*interview|3rd\s*interview/.test(t)) return "interview_3";
-  if (/二次面[接談]|2次面[接談]|２次面[接談]|second\s*interview|2nd\s*interview/.test(t)) return "interview_2";
-  if (/一次面[接談]|1次面[接談]|１次面[接談]|first\s*interview|1st\s*interview/.test(t)) return "interview_1";
-  if (
-    /(最終選考|final\s*selection)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_final";
-  }
-  if (
-    /(四次選考|4次選考|４次選考)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_4";
-  }
-  if (
-    /(三次選考|3次選考|３次選考)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_3";
-  }
-  if (
-    /(二次選考|2次選考|２次選考)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_2";
-  }
-  if (
-    /(一次選考|1次選考|１次選考)/.test(t) &&
-    /(面[接談]|interview|選考|selection|web面接|online)/.test(t)
-  ) {
-    return "interview_1";
-  }
-  // Standalone round markers only when adjacent to 面接/選考 context
-  if (/最終/.test(t) && /面[接談]|選考/.test(t)) return "interview_final";
-  return null;
-}
-
-export function __inferInterviewStatusFromTextForTests(text: string): JobStatus | null {
-  return inferInterviewStatusFromText(text);
-}
-
 function jobStatusLabelZh(status: JobStatus): string {
   if (status === "researching") return "调研/准备";
   if (status === "applied") return "エントリー済み";
@@ -902,10 +842,6 @@ function jobStatusLabelZh(status: JobStatus): string {
   if (status === "rejected") return "未通过";
   if (status === "withdrawn") return "已撤回";
   return status;
-}
-
-function normalizeCompanyName(name: string | null | undefined): string | null {
-  return resolveCanonicalCompanyName(name);
 }
 
 function nextStepsZh(status: JobStatus): string[] {
@@ -1028,113 +964,23 @@ function calendarColorForEventType(
   return undefined;
 }
 
-const FREE_MAIL_DOMAINS = new Set([
-  "gmail.com",
-  "yahoo.co.jp",
-  "yahoo.com",
-  "outlook.com",
-  "hotmail.com",
-  "icloud.com",
-  "qq.com",
-  "163.com",
-]);
 
-const JOB_RELATED_DOMAIN_HINTS = [
-  "recruit",
-  "career",
-  "saiyo",
-  "hr",
-  "job",
-  "talent",
-  "mypage",
-  "rikunabi",
-  "mynavi",
-  "wantedly",
-];
-
-function getSenderDomain(from: string): string | null {
-  const m = from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-  return m?.[1]?.toLowerCase() ?? null;
-}
-
-function senderDomainScore(from: string): number {
-  const domain = getSenderDomain(from);
-  if (!domain) return 0;
-  if (FREE_MAIL_DOMAINS.has(domain)) return 0.1;
-  if (JOB_RELATED_DOMAIN_HINTS.some(hint => domain.includes(hint))) return 0.95;
-  return 0.6;
-}
-
-function extractCompanyName(from: string, subject: string): string | null {
-  // Extract from email domain
-  const domainMatch = from.match(/@([^.>]+)\./);
-  if (domainMatch) {
-    const domain = domainMatch[1];
-    // Skip common email providers
-    if (!["gmail", "yahoo", "hotmail", "outlook", "icloud"].includes(domain)) {
-      return domain;
-    }
-  }
-  return null;
-}
-
-function extractDate(text: string): { date: string | null; time: string | null } {
-  let date: string | null = null;
-  let time: string | null = null;
-
-  for (const pattern of DATE_PATTERNS) {
-    const m = text.match(pattern);
-    if (m) {
-      const year = m[1];
-      const month = String(m[2]).padStart(2, "0");
-      const day = String(m[3]).padStart(2, "0");
-      date = `${year}-${month}-${day}`;
-      break;
-    }
-  }
-
-  for (const pattern of TIME_PATTERNS) {
-    const m = text.match(pattern);
-    if (m) {
-      const hour = String(m[1]).padStart(2, "0");
-      const min = m[2] ? String(m[2]).padStart(2, "0") : "00";
-      time = `${hour}:${min}`;
-      break;
-    }
-  }
-
-  return { date, time };
-}
-
-function extractJapaneseTimeRange(text: string): { date: string | null; time: string | null } {
-  // Examples:
-  // 2026年4月10日(金) 14:00〜15:00
-  // 2026/04/10 14:00-15:00
-  const m = text.match(
-    /(\d{4})[\/年.-](\d{1,2})[\/月.-](\d{1,2})日?(?:\([^)]+\))?\s*(\d{1,2})[:：時](\d{2})?\s*[~〜\-－]\s*(\d{1,2})[:：時]?(\d{2})?/
-  );
-  if (!m) return { date: null, time: null };
-  const date = `${m[1]}-${String(m[2]).padStart(2, "0")}-${String(m[3]).padStart(2, "0")}`;
-  const time = `${String(m[4]).padStart(2, "0")}:${String(m[5] ?? "00").padStart(2, "0")}`;
-  return { date, time };
-}
 
 async function runCareerpassmailAgent(input: {
   subject: string;
   body: string;
   from: string;
+  fallbackDate: string | null;
 }): Promise<CareerpassmailDecision & { _meta?: { pipelineOnly?: boolean; pipelineShouldSkipLlm?: boolean } }> {
-  const domain = getSenderDomain(input.from);
-  const domainSignal = senderDomainScore(input.from);
-  const localized = extractJapaneseTimeRange(`${input.subject}\n${input.body}`);
-  const basic = extractDate(`${input.subject}\n${input.body}`);
+  const domainRep = getDomainReputation(input.from);
+  const extractedDate = extractBestDateTime(`${input.subject}\n${input.body}`);
   const preflight = runRecruitingNlpPipeline({
     subject: input.subject,
     body: input.body,
     from: input.from,
-    domainSignal,
-    fallbackDate: localized.date ?? basic.date ?? null,
-    fallbackTime: localized.time ?? basic.time ?? null,
+    domainSignal: domainRep.score,
+    fallbackDate: extractedDate.date ?? input.fallbackDate,
+    fallbackTime: extractedDate.time ?? null,
   });
   if (preflight.shouldSkipLlm) {
     console.info("[careerpassmail] preflight-skip-llm", {
@@ -1265,8 +1111,8 @@ async function runCareerpassmailAgent(input: {
           content:
             `件名: ${input.subject}\n\n` +
             `送信者: ${input.from}\n` +
-            `送信者ドメイン: ${domain ?? "unknown"} (${domainTier})\n` +
-            `送信者ドメイン信号: ${domainSignal}\n\n` +
+            `送信者ドメイン: ${domainTier}\n` +
+            `送信者ドメイン信号: ${domainRep.score}\n\n` +
             `正文:\n${input.body.slice(0, 2500)}`,
         },
       ],
@@ -1281,9 +1127,9 @@ async function runCareerpassmailAgent(input: {
           subject: input.subject,
           body: input.body,
           from: input.from,
-          domainSignal,
-          fallbackDate: localized.date ?? basic.date ?? null,
-          fallbackTime: localized.time ?? basic.time ?? null,
+          domainSignal: domainRep.score,
+          fallbackDate: extractedDate.date ?? null,
+          fallbackTime: extractedDate.time ?? null,
         },
         parsed
       );
@@ -1312,9 +1158,9 @@ async function runCareerpassmailAgent(input: {
     subject: input.subject,
     body: input.body,
     from: input.from,
-    domainSignal,
-    fallbackDate: localized.date ?? basic.date ?? null,
-    fallbackTime: localized.time ?? basic.time ?? null,
+    domainSignal: domainRep.score,
+    fallbackDate: extractedDate.date ?? null,
+    fallbackTime: extractedDate.time ?? null,
   });
   return {
     isJobRelated: fallback.isJobRelated,
@@ -1626,11 +1472,13 @@ async function processGmailMessageIds(params: {
 
   const analyzed = await mapWithConcurrency(candidates, 4, async (item) => {
     try {
-      const decision = await runCareerpassmailAgent({
-        subject: item.value.subject,
-        body: item.value.body,
-        from: item.value.from,
-      });
+        const fallbackDate = item.mailTs ? new Date(item.mailTs).toISOString().split("T")[0] : null;
+        const decision = await runCareerpassmailAgent({
+          subject: item.value.subject,
+          body: item.value.body,
+          from: item.value.from,
+          fallbackDate,
+        });
       if (!decision.isJobRelated) return null;
       return { item, decision };
     } catch (err) {
@@ -1649,33 +1497,12 @@ async function processGmailMessageIds(params: {
       const decisionMeta = decision._meta ?? {};
 
       const mailText = `${detail.subject}\n${detail.body}`;
-      const hardOutcome = inferHardOutcomeStatusFromText(mailText);
+      const hardOutcome = (decisionMeta as any).hardOutcome ?? null;
       const rawEventType = decision.eventType ?? "other";
-      // Result-notification subjects (結果通知 / 選考結果 / 合否通知 …) are never
-      // schedulable events. Force them down to offer / rejection / other so they
-      // bypass CALENDAR_WRITABLE_TYPES regardless of how the LLM classified them.
-      const resultNotificationSubject = isResultNotificationSubject(detail.subject);
-      const eventType = resultNotificationSubject
-        ? hardOutcome === "offer"
-          ? "offer"
-          : hardOutcome === "rejected"
-          ? "rejection"
-          : "other"
-        : rawEventType === "offer"
-        ? hardOutcome === "offer"
-          ? "offer"
-          : "other"
-        : rawEventType === "rejection"
-        ? hardOutcome === "rejected"
-          ? "rejection"
-          : "other"
-        : rawEventType;
+      const eventType = rawEventType;
       const date = decision.eventDate ?? null;
       const time = decision.eventTime ?? null;
-      const companyName =
-        normalizeCompanyName(decision.companyName) ??
-        normalizeCompanyName(extractCompanyName(detail.from, detail.subject)) ??
-        null;
+      const companyName = decision.companyName ?? null;
 
       let location = decision.location ?? null;
       if (eventType === "interview" && detail.threadId) {
@@ -1752,7 +1579,12 @@ async function processGmailMessageIds(params: {
 
       const stageStatus =
         rawEventType === "interview" || rawEventType === "test" || /面接|interview/.test(mailText.toLowerCase())
-          ? inferInterviewStatusFromText(mailText)
+          ? (decisionMeta as any).interviewRound === "1st" ? "interview_1" :
+            (decisionMeta as any).interviewRound === "2nd" ? "interview_2" :
+            (decisionMeta as any).interviewRound === "3rd" ? "interview_3" :
+            (decisionMeta as any).interviewRound === "4th" ? "interview_4" :
+            (decisionMeta as any).interviewRound === "final" ? "interview_final" :
+            null
           : null;
       const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(eventType);
       const inferredStatus = companyName ? desiredStatus : null;

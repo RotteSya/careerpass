@@ -13,11 +13,13 @@ export function sortMailItemsByTsDesc<T>(items: MailItem<T>[]): MailItem<T>[] {
   return normalized;
 }
 
+import { normalizeCompanyKeyForBilling } from "./db";
+
 export function createCompanyBatchDeduper(): (companyKey: string | null) => boolean {
   const seen = new Set<string>();
   return (companyKey: string | null) => {
     if (!companyKey) return true;
-    const key = companyKey.toLowerCase();
+    const key = normalizeCompanyKeyForBilling(companyKey);
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

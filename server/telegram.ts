@@ -632,8 +632,10 @@ function buildBoardText(params: {
   return `${header}\n${dashboardLink}\n${table}${footer}`;
 }
 
+import { normalizeCompanyKey as standardNormalizeCompanyKey } from "./companyName";
+
 function normalizeCompanyKey(name: string): string {
-  return name.trim().toLowerCase();
+  return standardNormalizeCompanyKey(name) ?? name.trim().toLowerCase();
 }
 
 function uniqueCompanyNamesFromEvents(

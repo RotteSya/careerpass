@@ -18,6 +18,7 @@ import {
   type DomainReputation,
   type InterviewRound,
 } from "./mailNer";
+import { normalizeCompanyDisplayName } from "./companyName";
 
 type MailEventType =
   | "interview"
@@ -39,6 +40,7 @@ interface MailDecisionLike {
   eventTime?: string | null;
   location?: string | null;
   todoItems?: string[] | null;
+  _meta?: any;
 }
 
 export interface RecruitingNlpInput {
@@ -64,6 +66,9 @@ export interface RecruitingNlpDecision extends MailDecisionLike {
     interviewRound: InterviewRound | null;
     negPenalty: number;
     ruleSignals: Array<{ eventType: MailEventType; confidence: number; reason: string }>;
+    hardOutcome?: "offer" | "rejection" | null;
+    isResultNotificationSubject?: boolean;
+    [key: string]: any;
   };
 }
 
@@ -208,15 +213,8 @@ function normalizeEventType(v: string | null | undefined): MailEventType {
  * For rule-based extraction, prefer `extractBestCompanyName` from mailNer.
  */
 function normalizeCompanyName(name: string | null | undefined): string | null {
-  const raw = (name ?? "").trim();
-  if (!raw) return null;
-  const cleaned = raw
-    .replace(/^(【|「|\[|\()(.+?)(】|」|\]|\))$/, "$2")
-    .replace(/^[\s\-:：|｜"'`"']+|[\s\-:：|｜"'`"']+$/g, "")
-    .replace(/(株式会社|（株）|\(株\))/g, "株式会社")
-    .replace(/(採用|採用担当|採用事務局|人事部|人事|HR|Recruiting|recruit)$/i, "")
-    .trim();
-  if (cleaned.length < 2) return null;
+  const cleaned = normalizeCompanyDisplayName(name);
+  if (!cleaned) return null;
   if (JOB_PLATFORM_HINTS.test(cleaned)) return null;
   return cleaned;
 }
@@ -445,14 +443,31 @@ export function runRecruitingNlpPipeline(
 
   // ⑨ Merge with LLM decision
   const llmEventType = normalizeEventType(llmDecision?.eventType ?? null);
-  const hardRuleOutcome = rule.eventType === "offer" || rule.eventType === "rejection";
+  const isResultNotificationSubject = /(結果通知|選考結果|合否通知|合否のご連絡|お祈り|お見送り|不採用通知|不合格通知)/.test(input.subject);
 
-  // Event type resolution: hard rules > LLM > best rule
-  const mergedEventType: MailEventType = hardRuleOutcome
-    ? rule.eventType
-    : llmEventType !== "other"
-      ? llmEventType
-      : rule.eventType;
+  // Hard outcome logic extracted from gmail.ts
+  let hardOutcome: "offer" | "rejection" | null = null;
+  if (
+    /(不採用|見送り|お見送り|選考結果.*残念|残念ながら|ご縁がなく|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|不合格|不通過)/.test(lowerText) ||
+    /(rejected|unfortunately|we regret|not selected)/.test(lowerText)
+  ) {
+    hardOutcome = "rejection";
+  } else if (
+    /(内定通知|内定のご連絡|内定のお知らせ|内定.*決定|採用内定|合格通知|合格のお知らせ|採用決定)/.test(lowerText) ||
+    /(offer\s*letter|job\s*offer|we are pleased to offer)/.test(lowerText)
+  ) {
+    hardOutcome = "offer";
+  }
+
+  // Event type resolution: hard outcome > result subject gating > LLM > best rule
+  let mergedEventType: MailEventType;
+  if (isResultNotificationSubject) {
+    mergedEventType = hardOutcome === "offer" ? "offer" : hardOutcome === "rejection" ? "rejection" : "other";
+  } else if (hardOutcome) {
+    mergedEventType = hardOutcome;
+  } else {
+    mergedEventType = llmEventType !== "other" ? llmEventType : rule.eventType;
+  }
 
   // ⑩ Dynamic confidence merging
   const llmConfidence =
@@ -533,6 +548,13 @@ export function runRecruitingNlpPipeline(
     location: mergedLocation,
     todoItems: mergedTodo.slice(0, 3),
     shouldSkipLlm: skipLlm,
-    _meta: { domainReputation: domainRep, interviewRound, negPenalty, ruleSignals },
+    _meta: {
+      domainReputation: domainRep,
+      interviewRound,
+      negPenalty,
+      ruleSignals,
+      hardOutcome,
+      isResultNotificationSubject
+    },
   };
 }
