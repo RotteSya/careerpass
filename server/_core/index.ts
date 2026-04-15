@@ -13,7 +13,10 @@ import { appRouter } from "../routers";
 import { registerCalendarOAuthRoute } from "../calendarOAuth";
 import { registerNotionOAuthRoute } from "../notionOAuth";
 import { createContext } from "./context";
+import { createCsrfMiddleware } from "./csrfMiddleware";
 import { serveStatic, setupVite } from "./vite";
+import { createRateLimiter } from "./rateLimit";
+import { createRateLimitMiddleware } from "./rateLimitMiddleware";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -36,10 +39,10 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   const app = express();
+  app.set("trust proxy", true);
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ limit: "2mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // Google Calendar OAuth callback — server-side Express route to avoid SPA routing issues
@@ -82,8 +85,22 @@ async function startServer() {
   }
 
   // tRPC API
+  const appDomain = process.env.APP_DOMAIN ?? "http://localhost:3000";
+  const allowedOrigins = (() => {
+    try {
+      return [new URL(appDomain).origin];
+    } catch {
+      return [];
+    }
+  })();
+  const trpcLimiter = createRateLimiter({ windowMs: 60_000, max: 300 });
   app.use(
     "/api/trpc",
+    createRateLimitMiddleware({
+      limiter: trpcLimiter,
+      key: (req) => `ip:${req.ip}`,
+    }),
+    createCsrfMiddleware({ allowedOrigins }),
     createExpressMiddleware({
       router: appRouter,
       createContext,

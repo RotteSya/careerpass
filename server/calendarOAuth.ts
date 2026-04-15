@@ -8,9 +8,10 @@ import crypto from "crypto";
 import { upsertOauthProviderAccount, upsertOauthToken } from "./db";
 import { registerGmailPushWatch } from "./gmail";
 import { startBackgroundMailScan } from "./mailMonitoring";
+import { ENV } from "./_core/env";
 
 function getStateSecret(): string {
-  return process.env.JWT_SECRET ?? "careerpass-oauth-state-secret";
+  return ENV.cookieSecret;
 }
 
 function verifySignedState(state: string): { userId: number; provider: string } {
