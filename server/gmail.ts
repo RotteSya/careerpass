@@ -31,8 +31,8 @@ import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import {
   startCompanyWorkflow,
 } from "./agents";
-import { syncJobToNotionBoard } from "./notion";
-import { createCompanyBatchDeduper, sortMailItemsByTsDesc } from "./gmail_dedup";
+import { syncJobToNotionBoard, type SyncNotionJobInput } from "./notion";
+import { createCompanyBatchDeduper, sortMailItemsByTsAsc } from "./gmail_dedup";
 import { sendTelegramMessage } from "./telegramMessaging";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
 import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
@@ -1438,7 +1438,7 @@ async function processGmailMessageIds(params: {
     fetched.push(row);
   }
 
-  const sorted = sortMailItemsByTsDesc(
+  const sorted = sortMailItemsByTsAsc(
     fetched.map((x) => ({ messageId: x.messageId, mailTs: x.mailTs, value: x.detail }))
   );
 
@@ -1486,6 +1486,15 @@ async function processGmailMessageIds(params: {
       return null;
     }
   });
+
+  const pendingNotionSyncs = new Map<string, SyncNotionJobInput>();
+
+  const latestMessageIdPerCompany = new Map<string, string>();
+  for (const entry of analyzed) {
+    if (!entry?.decision?.companyName) continue;
+    const key = entry.decision.companyName.toLowerCase();
+    latestMessageIdPerCompany.set(key, entry.item.messageId);
+  }
 
   for (const entry of analyzed) {
     if (!entry) continue;
@@ -1628,21 +1637,17 @@ async function processGmailMessageIds(params: {
       }
 
       if (enableAutoBoardWrite && companyName) {
-        try {
-          await syncJobToNotionBoard({
-            userId,
-            companyName,
-            status: inferredStatus ?? null,
-            eventType,
-            eventDate: date,
-            eventTime: time,
-            location,
-            mailSubject: detail.subject,
-            source: "gmail",
-          });
-        } catch (e) {
-          console.warn("[Notion] Gmail sync failed:", (e as Error).message);
-        }
+        pendingNotionSyncs.set(companyName.toLowerCase(), {
+          userId,
+          companyName,
+          status: progressUpdate?.nextStatus ?? inferredStatus ?? null,
+          eventType,
+          eventDate: date,
+          eventTime: time,
+          location,
+          mailSubject: detail.subject,
+          source: "gmail",
+        });
       }
 
       // Decide whether to notify the user about this mail.
@@ -1654,7 +1659,7 @@ async function processGmailMessageIds(params: {
         notifyCutoffMs === null || (Number.isFinite(mailTs) && mailTs >= notifyCutoffMs);
 
       const companyKey = companyName?.toLowerCase() ?? null;
-      const isNewestForCompany = isFirstForCompanyInBatch(companyKey);
+      const isNewestForCompany = companyKey ? latestMessageIdPerCompany.get(companyKey) === item.messageId : false;
 
       const shouldNotify =
         !suppressTelegramItemNotifications && isWithinWindow && isNewestForCompany;
@@ -1751,6 +1756,17 @@ async function processGmailMessageIds(params: {
         err,
       });
     }
+  }
+
+  // Batch sync to Notion: only the latest state for each company
+  if (pendingNotionSyncs.size > 0) {
+    await mapWithConcurrency(Array.from(pendingNotionSyncs.values()), 3, async (syncPayload) => {
+      try {
+        await syncJobToNotionBoard(syncPayload);
+      } catch (e) {
+        console.warn("[Notion] Batch sync failed for", syncPayload.companyName, ":", (e as Error).message);
+      }
+    });
   }
 
   return {

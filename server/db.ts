@@ -578,7 +578,7 @@ export async function getJobApplications(userId: number) {
       eq(jobApplications.id, jobStatusEvents.jobApplicationId)
     )
     .where(eq(jobApplications.userId, userId))
-    .orderBy(desc(jobApplications.updatedAt), desc(jobStatusEvents.createdAt));
+    .orderBy(desc(jobApplications.updatedAt), desc(jobStatusEvents.id));
 
   // Deduplicate by job id to keep only the latest event
   const dedupedMap = new Map<number, typeof jobs[0]>();

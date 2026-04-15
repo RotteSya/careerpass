@@ -46,7 +46,7 @@ const NON_COMPANY_PATTERNS =
   /^(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster|mail|me|cs|job|job-s27|reply)$/i;
 
 const AD_TITLE_PATTERNS =
-  /^(外国人留学生必見|.*の知識を活かせます|.*向け|.*卒|1次|2次|3次|最終|面接|選考|説明会|セミナー|エントリー|案内|結果|通知|お知らせ|重要|緊急|締切|ご連絡|ご案内|就活|速報|オファー|スカウト|メッセージ|おすすめ|ピックアップ|特集|キャンペーン|ランキング|本人確認|会員登録|利用規約|退会フォーム|履歴書送付|資料提出|日程調整|書類選考|適性検査)$/i;
+  /^(外国人留学生必見|.*の知識を活かせます|.*向け|.*卒|1次|2次|3次|一次|二次|三次|四次|最終|面接|選考|説明会|セミナー|エントリー|案内|結果|通知|お知らせ|重要|緊急|締切|ご連絡|ご案内|就活|速報|オファー|スカウト|メッセージ|おすすめ|ピックアップ|特集|キャンペーン|ランキング|本人確認|会員登録|利用規約|退会フォーム|履歴書送付|資料提出|日程調整|書類選考|適性検査)$/i;
 
 const HR_SUFFIXES = /(採用担当|採用チーム|人事部|人事課|リクルート|Recruiting|recruit|HR|人材|キャリア|新卒採用|中途採用|採用事務局|運営事務局|事務局|マイページ|team|Team|採用|新卒)$/i;
 
@@ -109,11 +109,11 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   // Helper to extract Maekabu and Atokabu legal entities
   const extractLegal = (text: string, sourcePrefix: string, baseConf: number) => {
     if (!text) return;
-    const reMaekabu = new RegExp(`(?:^|[\\s【】\\[\\]<>「」/／\\n"'(（:：])(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n"'(（]+)`, "g");
+    const reMaekabu = new RegExp(`(?:^|[\\s【】\\[\\]<>「」/／\\n"'(（:：])(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n"'(（)）]+)`, "g");
     for (const m of Array.from(text.matchAll(reMaekabu))) {
       addCandidate(m[1], `${sourcePrefix}_maekabu`, baseConf);
     }
-    const reAtokabu = new RegExp(`([^\\s【】\\[\\]<>「」/／\\n"'(（:：]+)\\s*(?:${LEGAL_ENTITY_PREFIX.source})(?=$|[\\s【】\\[\\]<>「」/／\\n"')）:：])`, "g");
+    const reAtokabu = new RegExp(`([^\\s【】\\[\\]<>「」/／\\n"'(（:：)）]+)\\s*(?:${LEGAL_ENTITY_PREFIX.source})(?=$|[\\s【】\\[\\]<>「」/／\\n"')）:：])`, "g");
     for (const m of Array.from(text.matchAll(reAtokabu))) {
       const fullMatch = m[0];
       const prefixMatch = text.substring(0, m.index).match(/([a-zA-Z0-9\s.-]+)$/);
@@ -174,12 +174,15 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   }
 
   // Strategy 6: Subject lead pattern — "CompanyName 面接のご案内"
-  const subjectLead = subject.match(
-    /^(?:【[^】]*】\s*)?([^\s【】\[\]「」]{2,24})\s*(?:の|より|から)?\s*(?:採用|選考|面接|説明会|エントリー|内定|Webテスト)/
-  );
-  if (subjectLead?.[1]) {
-    candidates.push({ name: subjectLead[1], source: "subject_lead", confidence: 0.75 });
-  }
+    const subjectLead = subject.match(
+      /^(?:【[^】]*】\s*)?([^\s【】\[\]「」]{2,24})\s*(?:の|より|から)?\s*(?:採用|選考|面接|説明会|エントリー|内定|Webテスト)/
+    );
+    if (subjectLead?.[1]) {
+      const leadClean = subjectLead[1].trim();
+      if (!AD_TITLE_PATTERNS.test(leadClean) && !/^(一次|二次|三次|四次|最終|書類|適性)$/.test(leadClean)) {
+        candidates.push({ name: leadClean, source: "subject_lead", confidence: 0.75 });
+      }
+    }
 
   // Strategy 6.5: Fallback pattern matching in body
   const fallbackMatches = Array.from(body.matchAll(/(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s*([^\s【】\\[\\]<>「」\n]{2,20})/g));
@@ -264,6 +267,8 @@ export function isValidExtractedCompany(name: string | null | undefined, recipie
   if (/^fwd?:/i.test(c)) return null;
   if (/^[-_=+*]{3,}/.test(c)) return null;
   if (/^[一-龥]{1,3}[\s　]+[一-龥]{1,3}$/.test(c)) return null;
+  if (AD_TITLE_PATTERNS.test(c)) return null;
+  if (NON_COMPANY_PATTERNS.test(c)) return null;
   
   // Dynamically reject if it's likely the recipient's name
   if (recipientNames.length > 0 && recipientNames.some(n => c === n || (c.includes(n) && c.length - n.length <= 4))) {

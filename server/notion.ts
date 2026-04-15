@@ -9,7 +9,7 @@ type NotionProperty = {
   select?: { options?: Array<{ name: string }> };
 };
 
-type SyncNotionJobInput = {
+export type SyncNotionJobInput = {
   userId: number;
   companyName: string;
   position?: string | null;
@@ -287,6 +287,29 @@ export async function createNotionJobBoardFromTemplate(userId: number): Promise<
   return { databaseId: created.id.replace(/-/g, ""), url: created.url };
 }
 
+const databaseSchemaCache = new Map<string, {
+  propsMeta: Record<string, NotionProperty>;
+  expiresAt: number;
+}>();
+
+async function getNotionDatabaseSchema(dbId: string, accessToken: string) {
+  const now = Date.now();
+  const cached = databaseSchemaCache.get(dbId);
+  if (cached && cached.expiresAt > now) {
+    return cached.propsMeta;
+  }
+  const database = await notionFetchJson<{
+    properties: Record<string, NotionProperty>;
+  }>(`/databases/${dbId}`, accessToken, { method: "GET" });
+  
+  const propsMeta = database.properties ?? {};
+  databaseSchemaCache.set(dbId, {
+    propsMeta,
+    expiresAt: now + 5 * 60 * 1000, // Cache for 5 minutes
+  });
+  return propsMeta;
+}
+
 export async function syncJobToNotionBoard(input: SyncNotionJobInput): Promise<void> {
   const token = await getOauthToken(input.userId, "notion");
   if (!token?.accessToken) return;
@@ -309,11 +332,8 @@ export async function syncJobToNotionBoard(input: SyncNotionJobInput): Promise<v
   const dbId = perUserDbId || fallbackDbId;
   if (!dbId) return;
 
-  const database = await notionFetchJson<{
-    properties: Record<string, NotionProperty>;
-  }>(`/databases/${dbId}`, token.accessToken, { method: "GET" });
+  const propsMeta = await getNotionDatabaseSchema(dbId, token.accessToken);
 
-  const propsMeta = database.properties ?? {};
   const titleProp = findTitlePropertyName(propsMeta);
   if (!titleProp) throw new Error("Notion database missing title property");
 

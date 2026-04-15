@@ -29,7 +29,7 @@ const LEGAL_ENTITY_TOKENS =
   /(株式会社|（株）|\(株\)|㈱|合同会社|有限会社|incorporated|inc\.?|co\.?\s*,?\s*ltd\.?|ltd\.?|corp\.?|corporation|company|llc|g\.k\.)/gi;
 
 const RECRUITING_SUFFIXES =
-  /(採用担当|採用チーム|人事部|人事課|人事|採用|リクルート|Recruiting|recruit|HR|新卒採用|中途採用|採用事務局|運営事務局|事務局)$/i;
+  /(採用担当|採用チーム|人事部|人事課|人事|採用|リクルート|Recruiting|recruit|HR|新卒採用|中途採用|採用事務局|運営事務局|事務局|team|Team|新卒|中途|専用マイページのお知らせ|からのご案内)$/i;
 
 function cleanEdgeSymbols(input: string): string {
   return input

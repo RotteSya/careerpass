@@ -1,11 +1,11 @@
 export type MailItem<T> = { messageId: string; mailTs: number; value: T };
 
-export function sortMailItemsByTsDesc<T>(items: MailItem<T>[]): MailItem<T>[] {
+export function sortMailItemsByTsAsc<T>(items: MailItem<T>[]): MailItem<T>[] {
   const normalized = items.slice();
   normalized.sort((a, b) => {
-    const ta = Number.isFinite(a.mailTs) ? a.mailTs : -Infinity;
-    const tb = Number.isFinite(b.mailTs) ? b.mailTs : -Infinity;
-    if (tb !== ta) return tb - ta;
+    const ta = Number.isFinite(a.mailTs) ? a.mailTs : Infinity;
+    const tb = Number.isFinite(b.mailTs) ? b.mailTs : Infinity;
+    if (ta !== tb) return ta - tb;
     if (a.messageId < b.messageId) return -1;
     if (a.messageId > b.messageId) return 1;
     return 0;
