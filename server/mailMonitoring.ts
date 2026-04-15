@@ -1,4 +1,4 @@
-import { getBillingFeatureAccess, getOauthToken } from "./db";
+import { getBillingFeatureAccess, getJobApplications, getOauthToken } from "./db";
 import { monitorGmailAndSync, registerGmailPushWatch } from "./gmail";
 import type { MonitorResult } from "./gmail";
 
@@ -54,10 +54,15 @@ export async function startMailMonitoringAndCheckmail(params: {
   // Scan completion should produce only a digest summary in Telegram flow,
   // not per-mail bubbles; additionally suppress immediate push-trigger bursts.
   markRealtimeTelegramSuppressedAfterScan(params.userId);
+  const shouldForceFullMailboxScan =
+    mode === "manual" && access.autoBoardWriteEnabled
+      ? (await getJobApplications(params.userId)).length <= 3
+      : false;
   const result = await monitorGmailAndSync(params.userId, params.telegramChatId, {
     suppressTelegramItemNotifications: true,
     enableAutoBoardWrite: access.autoBoardWriteEnabled,
     enableAutoWorkflow: access.autoWorkflowEnabled,
+    ...(shouldForceFullMailboxScan ? { fullMailboxScan: true } : {}),
   });
   return {
     needsOAuth: false as const,
