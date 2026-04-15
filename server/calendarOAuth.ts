@@ -35,32 +35,6 @@ async function exchangeGoogleCode(code: string, redirectUri: string) {
   }>;
 }
 
-async function exchangeOutlookCode(code: string, redirectUri: string) {
-  const params = new URLSearchParams({
-    code,
-    client_id: process.env.OUTLOOK_CLIENT_ID ?? "",
-    client_secret: process.env.OUTLOOK_CLIENT_SECRET ?? "",
-    redirect_uri: redirectUri,
-    grant_type: "authorization_code",
-    scope: "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/Mail.Read offline_access",
-  });
-  const res = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Outlook token exchange failed: ${err}`);
-  }
-  return res.json() as Promise<{
-    access_token: string;
-    refresh_token?: string;
-    expires_in?: number;
-    scope?: string;
-  }>;
-}
-
 async function fetchGoogleAccountEmail(accessToken: string): Promise<string | null> {
   try {
     const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -71,46 +45,6 @@ async function fetchGoogleAccountEmail(accessToken: string): Promise<string | nu
     return typeof data.email === "string" ? data.email.trim().toLowerCase() : null;
   } catch {
     return null;
-  }
-}
-
-export async function handleOutlookCalendarCallback(req: Request, res: Response) {
-  const { code, state, error } = req.query as Record<string, string>;
-  const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.com";
-
-  if (error) {
-    return res.redirect(`${appDomain}/dashboard?calendar=error&reason=${encodeURIComponent(error)}`);
-  }
-  if (!code || !state) {
-    return res.redirect(`${appDomain}/dashboard?calendar=error&reason=missing_code`);
-  }
-
-  let stateData: { userId: number; provider: string };
-  try {
-    stateData = verifyOauthSignedState(state, ENV.cookieSecret);
-  } catch {
-    return res.redirect(`${appDomain}/dashboard?calendar=error&reason=invalid_state`);
-  }
-  if (stateData.provider !== "outlook") {
-    return res.redirect(`${appDomain}/dashboard?calendar=error&reason=invalid_provider`);
-  }
-
-  const redirectUri = `${appDomain}/dashboard/calendar/callback`;
-  try {
-    const tokenData = await exchangeOutlookCode(code, redirectUri);
-    const expiresAt = new Date(Date.now() + (tokenData.expires_in ?? 3600) * 1000);
-    await upsertOauthToken({
-      userId: stateData.userId,
-      provider: "outlook",
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token ?? null,
-      expiresAt,
-      scope: tokenData.scope ?? null,
-    });
-    return res.redirect(`${appDomain}/dashboard?calendar=success`);
-  } catch (e) {
-    const reason = encodeURIComponent((e as Error).message ?? "token_exchange_failed");
-    return res.redirect(`${appDomain}/dashboard?calendar=error&reason=${reason}`);
   }
 }
 
@@ -174,5 +108,4 @@ export function registerCalendarOAuthRoute(app: Express) {
       return res.redirect(`${appDomain}/dashboard?calendar=error&reason=${reason}`);
     }
   });
-  app.get("/dashboard/calendar/callback", handleOutlookCalendarCallback);
 }

@@ -12,6 +12,7 @@ import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
 import EmailVerified from "./pages/EmailVerified";
 import Dashboard from "./pages/Dashboard";
+import CalendarCallback from "./pages/CalendarCallback";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/email-verified" component={EmailVerified} />
       <Route path="/register" component={Register} />
+      <Route path="/dashboard/calendar/callback" component={CalendarCallback} />
       <Route path="/dashboard/:section" component={Dashboard} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/privacy" component={Privacy} />
