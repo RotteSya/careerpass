@@ -73,6 +73,9 @@ export function registerCalendarOAuthRoute(app: Express) {
       console.error("[CalendarOAuth] State verification failed:", e);
       return res.redirect(`${appDomain}/dashboard?calendar=error&reason=invalid_state`);
     }
+    if (stateData.provider !== "google") {
+      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=invalid_provider`);
+    }
 
     // Must match exactly what was used to generate the auth URL
     const redirectUri = `${appDomain}/api/calendar/callback`;

@@ -62,19 +62,6 @@ function buildGoogleOAuthUrl(userId: number, _origin: string): string {
   );
   return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
 }
-function buildOutlookOAuthUrl(userId: number, origin: string): string {
-  const clientId = process.env.OUTLOOK_CLIENT_ID ?? "";
-  const redirectUri = `${origin}/dashboard/calendar/callback`;
-  const scope = encodeURIComponent(
-    "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/Mail.Read offline_access"
-  );
-  const state = buildOauthSignedState(
-    { userId, provider: "outlook", exp: Date.now() + 10 * 60 * 1000 },
-    ENV.cookieSecret
-  );
-  return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
-}
-
 function buildNotionOAuthUrl(userId: number): string {
   const clientId = (process.env.NOTION_CLIENT_ID ?? "").trim();
   if (!clientId || clientId === "0") {
@@ -98,28 +85,6 @@ async function exchangeGoogleCode(code: string, redirectUri: string) {
     grant_type: "authorization_code",
   });
   const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-  return res.json() as Promise<{
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number;
-    scope: string;
-  }>;
-}
-
-async function exchangeOutlookCode(code: string, redirectUri: string) {
-  const params = new URLSearchParams({
-    code,
-    client_id: process.env.OUTLOOK_CLIENT_ID ?? "",
-    client_secret: process.env.OUTLOOK_CLIENT_SECRET ?? "",
-    redirect_uri: redirectUri,
-    grant_type: "authorization_code",
-    scope: "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/Mail.Read offline_access",
-  });
-  const res = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
@@ -435,68 +400,24 @@ export const appRouter = router({
   // ── Calendar OAuth ────────────────────────────────────────────────────────────
   calendar: router({
     getAuthUrl: protectedProcedure
-      .input(z.object({ provider: z.enum(["google", "outlook"]), origin: z.string() }))
-      .query(({ ctx, input }) => {
-        const url =
-          input.provider === "google"
-            ? buildGoogleOAuthUrl(ctx.user.id, input.origin)
-            : buildOutlookOAuthUrl(ctx.user.id, input.origin);
+      .input(z.void())
+      .query(({ ctx }) => {
+        const url = buildGoogleOAuthUrl(ctx.user.id, "");
         return { url };
       }),
 
-     handleCallback: publicProcedure
-      .input(
-        z.object({
-          code: z.string(),
-          state: z.string(),
-          redirectUri: z.string(),
-        })
-      )
-      .mutation(async ({ input }) => {
-        // Verify HMAC-signed state — prevents forged callbacks since handleCallback is public
-        let stateData: { userId: number; provider: string };
-        try {
-          stateData = verifyOauthSignedState(input.state, ENV.cookieSecret);
-        } catch (e) {
-          throw new Error(`Invalid OAuth state: ${(e as Error).message}`);
-        }
-        if (!stateData.userId || !stateData.provider) throw new Error("Invalid state payload");
-        const provider = stateData.provider as "google" | "outlook";
-        const tokenData =
-          provider === "google"
-            ? await exchangeGoogleCode(input.code, input.redirectUri)
-            : await exchangeOutlookCode(input.code, input.redirectUri);
-        const expiresAt = new Date(Date.now() + (tokenData.expires_in ?? 3600) * 1000);
-        await upsertOauthToken({
-          userId: stateData.userId,
-          provider,
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token ?? null,
-          expiresAt,
-          scope: tokenData.scope ?? null,
-        });
-        return { success: true, provider };
-      }),
-
     getStatus: protectedProcedure.query(async ({ ctx }) => {
-      const [google, outlook] = await Promise.all([
-        getOauthToken(ctx.user.id, "google"),
-        getOauthToken(ctx.user.id, "outlook"),
-      ]);
+      const google = await getOauthToken(ctx.user.id, "google");
       return {
         google: !!google,
-        outlook: !!outlook,
         googleExpiresAt: google?.expiresAt ?? null,
-        outlookExpiresAt: outlook?.expiresAt ?? null,
       };
     }),
 
-    disconnect: protectedProcedure
-      .input(z.object({ provider: z.enum(["google", "outlook"]) }))
-      .mutation(async ({ ctx, input }) => {
-        await deleteOauthToken(ctx.user.id, input.provider);
-        return { success: true };
-      }),
+    disconnect: protectedProcedure.mutation(async ({ ctx }) => {
+      await deleteOauthToken(ctx.user.id, "google");
+      return { success: true };
+    }),
 
     listRecentAutoEvents: protectedProcedure
       .input(z.object({ max: z.number().min(1).max(50).optional() }).optional())

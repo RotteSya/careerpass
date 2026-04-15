@@ -92,15 +92,9 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
-  const { data: googleAuthUrl } = trpc.calendar.getAuthUrl.useQuery(
-    { provider: "google", origin: typeof window !== "undefined" ? window.location.origin : "" },
-    { enabled: isAuthenticated }
-  );
-
-  const { data: outlookAuthUrl } = trpc.calendar.getAuthUrl.useQuery(
-    { provider: "outlook", origin: typeof window !== "undefined" ? window.location.origin : "" },
-    { enabled: isAuthenticated }
-  );
+  const { data: googleAuthUrl } = trpc.calendar.getAuthUrl.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
   const { data: notionStatus, refetch: refetchNotionStatus } = trpc.notion.getStatus.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -543,7 +537,7 @@ export default function Dashboard() {
                       variant="outline"
                       size="sm"
                       className="w-full bg-transparent text-destructive border-destructive/30 hover:bg-destructive/10"
-                      onClick={() => disconnectCalendar.mutate({ provider: "google" })}
+                      onClick={() => disconnectCalendar.mutate()}
                       disabled={disconnectCalendar.isPending}
                     >
                       連携解除

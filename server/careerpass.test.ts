@@ -162,32 +162,15 @@ describe("calendar.getAuthUrl", () => {
   it("generates Google OAuth URL with calendar scope", async () => {
     const ctx = createMockContext();
     const caller = appRouter.createCaller(ctx);
-    const result = await caller.calendar.getAuthUrl({
-      provider: "google",
-      origin: "https://example.com",
-    });
+    const result = await caller.calendar.getAuthUrl();
     expect(result.url).toContain("accounts.google.com");
     expect(result.url).toContain("calendar");
-  });
-
-  it("generates Outlook OAuth URL with graph.microsoft.com", async () => {
-    const ctx = createMockContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.calendar.getAuthUrl({
-      provider: "outlook",
-      origin: "https://example.com",
-    });
-    expect(result.url).toContain("microsoftonline.com");
-    expect(result.url).toContain("Calendars");
   });
 
   it("encodes redirectUri in OAuth URL using fixed production domain", async () => {
     const ctx = createMockContext();
     const caller = appRouter.createCaller(ctx);
-    const result = await caller.calendar.getAuthUrl({
-      provider: "google",
-      origin: "https://myapp.example.com", // origin is now ignored; fixed domain is always used
-    });
+    const result = await caller.calendar.getAuthUrl();
     expect(result.url).toContain("redirect_uri");
     // redirect_uri must always point to the canonical production domain
     // to prevent redirect_uri_mismatch when users access via alternate URLs (e.g. Cloud Run preview)
@@ -201,7 +184,6 @@ describe("calendar.getStatus", () => {
     const caller = appRouter.createCaller(ctx);
     const status = await caller.calendar.getStatus();
     expect(status.google).toBe(false);
-    expect(status.outlook).toBe(false);
   });
 });
 

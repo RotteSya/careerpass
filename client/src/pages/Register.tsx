@@ -49,10 +49,9 @@ export default function Register() {
     enabled: isAuthenticated && step === 3,
   });
 
-  const { data: googleAuthUrl } = trpc.calendar.getAuthUrl.useQuery(
-    { provider: "google", origin: typeof window !== "undefined" ? window.location.origin : "" },
-    { enabled: isAuthenticated && step === 3 }
-  );
+  const { data: googleAuthUrl } = trpc.calendar.getAuthUrl.useQuery(undefined, {
+    enabled: isAuthenticated && step === 3,
+  });
 
   const completeRegistration = trpc.user.completeRegistration.useMutation({
     onSuccess: async () => {

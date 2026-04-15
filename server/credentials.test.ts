@@ -48,10 +48,7 @@ describe("Google OAuth configuration", () => {
   it("calendar.getAuthUrl generates valid Google OAuth URL with client_id", async () => {
     const ctx = createMockContext();
     const caller = appRouter.createCaller(ctx);
-    const result = await caller.calendar.getAuthUrl({
-      provider: "google",
-      origin: "https://example.com",
-    });
+    const result = await caller.calendar.getAuthUrl();
 
     expect(result.url).toBeTruthy();
     expect(result.url).toContain("accounts.google.com");
@@ -65,23 +62,12 @@ describe("Google OAuth configuration", () => {
     }
   });
 
-  it("calendar.getAuthUrl fails gracefully when provider is missing credentials", async () => {
-    // Test that the URL generation handles missing OUTLOOK credentials gracefully
+  it("calendar.getAuthUrl rejects unexpected input (outlook not supported)", async () => {
     const ctx = createMockContext();
     const caller = appRouter.createCaller(ctx);
-    // Outlook is not configured - should either throw or return a URL indicating misconfiguration
-    // We just verify it doesn't crash the server
-    try {
-      const result = await caller.calendar.getAuthUrl({
-        provider: "outlook",
-        origin: "https://example.com",
-      });
-      // If it returns, the URL should at least be a string
-      expect(typeof result.url).toBe("string");
-    } catch (err) {
-      // Acceptable: throwing when credentials are missing is also valid behavior
-      expect(err).toBeDefined();
-    }
+    await expect(
+      (caller.calendar.getAuthUrl as any)({ provider: "outlook" })
+    ).rejects.toThrow();
   });
 });
 
