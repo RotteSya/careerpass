@@ -262,7 +262,7 @@ export async function getBillingFeatureAccess(userId: number): Promise<BillingFe
   };
 }
 
-function normalizeCompanyKeyForBilling(companyName: string): string {
+export function normalizeCompanyKeyForBilling(companyName: string): string {
   return normalizeCompanyKey(companyName) ?? companyName.trim().toLowerCase().replace(/\s+/g, " ");
 }
 

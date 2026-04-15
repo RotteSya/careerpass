@@ -18,7 +18,6 @@ import {
   createJobApplication,
   createJobStatusEvent,
   updateJobApplicationStatus,
-  updateJobApplicationDetails,
   getUserCalendarColorPrefs,
   saveAgentMemory,
   updateGoogleAccountSyncState,
@@ -37,8 +36,19 @@ import { createCompanyBatchDeduper, sortMailItemsByTsDesc } from "./gmail_dedup"
 import { sendTelegramMessage } from "./telegramMessaging";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
 import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
+import { getDomainReputation, extractBestDateTime } from "./mailNer";
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
+
+function getSenderDomain(from: string): string | null {
+  const match = from.match(/@([^>\s]+)/);
+  return match ? match[1] : null;
+}
+
+function extractCompanyName(from: string, subject: string): string | null {
+  const domainMatch = from.match(/@([^.>]+)\./);
+  return domainMatch ? domainMatch[1] : null;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -240,8 +250,8 @@ async function fetchInboxMessageIds(params: {
     // Broad pull (without hard keyword gate). Actual job-related decision is delegated to monitor agent.
     // First full scan removes time window so we can reconstruct the board from the entire inbox.
     const q = fullMailbox
-      ? "-category:social"
-      : "newer_than:30d -category:social";
+      ? "-category:social -category:promotions"
+      : "newer_than:5d -category:social -category:promotions";
 
     while (maxResults === null || messageIds.length < maxResults) {
       const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
@@ -815,9 +825,6 @@ function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobSta
   return null;
 }
 
-
-
-
 function jobStatusLabelZh(status: JobStatus): string {
   if (status === "researching") return "调研/准备";
   if (status === "applied") return "エントリー済み";
@@ -836,7 +843,6 @@ function jobStatusLabelZh(status: JobStatus): string {
   if (status === "withdrawn") return "已撤回";
   return status;
 }
-
 
 function nextStepsZh(status: JobStatus): string[] {
   if (status === "researching") return ["确认投递岗位与截止时间", "准备 ES 的两段核心素材（志望动机/自己PR）"];
@@ -861,10 +867,6 @@ async function upsertJobProgressFromMail(params: {
   userId: number;
   companyName: string;
   nextStatus: JobStatus;
-  position?: string | null;
-  contactInfo?: string | null;
-  priority?: "high" | "medium" | "low" | null;
-  nextActionAt?: Date | null;
   mail?: {
     messageId: string;
     from: string;
@@ -873,7 +875,7 @@ async function upsertJobProgressFromMail(params: {
     reason?: string;
   };
 }): Promise<{ changed: boolean; jobId: number | null; prevStatus: JobStatus | null; nextStatus: JobStatus }> {
-  const { userId, companyName, nextStatus, position, contactInfo, priority, nextActionAt } = params;
+  const { userId, companyName, nextStatus } = params;
   const canonicalCompanyName = resolveCanonicalCompanyName(companyName) ?? companyName;
   const targetKey = normalizeCompanyKey(canonicalCompanyName);
   const jobs = await getJobApplications(userId);
@@ -884,14 +886,7 @@ async function upsertJobProgressFromMail(params: {
     return j.companyNameJa === canonicalCompanyName || j.companyNameEn === canonicalCompanyName;
   });
   if (!existing) {
-    await createJobApplication({
-      userId,
-      companyNameJa: canonicalCompanyName,
-      position: position ?? null,
-      contactInfo: contactInfo ?? null,
-      priority: priority ?? "medium",
-      nextActionAt: nextActionAt ?? null,
-    });
+    await createJobApplication({ userId, companyNameJa: canonicalCompanyName });
     const fresh = await getJobApplications(userId);
     const created = fresh.find((j) => {
       const jaKey = normalizeCompanyKey(j.companyNameJa);
@@ -899,7 +894,7 @@ async function upsertJobProgressFromMail(params: {
       return j.companyNameJa === canonicalCompanyName;
     }) ?? null;
     if (created) {
-      await updateJobApplicationDetails(created.id, userId, { status: nextStatus });
+      await updateJobApplicationStatus(created.id, userId, nextStatus);
       await createJobStatusEvent({
         userId,
         jobApplicationId: created.id,
@@ -919,18 +914,8 @@ async function upsertJobProgressFromMail(params: {
 
   const prevStatus = existing.status as JobStatus;
   const shouldAdvance = jobStatusRank(nextStatus) > jobStatusRank(prevStatus);
-  const updates: Record<string, any> = {};
-  if (shouldAdvance) updates.status = nextStatus;
-  if (position) updates.position = position;
-  if (contactInfo) updates.contactInfo = contactInfo;
-  if (priority) updates.priority = priority;
-  if (nextActionAt) updates.nextActionAt = nextActionAt;
-
-  if (Object.keys(updates).length > 0) {
-    await updateJobApplicationDetails(existing.id, userId, updates);
-  }
-
   if (shouldAdvance) {
+    await updateJobApplicationStatus(existing.id, userId, nextStatus);
     await createJobStatusEvent({
       userId,
       jobApplicationId: existing.id,
@@ -967,9 +952,6 @@ interface CareerpassmailDecision extends Partial<EmailEvent> {
   isJobRelated: boolean;
   confidence: number;
   reason: string;
-  position?: string | null;
-  contactInfo?: string | null;
-  priority?: "high" | "medium" | "low" | null;
 }
 
 function calendarColorForEventType(
@@ -982,34 +964,7 @@ function calendarColorForEventType(
   return undefined;
 }
 
-const FREE_MAIL_DOMAINS = new Set([
-  "gmail.com",
-  "yahoo.co.jp",
-  "yahoo.com",
-  "outlook.com",
-  "hotmail.com",
-  "icloud.com",
-  "qq.com",
-  "163.com",
-]);
 
-const JOB_RELATED_DOMAIN_HINTS = [
-  "recruit",
-  "career",
-  "saiyo",
-  "hr",
-  "job",
-  "talent",
-  "mypage",
-  "rikunabi",
-  "mynavi",
-  "wantedly",
-];
-
-function getSenderDomain(from: string): string | null {
-  const m = from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-  return m?.[1]?.toLowerCase() ?? null;
-}
 
 async function runCareerpassmailAgent(input: {
   subject: string;
@@ -1017,14 +972,15 @@ async function runCareerpassmailAgent(input: {
   from: string;
   fallbackDate: string | null;
 }): Promise<CareerpassmailDecision & { _meta?: { pipelineOnly?: boolean; pipelineShouldSkipLlm?: boolean } }> {
-  const domain = getSenderDomain(input.from);
+  const domainRep = getDomainReputation(input.from);
+  const extractedDate = extractBestDateTime(`${input.subject}\n${input.body}`);
   const preflight = runRecruitingNlpPipeline({
     subject: input.subject,
     body: input.body,
     from: input.from,
-    domainSignal: 0.5, // domain reputation is now completely handled by mailNer.ts getDomainReputation
-    fallbackDate: input.fallbackDate,
-    fallbackTime: null,
+    domainSignal: domainRep.score,
+    fallbackDate: extractedDate.date ?? input.fallbackDate,
+    fallbackTime: extractedDate.time ?? null,
   });
   if (preflight.shouldSkipLlm) {
     console.info("[careerpassmail] preflight-skip-llm", {
@@ -1133,12 +1089,9 @@ async function runCareerpassmailAgent(input: {
   "reason": string (简短判断依据),
   "eventType": "interview" | "briefing" | "test" | "deadline" | "entry" | "offer" | "rejection" | "other",
   "companyName": string | null,
-  "position": string | null (具体的职位名称/选考Course等，若无则为null),
   "eventDate": "YYYY-MM-DD" | null,
   "eventTime": "HH:MM" | null,
   "location": string | null,
-  "contactInfo": string | null (联系方式，如HR邮箱、电话、人名等),
-  "priority": "high" | "medium" | "low" (基于此事件的紧迫程度评估),
   "todoItems": string[] (最多3条)
 }`;
   const soul = await loadAgentSoul("careerpassmail");
@@ -1158,8 +1111,8 @@ async function runCareerpassmailAgent(input: {
           content:
             `件名: ${input.subject}\n\n` +
             `送信者: ${input.from}\n` +
-            `送信者ドメイン: ${domain ?? "unknown"} (${domainTier})\n` +
-            `送信者ドメイン信号: 0.5\n\n` +
+            `送信者ドメイン: ${domainTier}\n` +
+            `送信者ドメイン信号: ${domainRep.score}\n\n` +
             `正文:\n${input.body.slice(0, 2500)}`,
         },
       ],
@@ -1169,15 +1122,17 @@ async function runCareerpassmailAgent(input: {
     const content = response.choices?.[0]?.message?.content;
     if (typeof content === "string") {
       const parsed = JSON.parse(content) as CareerpassmailDecision;
-      const merged = runRecruitingNlpPipeline({
-        subject: input.subject,
-        body: input.body,
-        from: input.from,
-        domainSignal: 0.5,
-        fallbackDate: input.fallbackDate,
-        fallbackTime: null,
-        llmDecision: parsed,
-      });
+      const merged = runRecruitingNlpPipeline(
+        {
+          subject: input.subject,
+          body: input.body,
+          from: input.from,
+          domainSignal: domainRep.score,
+          fallbackDate: extractedDate.date ?? null,
+          fallbackTime: extractedDate.time ?? null,
+        },
+        parsed
+      );
       return {
         isJobRelated: merged.isJobRelated,
         confidence: merged.confidence,
@@ -1188,9 +1143,6 @@ async function runCareerpassmailAgent(input: {
         eventTime: merged.eventTime,
         location: merged.location,
         todoItems: merged.todoItems,
-        position: parsed.position ?? null,
-        contactInfo: parsed.contactInfo ?? null,
-        priority: parsed.priority ?? "medium",
         _meta: {
           pipelineOnly: true,
           pipelineShouldSkipLlm: false,
@@ -1206,16 +1158,16 @@ async function runCareerpassmailAgent(input: {
     subject: input.subject,
     body: input.body,
     from: input.from,
-    domainSignal: 0.5,
-    fallbackDate: input.fallbackDate,
-    fallbackTime: null,
+    domainSignal: domainRep.score,
+    fallbackDate: extractedDate.date ?? null,
+    fallbackTime: extractedDate.time ?? null,
   });
   return {
     isJobRelated: fallback.isJobRelated,
     confidence: fallback.confidence,
     reason: `fallback-pipeline:${fallback.reason}`,
     eventType: fallback.eventType,
-    companyName: fallback.companyName,
+    companyName: fallback.companyName ?? extractCompanyName(input.from, input.subject),
     eventDate: fallback.eventDate,
     eventTime: fallback.eventTime,
     location: fallback.location,
@@ -1492,6 +1444,29 @@ async function processGmailMessageIds(params: {
 
   const candidates: typeof sorted = [];
   for (const item of sorted) {
+    const detail = item.value;
+    // Hard exclude マイナビ/リクナビ-style "站内通知" mails — they carry no real content.
+    const senderDomain = (getSenderDomain(detail.from) ?? "").toLowerCase();
+    const isJobBoardSender =
+      /mynavi|rikunabi|マイナビ|リクナビ/.test(detail.from) ||
+      /mynavi|rikunabi/.test(senderDomain);
+    const inboxNoticePattern =
+      /(新着メッセージ|メッセージが届|マイページに新しい|新着のお知らせ|站内|站内信|新しいお知らせが届)/;
+    if (isJobBoardSender && inboxNoticePattern.test(`${detail.subject}\n${detail.body}`)) {
+      continue;
+    }
+
+    // Hard exclude 就活会議 / OpenWork / Vorkers / ONE CAREER — these are review/info
+    // platforms, NOT companies the user is applying to. Emails from them should
+    // never create a job application entry.
+    const isReviewPlatformSender =
+      /syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career/.test(
+        `${detail.from}\n${detail.subject}`.toLowerCase()
+      ) ||
+      /syukatsu-kaigi|syukatsukaigi|openwork|vorkers|onecareer|one-career/.test(senderDomain);
+    if (isReviewPlatformSender) {
+      continue;
+    }
     candidates.push(item);
   }
 
@@ -1522,10 +1497,9 @@ async function processGmailMessageIds(params: {
       const decisionMeta = decision._meta ?? {};
 
       const mailText = `${detail.subject}\n${detail.body}`;
-      
+      const hardOutcome = (decisionMeta as any).hardOutcome ?? null;
       const rawEventType = decision.eventType ?? "other";
       const eventType = rawEventType;
-      const hardOutcome = rawEventType === "offer" ? "offer" : rawEventType === "rejection" ? "rejected" : null;
       const date = decision.eventDate ?? null;
       const time = decision.eventTime ?? null;
       const companyName = decision.companyName ?? null;
@@ -1634,10 +1608,6 @@ async function processGmailMessageIds(params: {
               userId,
               companyName,
               nextStatus: inferredStatus,
-              position: decision.position,
-              contactInfo: decision.contactInfo,
-              priority: decision.priority,
-              nextActionAt: date ? new Date(`${date}T${time ?? "09:00"}:00+09:00`) : null,
               mail: {
                 messageId,
                 from: detail.from,
@@ -1808,15 +1778,11 @@ export async function monitorGmailAndSync(
   }
 
   const state = await getGoogleAccountSyncState(userId);
-  let fullMailboxScan = options?.fullMailboxScan ?? !state?.lastHistoryId;
-  if (options?.fullMailboxScan === undefined) {
-    const existing = await getJobApplications(userId);
-    if (existing.length === 0) fullMailboxScan = true;
-  }
+  const fullMailboxScan = options?.fullMailboxScan ?? !state?.lastHistoryId;
   const ids = await fetchInboxMessageIds({
     accessToken,
     fullMailbox: fullMailboxScan,
-    maxResults: fullMailboxScan ? null : 200,
+    maxResults: fullMailboxScan ? null : 50,
   });
 
   const result = await processGmailMessageIds({
