@@ -1,9 +1,10 @@
 import type { Express, Request, Response } from "express";
 import crypto from "crypto";
 import { upsertOauthToken } from "./db";
+import { ENV } from "./_core/env";
 
 function getStateSecret(): string {
-  return process.env.JWT_SECRET ?? "careerpass-oauth-state-secret";
+  return ENV.cookieSecret;
 }
 
 function verifySignedState(state: string): { userId: number; provider: string } {

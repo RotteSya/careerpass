@@ -1,9 +1,26 @@
 import express from "express";
+import { createRemoteJWKSet } from "jose";
 import { getTelegramBinding, getUserByEmail, getUserIdByOauthProviderAccount } from "./db";
 import { monitorGmailAndSync, syncGmailIncremental } from "./gmail";
 import { isRealtimeTelegramSuppressed } from "./mailMonitoring";
+import { authorizeGmailPushRequest } from "./_core/gmailPushAuth";
+import { createRateLimiter } from "./_core/rateLimit";
+import { createRateLimitMiddleware } from "./_core/rateLimitMiddleware";
 
 export const gmailPushRouter = express.Router();
+
+const GOOGLE_JWKS = createRemoteJWKSet(
+  new URL("https://www.googleapis.com/oauth2/v3/certs")
+);
+const GOOGLE_ISSUER = "https://accounts.google.com";
+
+const pushLimiter = createRateLimiter({ windowMs: 60_000, max: 120 });
+gmailPushRouter.use(
+  createRateLimitMiddleware({
+    limiter: pushLimiter,
+    key: (req) => `ip:${req.ip}`,
+  })
+);
 
 interface GmailPubSubEnvelope {
   message?: {
@@ -43,8 +60,52 @@ function enqueuePerUser(userId: number, fn: () => Promise<void>): Promise<void> 
   return next;
 }
 
-gmailPushRouter.post("/push", (req, res) => {
-  // Acknowledge first; process asynchronously to avoid Pub/Sub retries caused by long processing.
+function getHeader(
+  headers: Record<string, string | string[] | undefined>,
+  name: string
+): string | undefined {
+  const v = headers[name];
+  if (Array.isArray(v)) return v[0];
+  return typeof v === "string" ? v : undefined;
+}
+
+gmailPushRouter.post("/push", async (req, res) => {
+  try {
+    const audience = process.env.GMAIL_PUBSUB_AUDIENCE ?? "";
+    if (!audience) {
+      res.status(503).end();
+      return;
+    }
+
+    const result = await authorizeGmailPushRequest(
+      {
+        authorization: getHeader(req.headers as any, "authorization"),
+      },
+      {
+        audience,
+        issuer: GOOGLE_ISSUER,
+        jwks: GOOGLE_JWKS,
+      }
+    );
+
+    const expectedServiceAccount = (process.env.GMAIL_PUBSUB_SERVICE_ACCOUNT ?? "")
+      .trim()
+      .toLowerCase();
+    if (expectedServiceAccount) {
+      const email =
+        typeof (result.payload as any).email === "string"
+          ? String((result.payload as any).email).trim().toLowerCase()
+          : "";
+      if (!email || email !== expectedServiceAccount) {
+        res.status(401).end();
+        return;
+      }
+    }
+  } catch {
+    res.status(401).end();
+    return;
+  }
+
   res.status(204).end();
 
   void (async () => {

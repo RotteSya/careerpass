@@ -27,6 +27,7 @@ import crypto from "crypto";
 import { reconCompany as runRecon, searchMemories } from "./recon";
 import { getValidAccessToken, monitorGmailAndSync, sendTelegramMessage } from "./gmail";
 import { createNotionJobBoardFromTemplate, syncJobToNotionBoard } from "./notion";
+import { ENV } from "./_core/env";
 import {
   handleAgentChat,
   generateResume,
@@ -48,7 +49,7 @@ import { sdk } from "./_core/sdk";
 
 // ── HMAC-signed state helpers ─────────────────────────────────────────────────
 function getStateSecret(): string {
-  return process.env.JWT_SECRET ?? "careerpass-oauth-state-secret";
+  return ENV.cookieSecret;
 }
 function buildSignedState(payload: { userId: number; provider: string; exp: number }): string {
   const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -59,7 +60,7 @@ function verifySignedState(state: string): { userId: number; provider: string } 
   const [data, sig] = state.split(".");
   if (!data || !sig) throw new Error("Malformed state");
   const expected = crypto.createHmac("sha256", getStateSecret()).update(data).digest("base64url");
-  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
     throw new Error("State signature mismatch");
   }
   const payload = JSON.parse(Buffer.from(data, "base64url").toString()) as {

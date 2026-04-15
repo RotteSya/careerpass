@@ -23,6 +23,9 @@ import { invokeLLM } from "./_core/llm";
 import { startMailMonitoringAndCheckmail, consumeBackgroundScanResult } from "./mailMonitoring";
 import { registerGmailPushWatch } from "./gmail";
 import { sendTelegramMessage, sendTelegramBubbles } from "./telegramMessaging";
+import { createRateLimiter } from "./_core/rateLimit";
+import { createRateLimitMiddleware } from "./_core/rateLimitMiddleware";
+import { assertTelegramWebhookSecret } from "./_core/telegramWebhookAuth";
 import {
   collectTrialNudges,
   manualScanUpsellLine,
@@ -40,10 +43,28 @@ if (!TELEGRAM_BOT_TOKEN) {
 }
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
+const TELEGRAM_WEBHOOK_SECRET_TOKEN =
+  process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN ?? "";
+
+if (
+  process.env.NODE_ENV === "production" &&
+  TELEGRAM_BOT_TOKEN &&
+  !TELEGRAM_WEBHOOK_SECRET_TOKEN
+) {
+  throw new Error("TELEGRAM_WEBHOOK_SECRET_TOKEN is required");
+}
 
 export const telegramRouter = express.Router();
 const processedUpdateIds = new Map<number, number>();
 const TELEGRAM_UPDATE_TTL_MS = 10 * 60 * 1000;
+
+const webhookLimiter = createRateLimiter({ windowMs: 60_000, max: 60 });
+telegramRouter.use(
+  createRateLimitMiddleware({
+    limiter: webhookLimiter,
+    key: (req) => `ip:${req.ip}`,
+  })
+);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -733,6 +754,15 @@ async function maybeSendTrialLifecycleNudges(userId: number, chatId: string | nu
 // Webhook endpoint: POST /api/telegram/webhook
 telegramRouter.post("/webhook", async (req, res) => {
   try {
+    if (TELEGRAM_WEBHOOK_SECRET_TOKEN) {
+      const header = req.headers["x-telegram-bot-api-secret-token"];
+      const value = Array.isArray(header) ? header[0] : header;
+      assertTelegramWebhookSecret(
+        { "x-telegram-bot-api-secret-token": value },
+        { requiredSecret: TELEGRAM_WEBHOOK_SECRET_TOKEN }
+      );
+    }
+
     const update = req.body;
     const updateId =
       typeof update?.update_id === "number" ? update.update_id : null;
@@ -1197,7 +1227,12 @@ export async function registerTelegramWebhook(webhookUrl: string) {
     const res = await fetch(`${TELEGRAM_API}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: webhookUrl }),
+      body: JSON.stringify({
+        url: webhookUrl,
+        ...(TELEGRAM_WEBHOOK_SECRET_TOKEN
+          ? { secret_token: TELEGRAM_WEBHOOK_SECRET_TOKEN }
+          : {}),
+      }),
     });
     const data = await res.json();
     console.log("[Telegram] Webhook registered:", data);
