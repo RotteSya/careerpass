@@ -40,16 +40,22 @@ function App() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("bypass") === "true" || params.get("admin") === "true") {
-      localStorage.setItem("admin_bypass", "true");
-      // Clean up URL parameters
-      window.history.replaceState({}, document.title, window.location.pathname);
-      setIsBypassed(true);
-    } else {
-      setIsBypassed(localStorage.getItem("admin_bypass") === "true");
-    }
-    setIsChecking(false);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/internal/bypass/status", { credentials: "include" });
+        const data = (await res.json().catch(() => null)) as { bypassed?: unknown } | null;
+        const bypassed = res.ok && !!data && data.bypassed === true;
+        if (!cancelled) setIsBypassed(bypassed);
+      } catch {
+        if (!cancelled) setIsBypassed(false);
+      } finally {
+        if (!cancelled) setIsChecking(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (isChecking) return null;

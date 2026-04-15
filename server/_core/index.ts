@@ -14,6 +14,7 @@ import { registerCalendarOAuthRoute } from "../calendarOAuth";
 import { registerNotionOAuthRoute } from "../notionOAuth";
 import { createContext } from "./context";
 import { createCsrfMiddleware } from "./csrfMiddleware";
+import { internalBypassRouter } from "../internalBypass";
 import { serveStatic, setupVite } from "./vite";
 import { createRateLimiter } from "./rateLimit";
 import { createRateLimitMiddleware } from "./rateLimitMiddleware";
@@ -53,6 +54,7 @@ async function startServer() {
   app.use("/api/telegram", telegramRouter);
   // Gmail push notifications (Google Pub/Sub push endpoint)
   app.use("/api/gmail", gmailPushRouter);
+  app.use("/api/internal/bypass", internalBypassRouter);
 
   // Auto-register Telegram webhook on startup to avoid silent bot inactivity.
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
