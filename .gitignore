@@ -114,7 +114,6 @@ client/public/__manus__/version.json
 
 # Test files
 testmail/
-testmailcsv/
 testcsv/
 *.eml
 *.csv
