@@ -600,8 +600,8 @@ export async function getJobApplications(userId: number) {
 export async function createJobApplication(data: InsertJobApplication) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(jobApplications).values(data);
-  return result;
+  const [result] = await db.insert(jobApplications).values(data);
+  return { id: result.insertId };
 }
 
 export async function updateJobApplicationStatus(

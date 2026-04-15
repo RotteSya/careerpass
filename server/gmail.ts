@@ -15,7 +15,6 @@ import {
   getGoogleAccountSyncState,
   getOauthToken,
   getJobApplications,
-  createJobApplication,
   createJobStatusEvent,
   updateJobApplicationStatus,
   getUserCalendarColorPrefs,
@@ -25,7 +24,9 @@ import {
   upsertOauthToken,
   upsertOauthProviderAccount,
   trackCompanyForBilling,
+  createJobApplication,
 } from "./db";
+
 import { invokeLLM } from "./_core/llm";
 import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import {
@@ -35,7 +36,7 @@ import { syncJobToNotionBoard, type SyncNotionJobInput } from "./notion";
 import { createCompanyBatchDeduper, sortMailItemsByTsAsc } from "./gmail_dedup";
 import { sendTelegramMessage } from "./telegramMessaging";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
-import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
+import { resolveCanonicalCompanyName, normalizeCompanyKey } from "./companyName";
 import { getDomainReputation, extractBestDateTime } from "./mailNer";
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
@@ -863,88 +864,6 @@ function nextStepsZh(status: JobStatus): string[] {
   return [];
 }
 
-async function upsertJobProgressFromMail(params: {
-  userId: number;
-  companyName: string;
-  nextStatus: JobStatus;
-  mail?: {
-    messageId: string;
-    from: string;
-    subject: string;
-    snippet?: string;
-    reason?: string;
-  };
-}): Promise<{ changed: boolean; jobId: number | null; prevStatus: JobStatus | null; nextStatus: JobStatus }> {
-  const { userId, companyName, nextStatus } = params;
-  const canonicalCompanyName = resolveCanonicalCompanyName(companyName) ?? companyName;
-  const targetKey = normalizeCompanyKey(canonicalCompanyName);
-  const jobs = await getJobApplications(userId);
-  const existing = jobs.find((j) => {
-    const jaKey = normalizeCompanyKey(j.companyNameJa);
-    const enKey = normalizeCompanyKey(j.companyNameEn);
-    if (targetKey) return jaKey === targetKey || enKey === targetKey;
-    return j.companyNameJa === canonicalCompanyName || j.companyNameEn === canonicalCompanyName;
-  });
-  if (!existing) {
-    await createJobApplication({ userId, companyNameJa: canonicalCompanyName });
-    const fresh = await getJobApplications(userId);
-    const created = fresh.find((j) => {
-      const jaKey = normalizeCompanyKey(j.companyNameJa);
-      if (targetKey && jaKey) return jaKey === targetKey;
-      return j.companyNameJa === canonicalCompanyName;
-    }) ?? null;
-    if (created) {
-      await updateJobApplicationStatus(created.id, userId, nextStatus);
-      await createJobStatusEvent({
-        userId,
-        jobApplicationId: created.id,
-        source: "gmail",
-        prevStatus: null,
-        nextStatus,
-        mailMessageId: params.mail?.messageId ?? null,
-        mailFrom: params.mail?.from ?? null,
-        mailSubject: params.mail?.subject ?? null,
-        mailSnippet: params.mail?.snippet ?? null,
-        reason: params.mail?.reason ?? null,
-      });
-      return { changed: true, jobId: created.id, prevStatus: null, nextStatus };
-    }
-    return { changed: false, jobId: null, prevStatus: null, nextStatus };
-  }
-
-  const prevStatus = existing.status as JobStatus;
-  const shouldAdvance = jobStatusRank(nextStatus) > jobStatusRank(prevStatus);
-  if (shouldAdvance) {
-    await updateJobApplicationStatus(existing.id, userId, nextStatus);
-    await createJobStatusEvent({
-      userId,
-      jobApplicationId: existing.id,
-      source: "gmail",
-      prevStatus,
-      nextStatus,
-      mailMessageId: params.mail?.messageId ?? null,
-      mailFrom: params.mail?.from ?? null,
-      mailSubject: params.mail?.subject ?? null,
-      mailSnippet: params.mail?.snippet ?? null,
-      reason: params.mail?.reason ?? null,
-    });
-    return { changed: true, jobId: existing.id, prevStatus, nextStatus };
-  }
-  await createJobStatusEvent({
-    userId,
-    jobApplicationId: existing.id,
-    source: "gmail",
-    prevStatus,
-    nextStatus: prevStatus,
-    mailMessageId: params.mail?.messageId ?? null,
-    mailFrom: params.mail?.from ?? null,
-    mailSubject: params.mail?.subject ?? null,
-    mailSnippet: params.mail?.snippet ?? null,
-    reason: params.mail?.reason ?? null,
-  });
-  return { changed: false, jobId: existing.id, prevStatus, nextStatus: prevStatus };
-}
-
 // Only events that represent a real appointment should be written to calendar.
 const CALENDAR_WRITABLE_TYPES: EmailEvent["eventType"][] = ["interview", "briefing", "test", "deadline"];
 
@@ -1392,9 +1311,9 @@ async function processGmailMessageIds(params: {
   accessToken: string;
   messageIds: string[];
   notifyWindowDays?: number;
-  suppressTelegramItemNotifications?: boolean;
-  enableAutoBoardWrite?: boolean;
-  enableAutoWorkflow?: boolean;
+  suppressTelegramItemNotifications: boolean;
+  enableAutoBoardWrite: boolean;
+  enableAutoWorkflow: boolean;
 }): Promise<MonitorResult> {
   const {
     userId,
@@ -1488,6 +1407,20 @@ async function processGmailMessageIds(params: {
   });
 
   const pendingNotionSyncs = new Map<string, SyncNotionJobInput>();
+  
+  // Local DB cache for the user's job applications to prevent N+1 queries
+  const localJobsCache = new Map<string, any>();
+  if (enableAutoBoardWrite) {
+    const existingJobs = await getJobApplications(userId);
+    for (const j of existingJobs) {
+      const jaKey = normalizeCompanyKey(j.companyNameJa);
+      const enKey = normalizeCompanyKey(j.companyNameEn);
+      if (jaKey) localJobsCache.set(jaKey, j);
+      if (enKey && enKey !== jaKey) localJobsCache.set(enKey, j);
+      localJobsCache.set(j.companyNameJa, j);
+      if (j.companyNameEn) localJobsCache.set(j.companyNameEn, j);
+    }
+  }
 
   const latestMessageIdPerCompany = new Map<string, string>();
   for (const entry of analyzed) {
@@ -1611,21 +1544,49 @@ async function processGmailMessageIds(params: {
           reason: decision.reason,
         });
       }
-      const progressUpdate =
-        enableAutoBoardWrite && inferredStatus && companyName
-          ? await upsertJobProgressFromMail({
-              userId,
-              companyName,
-              nextStatus: inferredStatus,
-              mail: {
-                messageId,
-                from: detail.from,
-                subject: detail.subject,
-                snippet: detail.body.slice(0, 120),
-                reason: `${decision.reason ?? ""} (eventType=${rawEventType}, hardOutcome=${hardOutcome ?? "none"})`,
-              },
-            })
-          : null;
+      let progressUpdate: { changed: boolean; jobId: number | null; nextStatus: JobStatus } | null = null;
+
+      if (enableAutoBoardWrite && inferredStatus && companyName) {
+        const canonicalCompanyName = resolveCanonicalCompanyName(companyName) ?? companyName;
+        const targetKey = normalizeCompanyKey(canonicalCompanyName);
+        
+        let existingJob = targetKey ? localJobsCache.get(targetKey) : localJobsCache.get(canonicalCompanyName);
+        
+        if (!existingJob) {
+          const newJob = await createJobApplication({ userId, companyNameJa: canonicalCompanyName });
+          existingJob = { ...newJob, companyNameJa: canonicalCompanyName, companyNameEn: null, status: "applied" };
+          const jaKey = normalizeCompanyKey(canonicalCompanyName);
+          if (jaKey) localJobsCache.set(jaKey, existingJob);
+          localJobsCache.set(canonicalCompanyName, existingJob);
+        }
+
+        const prevStatus = existingJob.status as JobStatus;
+        const shouldAdvance = jobStatusRank(inferredStatus) > jobStatusRank(prevStatus);
+        
+        if (shouldAdvance) {
+          await updateJobApplicationStatus(existingJob.id, userId, inferredStatus);
+          existingJob.status = inferredStatus; // Update local cache
+        }
+        
+        await createJobStatusEvent({
+          userId,
+          jobApplicationId: existingJob.id,
+          source: "gmail",
+          prevStatus,
+          nextStatus: shouldAdvance ? inferredStatus : prevStatus,
+          mailMessageId: messageId,
+          mailFrom: detail.from,
+          mailSubject: detail.subject,
+          mailSnippet: detail.body.slice(0, 120),
+          reason: `${decision.reason ?? ""} (eventType=${rawEventType}, hardOutcome=${hardOutcome ?? "none"})`,
+        });
+
+        progressUpdate = {
+          changed: shouldAdvance,
+          jobId: existingJob.id,
+          nextStatus: shouldAdvance ? inferredStatus : prevStatus
+        };
+      }
 
       if (companyName) {
         await trackCompanyForBilling({
