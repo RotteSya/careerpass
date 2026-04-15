@@ -207,9 +207,9 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   const isFromPlatform =
     fromDomainTier === "recruiting_platform" || fromDomainTier === "noise_platform";
 
-  // Strategy 7: Legal entity in body (first 500 chars, lower confidence)
+  // Strategy 7: Legal entity in body (prefix, lower confidence)
   if (!isFromPlatform) {
-    const bodyPrefix = body.slice(0, 500);
+    const bodyPrefix = body.slice(0, 2500);
     extractLegal(bodyPrefix, "body_legal", 0.70);
   }
 

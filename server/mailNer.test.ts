@@ -97,6 +97,18 @@ describe("extractBestCompanyName", () => {
     expect(r.name).toContain("株式会社テスト");
   });
 
+  it("extracts company from signature beyond the first 500 chars", () => {
+    const body =
+      "a".repeat(1200) +
+      "\n株式会社さくらコーポレーション\nシステム事業部 関西リージョン\n";
+    const r = extractBestCompanyName(
+      "一次選考のご案内",
+      '"濱口 昭博" <hamaguchi@sakura-corp.co.jp>',
+      body,
+    );
+    expect(r.name).toBe("株式会社さくらコーポレーション");
+  });
+
   it("boosts confidence with multi-source agreement", () => {
     // Legal name appears in both subject and from
     const r = extractBestCompanyName(

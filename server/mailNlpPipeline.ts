@@ -139,7 +139,7 @@ const EVENT_RULES: EventRule[] = [
     reason: "rule:test",
     specificity: 7,
     pattern:
-      /(webテスト|spi|適性検査|筆記試験|テスト受検|受検案内|coding test|online assessment|assessment|玉手箱|GAB|CAB|テストセンター|コーディングテスト)/i,
+      /(webテスト|\bspi\b|適性検査|筆記試験|テスト受検|受検案内|coding test|online assessment|assessment|玉手箱|\bgab\b|\bcab\b|テストセンター|コーディングテスト)/i,
   },
   {
     eventType: "deadline",
@@ -420,6 +420,27 @@ export function runRecruitingNlpPipeline(
   const hasActionableProcessHints =
     ACTIONABLE_PROCESS_HINTS.test(`${input.subject}\n${body}`) ||
     (/【[^】]{2,40}】/.test(input.subject) && PROCESS_HINTS.test(input.subject));
+  const hasAnyProcessHints = PROCESS_HINTS.test(lowerText) || hasActionableProcessHints;
+  const isObviousMarketing =
+    negPenalty <= -0.6 &&
+    !hasAnyProcessHints &&
+    domainRep.tier !== "recruiting_platform" &&
+    domainRep.tier !== "noise_platform";
+  if (isObviousMarketing) {
+    return {
+      isJobRelated: false,
+      confidence: 0.92,
+      reason: "hard-negative:marketing",
+      eventType: "other",
+      companyName: null,
+      eventDate: input.fallbackDate,
+      eventTime: input.fallbackTime,
+      location: null,
+      todoItems: [],
+      shouldSkipLlm: true,
+      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+    };
+  }
   const isLikelyNoise =
     negPenalty <= -0.4 &&
     (domainRep.tier === "noise_platform" || domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText)) &&
@@ -536,9 +557,11 @@ export function runRecruitingNlpPipeline(
   }
 
   // ⑪ isJobRelated decision
+  const hasBasicProcessHints = PROCESS_HINTS.test(lowerText);
+  const hasProcessHintsForOther = hasBasicProcessHints || hasActionableProcessHints;
   const mergedIsJobRelated = llmDecision
     ? !!llmDecision.isJobRelated || mergedEventType !== "other"
-    : mergedEventType !== "other" || (domainRep.score >= 0.8 && !!input.fallbackDate);
+    : mergedEventType !== "other" || (domainRep.score >= 0.8 && !!input.fallbackDate && hasProcessHintsForOther);
 
   // ⑫ Company name: NER result > LLM > rule-extracted
   const llmCompany = normalizeCompanyName(llmDecision?.companyName ?? null);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  normalizeCompanyDisplayName,
   normalizeCompanyKey,
   resolveCanonicalCompanyName,
 } from "./companyName";
@@ -18,5 +19,16 @@ describe("companyName normalization", () => {
     expect(resolveCanonicalCompanyName("ミライト・ワン")).toBe("株式会社ミライト・ワン");
     expect(resolveCanonicalCompanyName("（株）ミライト・ワン")).toBe("株式会社ミライト・ワン");
     expect(resolveCanonicalCompanyName("株式会社ミライト・ワン")).toBe("株式会社ミライト・ワン");
+  });
+
+  it("normalizes newlines in display name", () => {
+    const d = normalizeCompanyDisplayName("株式会社\nアイ・エス・ビー");
+    expect(d).toBeTruthy();
+    expect(d).not.toContain("\n");
+  });
+
+  it("removes whitespace after legal entity token", () => {
+    const d = normalizeCompanyDisplayName("株式会社 アイ・エス・ビー");
+    expect(d).toBe("株式会社アイ・エス・ビー");
   });
 });

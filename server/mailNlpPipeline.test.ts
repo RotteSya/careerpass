@@ -528,6 +528,48 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.companyName).toBe("株式会社オロ");
   });
 
+  it("does not misclassify 'inspire' as SPI test", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "Meet Slides: Presentations Made Effortless",
+      body: "Turn your travel dreams into stunning presentation decks that inspire wanderlust.",
+      from: "Manus Team <info@news.manus.im>",
+      domainSignal: 0.6,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.eventType).toBe("other");
+    expect(d.isJobRelated).toBe(false);
+  });
+
+  it("does not treat corporate newsletters as job-related only because they have a date header", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "Amazonビジネスはお客様のご意見をお待ちしています",
+      body: "アンケートにご協力ください。配信停止はこちら。",
+      from: '"Amazonビジネス" <no-reply@business.amazon.co.jp>',
+      domainSignal: 0.85,
+      fallbackDate: "2026-05-01",
+      fallbackTime: null,
+    });
+    expect(d.eventType).toBe("other");
+    expect(d.isJobRelated).toBe(false);
+  });
+
+  it("blocks marketing mails with strong negative signals even if they contain the word 'briefing'", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "Your Journey Begins Now",
+      body:
+        "Perfect for pitches, meetings, and briefings.\n" +
+        "This is a newsletter campaign email.\n" +
+        "Unsubscribe here: https://example.com/unsubscribe",
+      from: "Manus Team <info@news.manus.im>",
+      domainSignal: 0.6,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.eventType).toBe("other");
+    expect(d.isJobRelated).toBe(false);
+  });
+
   it("detects rejection for 希望に添いかねる result phrasing (メイテックフィルダーズ)", () => {
     const d = runRecruitingNlpPipeline({
       subject: "【メイテックフィルダーズ】【重要】一次選考結果のご連絡",
