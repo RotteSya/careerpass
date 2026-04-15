@@ -86,7 +86,10 @@ const BACKGROUND_SCAN_TTL_MS = 10 * 60 * 1000; // 10 minutes
  * the result is cached in-memory and can be consumed later via
  * `consumeBackgroundScanResult()`.
  */
-export function startBackgroundMailScan(userId: number): void {
+export function startBackgroundMailScan(
+  userId: number,
+  options?: { forceFullMailboxScan?: boolean }
+): void {
   // Evict stale entries
   backgroundScans.forEach((entry, uid) => {
     if (Date.now() - entry.startedAt > BACKGROUND_SCAN_TTL_MS) {
@@ -110,6 +113,7 @@ export function startBackgroundMailScan(userId: number): void {
       return await monitorGmailAndSync(userId, undefined, {
         enableAutoBoardWrite: access.autoBoardWriteEnabled,
         enableAutoWorkflow: false, // heavy workflows deferred to Telegram flow
+        ...(options?.forceFullMailboxScan ? { fullMailboxScan: true } : {}),
       });
     } catch (err) {
       console.error("[BackgroundScan] Failed for user", userId, err);

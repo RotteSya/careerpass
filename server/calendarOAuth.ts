@@ -121,7 +121,7 @@ export function registerCalendarOAuthRoute(app: Express) {
       await registerGmailPushWatch(stateData.userId);
       // Kick off a background mailbox scan immediately so results are ready
       // by the time the user finishes Telegram binding and reaches the greeting.
-      startBackgroundMailScan(stateData.userId);
+      startBackgroundMailScan(stateData.userId, { forceFullMailboxScan: true });
       console.log(`[CalendarOAuth] Google calendar linked for user ${stateData.userId}`);
       return res.redirect(`${appDomain}/dashboard?calendar=success`);
     } catch (e) {
