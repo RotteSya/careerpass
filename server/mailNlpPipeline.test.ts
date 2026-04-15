@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
+import { MAX_MAIL_BODY_CHARS } from "./_core/mailText";
 
 describe("runRecruitingNlpPipeline", () => {
   // ─── Existing tests (preserved) ──────────────────────────────────────────
@@ -617,5 +618,19 @@ describe("runRecruitingNlpPipeline", () => {
       fallbackTime: null,
     });
     expect(d.companyName).toBe("株式会社ミライト・ワン");
+  });
+
+  it("marks _meta.inputBodyTruncated when body is too long", () => {
+    const body = "x".repeat(MAX_MAIL_BODY_CHARS + 100) + "面接のご案内";
+    const d = runRecruitingNlpPipeline({
+      subject: "面接のご案内",
+      body,
+      from: "hr@company.co.jp",
+      domainSignal: 0.9,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d._meta?.inputBodyTruncated).toBe(true);
+    expect(d._meta?.inputBodyUsedLength).toBe(MAX_MAIL_BODY_CHARS);
   });
 });

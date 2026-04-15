@@ -17,6 +17,7 @@ import {
   preferCompanyDisplayName,
   resolveCanonicalCompanyName,
 } from "./companyName";
+import { limitMailBody, limitText, MAX_MAIL_TEXT_CHARS } from "./_core/mailText";
 
 // ─── ORG (Company Name) Extraction ───────────────────────────────────────────
 
@@ -74,6 +75,7 @@ function isDateLikeOrgName(name: string): boolean {
 }
 
 export function extractOrgCandidates(subject: string, from: string, body: string, fromDomainTier?: DomainTier, recipientNames: string[] = []): OrgCandidate[] {
+  body = limitMailBody(body).text;
   const candidates: OrgCandidate[] = [];
   const displayName = from.split("<")[0]?.trim() ?? "";
 
@@ -298,6 +300,7 @@ export function extractBestCompanyName(
   fromDomainTier?: DomainTier,
   recipientNames: string[] = []
 ): { name: string | null; confidence: number } {
+  body = limitMailBody(body).text;
   // Extract candidates using multi-strategy approach
   const candidates = extractOrgCandidates(subject, from, body, fromDomainTier, recipientNames);
   const normalized = candidates
@@ -373,6 +376,7 @@ const EVENT_DATE_CONTEXT =
   /(面接|面談|説明会|セミナー|テスト|試験|締切|期限|日時|開始|集合|開催|実施|予約|interview|test|deadline)/i;
 
 export function extractTimeCandidates(text: string): TimeCandidate[] {
+  text = limitText(text ?? "", MAX_MAIL_TEXT_CHARS).text;
   const candidates: TimeCandidate[] = [];
   const now = new Date();
 
@@ -478,6 +482,7 @@ export function extractBestDateTime(text: string): {
   time: string | null;
   endTime: string | null;
 } {
+  text = limitText(text ?? "", MAX_MAIL_TEXT_CHARS).text;
   const candidates = extractTimeCandidates(text);
   if (candidates.length === 0) return { date: null, time: null, endTime: null };
 
@@ -502,6 +507,7 @@ const LOC_ONLINE_KEYWORD_PATTERN =
   /(オンライン(?:面接|面談|説明会)?|web(?:面接|面談|説明会)|リモート(?:面接|面談))/i;
 
 export function extractLocation(text: string): string | null {
+  text = limitText(text ?? "", MAX_MAIL_TEXT_CHARS).text;
   const labelMatch = text.match(LOC_LABEL_PATTERN);
   if (labelMatch?.[1]) return labelMatch[1].split("\n")[0].trim();
 
@@ -528,6 +534,7 @@ export function extractLocation(text: string): string | null {
 export type InterviewRound = "1st" | "2nd" | "3rd" | "4th" | "final" | "unknown";
 
 export function detectInterviewRound(text: string): InterviewRound | null {
+  text = limitText(text ?? "", MAX_MAIL_TEXT_CHARS).text;
   const t = text.toLowerCase();
   if (/最終面接|最終選考|final\s*interview|last\s*interview/.test(t)) return "final";
   if (/四次面[接談]|4次面[接談]|４次面[接談]|fourth\s*interview|4th\s*interview/.test(t)) return "4th";

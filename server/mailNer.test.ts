@@ -8,6 +8,7 @@ import {
   getDomainReputation,
   calculateNegativeSignalPenalty,
 } from "./mailNer";
+import { MAX_MAIL_BODY_CHARS } from "./_core/mailText";
 
 describe("extractBestCompanyName", () => {
   it("extracts legal entity from subject", () => {
@@ -183,6 +184,13 @@ describe("extractBestCompanyName", () => {
       "末尾署名: 株式会社ミライト・ワン",
     );
     expect(r.name).toBe("株式会社ミライト・ワン");
+  });
+
+  it("does not scan beyond hard body limit", () => {
+    const longPrefix = "a".repeat(MAX_MAIL_BODY_CHARS + 50);
+    const body = `${longPrefix}株式会社メルカリ より面接のご案内です`;
+    const r = extractBestCompanyName("", "someone@gmail.com", body);
+    expect(r.name).toBeNull();
   });
 });
 

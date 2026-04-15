@@ -19,6 +19,7 @@ import {
   type InterviewRound,
 } from "./mailNer";
 import { normalizeCompanyDisplayName } from "./companyName";
+import { buildLimitedMailText } from "./_core/mailText";
 
 type MailEventType =
   | "interview"
@@ -307,8 +308,16 @@ export function runRecruitingNlpPipeline(
   input: RecruitingNlpInput,
   llmDecision?: MailDecisionLike | null,
 ): RecruitingNlpDecision {
-  const text = `${input.subject}\n${input.body}\n${input.from}`;
+  const limited = buildLimitedMailText({ subject: input.subject, body: input.body, from: input.from });
+  const body = limited.body;
+  const text = limited.text;
   const lowerText = text.toLowerCase();
+  const inputMeta = {
+    inputBodyTruncated: limited.bodyTruncated,
+    inputBodyOriginalLength: limited.originalBodyLength,
+    inputBodyUsedLength: body.length,
+    inputTextUsedLength: text.length,
+  };
 
   // ① Domain reputation
   const domainRep = getDomainReputation(input.from);
@@ -327,7 +336,7 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
-      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty: 0, ruleSignals: [] },
+      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty: 0, ruleSignals: [] },
     };
   }
 
@@ -349,13 +358,13 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
-      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
     };
   }
   const isPlatformNewsletter =
     (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText)) &&
     PLATFORM_NEWSLETTER_HINTS.test(lowerText) &&
-    !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${input.body}`) &&
+    !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${body}`) &&
     !(/【[^】]{2,40}】/.test(input.subject) && /面接のご案内|選考のご案内|書類選考/.test(input.subject)) &&
     !/一次面接|二次面接|三次面接|四次面接|最終面接|最終選考|書類選考|適性検査|合否/.test(input.subject);
   // If it's a platform promo, but the subject contains strong words like "面接攻略" or "就活講座", 
@@ -377,7 +386,7 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
-      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
     };
   }
 
@@ -390,7 +399,7 @@ export function runRecruitingNlpPipeline(
     
   if (isPlatformMessageNotification) {
     // Try to extract company name from subject or body snippet if possible
-    const nerCompany = extractBestCompanyName(input.subject, input.from, input.body, domainRep.tier);
+    const nerCompany = extractBestCompanyName(input.subject, input.from, body, domainRep.tier);
     const cleanedCompanyName = nerCompany.name?.replace(/\)$/, "").trim() || null;
     
     return {
@@ -404,12 +413,12 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: ["マイページにログインしてメッセージを確認する"],
       shouldSkipLlm: true,
-      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
     };
   }
 
   const hasActionableProcessHints =
-    ACTIONABLE_PROCESS_HINTS.test(`${input.subject}\n${input.body}`) ||
+    ACTIONABLE_PROCESS_HINTS.test(`${input.subject}\n${body}`) ||
     (/【[^】]{2,40}】/.test(input.subject) && PROCESS_HINTS.test(input.subject));
   const isLikelyNoise =
     negPenalty <= -0.4 &&
@@ -427,7 +436,7 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
-      _meta: { domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
     };
   }
 
@@ -461,13 +470,13 @@ export function runRecruitingNlpPipeline(
   }
 
   // ⑤ NER: company name (pass domain tier so platform emails don't extract from body)
-  const nerCompany = extractBestCompanyName(input.subject, input.from, input.body, domainRep.tier);
+  const nerCompany = extractBestCompanyName(input.subject, input.from, body, domainRep.tier);
 
   // ⑥ NER: date/time
   const nerDateTime = extractBestDateTime(text);
 
   // ⑦ NER: location
-  const nerLocation = extractLocation(input.body);
+  const nerLocation = extractLocation(body);
 
   // ⑧ Interview round detection
   const interviewRound = detectInterviewRound(text);
@@ -580,6 +589,7 @@ export function runRecruitingNlpPipeline(
     todoItems: mergedTodo.slice(0, 3),
     shouldSkipLlm: skipLlm,
     _meta: {
+      ...inputMeta,
       domainReputation: domainRep,
       interviewRound,
       negPenalty,
