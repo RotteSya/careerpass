@@ -195,6 +195,13 @@ const CO_OCCURRENCE_RULES: CoOccurrenceRule[] = [
   { primary: /見送り|不採用|不合格/i, secondary: /残念|お祈り|ご縁|沿いかねる/i, boost: 0.04, appliesTo: "rejection" },
 ];
 
+const SUBJECT_DEADLINE_HINT =
+  /(提出期限|提出締切|提出のお願い|締切|〆切|締め切り|回答期限|期限までに|提出をお願いします)/i;
+const SUBJECT_TEST_HINT =
+  /(適性検査|webテスト|spi|筆記試験|テスト受検|受検案内|assessment|coding\s*test|オンラインアセスメント)/i;
+const SUBJECT_INTERVIEW_HINT =
+  /(面接|面談|interview|面接日程|日程調整|面接予約|面接のご案内|面談のご案内)/i;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function normalizeEventType(v: string | null | undefined): MailEventType {
@@ -350,13 +357,13 @@ export function runRecruitingNlpPipeline(
     PLATFORM_NEWSLETTER_HINTS.test(lowerText) &&
     !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${input.body}`) &&
     !(/【[^】]{2,40}】/.test(input.subject) && /面接のご案内|選考のご案内|書類選考/.test(input.subject)) &&
-    !/一次|二次|最終|書類選考|適性検査|合否/.test(input.subject);
+    !/一次面接|二次面接|三次面接|四次面接|最終面接|最終選考|書類選考|適性検査|合否/.test(input.subject);
   // If it's a platform promo, but the subject contains strong words like "面接攻略" or "就活講座", 
   // it might be misclassified as a real interview.
   const isPlatformSeminarPromo =
     (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText) || /人材紹介/.test(lowerText)) &&
     /セミナー|就活講座|攻略法|合同説明会|合説|就活イベント|本人確認|会員登録/.test(input.subject) &&
-    !/一次|二次|最終|書類選考|適性検査|合否/.test(input.subject);
+    !/一次面接|二次面接|三次面接|四次面接|最終面接|最終選考|書類選考|適性検査|合否/.test(input.subject);
 
   if (isPlatformNewsletter || isPlatformSeminarPromo) {
     return {
@@ -427,7 +434,31 @@ export function runRecruitingNlpPipeline(
   // ④ Multi-signal rule evaluation
   let ruleSignals = evaluateAllRules(lowerText);
   ruleSignals = applyCoOccurrenceBoosts(lowerText, ruleSignals);
-  const rule = pickBestRuleSignal(ruleSignals);
+  let rule = pickBestRuleSignal(ruleSignals);
+  if (!llmDecision) {
+    const subject = input.subject ?? "";
+    const hasInterviewSignal = ruleSignals.some((s) => s.eventType === "interview");
+    const hasTestSignal = ruleSignals.some((s) => s.eventType === "test");
+    const hasDeadlineSignal = ruleSignals.some((s) => s.eventType === "deadline");
+    const preferTest = hasTestSignal && SUBJECT_TEST_HINT.test(subject) && !SUBJECT_INTERVIEW_HINT.test(subject);
+    const preferDeadline =
+      hasDeadlineSignal && SUBJECT_DEADLINE_HINT.test(subject) && !SUBJECT_INTERVIEW_HINT.test(subject);
+    if (preferTest) {
+      const best = ruleSignals
+        .filter((s) => s.eventType === "test")
+        .sort((a, b) => b.confidence - a.confidence)[0];
+      rule = { eventType: "test", confidence: best?.confidence ?? rule.confidence, reason: best?.reason ?? rule.reason };
+    } else if (preferDeadline) {
+      const best = ruleSignals
+        .filter((s) => s.eventType === "deadline")
+        .sort((a, b) => b.confidence - a.confidence)[0];
+      rule = {
+        eventType: "deadline",
+        confidence: best?.confidence ?? rule.confidence,
+        reason: best?.reason ?? rule.reason,
+      };
+    }
+  }
 
   // ⑤ NER: company name (pass domain tier so platform emails don't extract from body)
   const nerCompany = extractBestCompanyName(input.subject, input.from, input.body, domainRep.tier);
