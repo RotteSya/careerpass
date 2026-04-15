@@ -110,11 +110,16 @@ export function startBackgroundMailScan(userId: number): void {
       const token = await getOauthToken(userId, "google");
       if (!token) return null;
 
+      const shouldForceFullMailboxScan = access.autoBoardWriteEnabled
+        ? (await getJobApplications(userId)).length <= 3
+        : false;
+
       // Run without telegramChatId — we only want classification + board/calendar
       // writes.  Telegram notifications will be sent separately after the greeting.
       return await monitorGmailAndSync(userId, undefined, {
         enableAutoBoardWrite: access.autoBoardWriteEnabled,
         enableAutoWorkflow: false, // heavy workflows deferred to Telegram flow
+        ...(shouldForceFullMailboxScan ? { fullMailboxScan: true } : {}),
       });
     } catch (err) {
       console.error("[BackgroundScan] Failed for user", userId, err);
