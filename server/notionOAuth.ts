@@ -1,29 +1,7 @@
 import type { Express, Request, Response } from "express";
-import crypto from "crypto";
 import { upsertOauthToken } from "./db";
 import { ENV } from "./_core/env";
-
-function getStateSecret(): string {
-  return ENV.cookieSecret;
-}
-
-function verifySignedState(state: string): { userId: number; provider: string } {
-  const dotIdx = state.lastIndexOf(".");
-  if (dotIdx === -1) throw new Error("Malformed state");
-  const data = state.slice(0, dotIdx);
-  const sig = state.slice(dotIdx + 1);
-  const expected = crypto.createHmac("sha256", getStateSecret()).update(data).digest("base64url");
-  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
-    throw new Error("State signature mismatch");
-  }
-  const payload = JSON.parse(Buffer.from(data, "base64url").toString()) as {
-    userId: number;
-    provider: string;
-    exp: number;
-  };
-  if (Date.now() > payload.exp) throw new Error("State expired");
-  return { userId: payload.userId, provider: payload.provider };
-}
+import { verifyOauthSignedState } from "./_core/oauthSignedState";
 
 async function exchangeNotionCode(code: string, redirectUri: string) {
   const clientId = process.env.NOTION_CLIENT_ID ?? "";
@@ -70,7 +48,7 @@ export function registerNotionOAuthRoute(app: Express) {
 
     let stateData: { userId: number; provider: string };
     try {
-      stateData = verifySignedState(state);
+      stateData = verifyOauthSignedState(state, ENV.cookieSecret);
     } catch {
       return res.redirect(`${appDomain}/dashboard?notion=error&reason=invalid_state`);
     }

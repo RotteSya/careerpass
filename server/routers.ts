@@ -23,7 +23,6 @@ import {
   getWaitlistCount,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
-import crypto from "crypto";
 import { reconCompany as runRecon, searchMemories } from "./recon";
 import { getValidAccessToken, monitorGmailAndSync, sendTelegramMessage } from "./gmail";
 import { createNotionJobBoardFromTemplate, syncJobToNotionBoard } from "./notion";
@@ -44,33 +43,9 @@ import {
   sendWaitlistEmail,
 } from "./emailAuth";
 import { sdk } from "./_core/sdk";
+import { buildOauthSignedState, verifyOauthSignedState } from "./_core/oauthSignedState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// ── HMAC-signed state helpers ─────────────────────────────────────────────────
-function getStateSecret(): string {
-  return ENV.cookieSecret;
-}
-function buildSignedState(payload: { userId: number; provider: string; exp: number }): string {
-  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const sig = crypto.createHmac("sha256", getStateSecret()).update(data).digest("base64url");
-  return `${data}.${sig}`;
-}
-function verifySignedState(state: string): { userId: number; provider: string } {
-  const [data, sig] = state.split(".");
-  if (!data || !sig) throw new Error("Malformed state");
-  const expected = crypto.createHmac("sha256", getStateSecret()).update(data).digest("base64url");
-  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
-    throw new Error("State signature mismatch");
-  }
-  const payload = JSON.parse(Buffer.from(data, "base64url").toString()) as {
-    userId: number;
-    provider: string;
-    exp: number;
-  };
-  if (Date.now() > payload.exp) throw new Error("State expired");
-  return { userId: payload.userId, provider: payload.provider };
-}
 
 function buildGoogleOAuthUrl(userId: number, _origin: string): string {
   const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
@@ -81,7 +56,10 @@ function buildGoogleOAuthUrl(userId: number, _origin: string): string {
   const scope = encodeURIComponent(
     "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly"
   );
-  const state = buildSignedState({ userId, provider: "google", exp: Date.now() + 10 * 60 * 1000 });
+  const state = buildOauthSignedState(
+    { userId, provider: "google", exp: Date.now() + 10 * 60 * 1000 },
+    ENV.cookieSecret
+  );
   return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
 }
 function buildOutlookOAuthUrl(userId: number, origin: string): string {
@@ -90,7 +68,10 @@ function buildOutlookOAuthUrl(userId: number, origin: string): string {
   const scope = encodeURIComponent(
     "https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/Mail.Read offline_access"
   );
-  const state = buildSignedState({ userId, provider: "outlook", exp: Date.now() + 10 * 60 * 1000 });
+  const state = buildOauthSignedState(
+    { userId, provider: "outlook", exp: Date.now() + 10 * 60 * 1000 },
+    ENV.cookieSecret
+  );
   return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
 }
 
@@ -101,7 +82,10 @@ function buildNotionOAuthUrl(userId: number): string {
   }
   const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.com";
   const redirectUri = `${appDomain}/api/notion/callback`;
-  const state = buildSignedState({ userId, provider: "notion", exp: Date.now() + 10 * 60 * 1000 });
+  const state = buildOauthSignedState(
+    { userId, provider: "notion", exp: Date.now() + 10 * 60 * 1000 },
+    ENV.cookieSecret
+  );
   return `https://api.notion.com/v1/oauth/authorize?owner=user&client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${encodeURIComponent(state)}`;
 }
 
@@ -472,7 +456,7 @@ export const appRouter = router({
         // Verify HMAC-signed state — prevents forged callbacks since handleCallback is public
         let stateData: { userId: number; provider: string };
         try {
-          stateData = verifySignedState(input.state);
+          stateData = verifyOauthSignedState(input.state, ENV.cookieSecret);
         } catch (e) {
           throw new Error(`Invalid OAuth state: ${(e as Error).message}`);
         }
