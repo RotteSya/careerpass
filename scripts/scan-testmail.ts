@@ -67,7 +67,7 @@ function inferStatus(params: {
   if (params.eventType === "entry") {
     const text = `${params.subject}\n${params.body}`;
     if (
-      /(エントリーシート|web\s*es|es)\s*(提出|回答).*(完了|ありがとう|ありがとうございました)/i.test(text) ||
+      /(エントリーシート|web\s*es|es)\s*(提出|回答).{0,40}(完了|ありがとう|ありがとうございました)/i.test(text) ||
       /(回答が完了しました|提出が完了しました|ご提出ありがとうございました|ご提出ありがとう|提出の御礼)/.test(text)
     ) {
       return "es_submitted";

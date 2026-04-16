@@ -89,7 +89,7 @@ const PLATFORM_INCENTIVE_HINTS =
 const PLATFORM_NEWSLETTER_HINTS =
   /(マイナビメール|ピックアップ|おすすめ企業|新着求人|求人をお届け|特集|キャンペーン|ランキング|就活講座|就活準備講座|就活対策|セミナー開催|合同説明会|合説|就活イベント|就活セミナー|本人確認|会員登録|サービスのご案内|利用規約|退会フォーム)/i;
 const PLATFORM_MESSAGE_NOTIFICATION_HINTS =
-  /(メッセージが届きました|新着メッセージ|企業から.*メッセージ|メッセージ受信)/i;
+  /(メッセージが届きました|新着メッセージ|企業から.{0,40}メッセージ|メッセージ受信)/i;
 const PLATFORM_ACTIONABLE_RELAY_HINTS =
   /(応募者管理システム|miws\.mynavi\.jp|info-job@|提出の御礼|提出ありがとう|ご応募ありがとうございます|ご応募ありがとうございました)/i;
 
@@ -112,7 +112,7 @@ const EVENT_RULES: EventRule[] = [
     reason: "rule:rejection",
     specificity: 10,
     pattern:
-      /(不採用|見送り|お見送り|不合格|不通過|残念ながら|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|ご縁がなく|rejected|not selected|we regret|selection result.*unsuccessful)/i,
+      /(不採用|見送り|お見送り|不合格|不通過|残念ながら|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|ご縁がなく|rejected|not selected|we regret|selection result.{0,50}unsuccessful)/i,
   },
   {
     eventType: "offer",
@@ -509,12 +509,12 @@ export function runRecruitingNlpPipeline(
   // Hard outcome logic extracted from gmail.ts
   let hardOutcome: "offer" | "rejection" | null = null;
   if (
-    /(不採用|見送り|お見送り|選考結果.*残念|残念ながら|ご縁がなく|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|不合格|不通過)/.test(lowerText) ||
+    /(不採用|見送り|お見送り|選考結果.{0,40}残念|残念ながら|ご縁がなく|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|不合格|不通過)/.test(lowerText) ||
     /(rejected|unfortunately|we regret|not selected)/.test(lowerText)
   ) {
     hardOutcome = "rejection";
   } else if (
-    /(内定通知|内定のご連絡|内定のお知らせ|内定.*決定|採用内定|合格通知|合格のお知らせ|採用決定)/.test(lowerText) ||
+    /(内定通知|内定のご連絡|内定のお知らせ|内定.{0,40}決定|採用内定|合格通知|合格のお知らせ|採用決定)/.test(lowerText) ||
     /(offer\s*letter|job\s*offer|we are pleased to offer)/.test(lowerText)
   ) {
     hardOutcome = "offer";

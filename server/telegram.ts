@@ -1034,7 +1034,7 @@ telegramRouter.post("/webhook", async (req, res) => {
       await maybeSendTrialLifecycleNudges(uid, chatId);
 
       // Simple routing based on session state or commands
-      if (text.startsWith("/board") || text.startsWith("/kanban") || /看板|进度|求职.*板|board|kanban/i.test(text)) {
+      if (text.startsWith("/board") || text.startsWith("/kanban") || /看板|进度|求职.{0,40}板|board|kanban/i.test(text)) {
         const user = await getUserById(uid);
         const lang = ((user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en");
         const apps = await getJobApplications(uid);
@@ -1091,7 +1091,7 @@ telegramRouter.post("/webhook", async (req, res) => {
         await sendTelegramMessage(chatId, "対話を終了し、メインメニューに戻ります。");
       } else if (
         text.startsWith("/checkmail") ||
-        /检查.*邮箱|查看.*邮箱|check.*mail|check.*inbox/i.test(text)
+        /检查.{0,40}邮箱|查看.{0,40}邮箱|check.{0,40}mail|check.{0,40}inbox/i.test(text)
       ) {
         const user = await getUserById(uid);
         const lang = languageOrDefault(user);

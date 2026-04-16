@@ -368,7 +368,7 @@ function cleanMailTextForAi(input: string): string {
     /^\s*-{2,}\s*forwarded message\s*-{2,}\s*$/i,
     /^\s*-{2,}\s*転送メッセージ\s*-{2,}\s*$/i,
     /^\s*-{2,}\s*元のメッセージ\s*-{2,}\s*$/i,
-    /^\s*on .+ wrote:\s*$/i,
+    /^\s*on .{1,100} wrote:\s*$/i,
   ];
   const headerLike = [
     /^(from|to|cc|bcc|subject|date)\s*:/i,
