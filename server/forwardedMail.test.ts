@@ -20,9 +20,9 @@ describe("extractForwardedOriginal", () => {
     expect(r.from).toContain("サンマルクホールディングス");
     expect(r.body).toContain("本文です");
     expect(r.body).not.toContain("intro text");
-    expect(r.date?.getUTCFullYear()).toBe(2026);
-    expect(r.date?.getUTCMonth()).toBe(1);
-    expect(r.date?.getUTCDate()).toBe(17);
+    expect(r.date?.getFullYear()).toBe(2026);
+    expect(r.date?.getMonth()).toBe(1);
+    expect(r.date?.getDate()).toBe(17);
   });
 
   it("keeps original mail unchanged when not forwarded", () => {
