@@ -5,6 +5,7 @@ import { extractBestDateTime, getDomainReputation } from "../server/mailNer";
 import { runRecruitingNlpPipeline } from "../server/mailNlpPipeline";
 import { extractForwardedOriginal } from "../server/forwardedMail";
 import { cleanQuotedText } from "../server/cleanQuotedText";
+import { normalizeCompanyKey, preferCompanyDisplayName } from "../server/companyName";
 
 type JobStatus =
   | "researching"
@@ -140,7 +141,7 @@ async function main() {
       subject: mailSubject,
       body: mailBody,
     });
-    const key = companyName.toLowerCase();
+    const key = normalizeCompanyKey(companyName) ?? companyName.toLowerCase();
     const prev = jobs.get(key);
     const reason = `${decision.reason} (eventType=${decision.eventType}, hardOutcome=${decision._meta?.hardOutcome ?? "none"})`;
     const deadline = decision.eventDate ?? "";
@@ -168,6 +169,7 @@ async function main() {
       continue;
     }
     if (sourceTs > prev.sourceTs) {
+      prev.companyName = preferCompanyDisplayName(prev.companyName, companyName);
       prev.status = status;
       prev.deadline = deadline || prev.deadline;
       prev.mailSubject = mailSubject || prev.mailSubject;
@@ -175,6 +177,7 @@ async function main() {
       prev.reason = reason || prev.reason;
       prev.sourceTs = sourceTs;
     } else if (sourceTs === prev.sourceTs && jobStatusRank(status) > jobStatusRank(prev.status)) {
+      prev.companyName = preferCompanyDisplayName(prev.companyName, companyName);
       // Fallback: If dates are identical, use higher job status
       prev.status = status;
       prev.deadline = deadline || prev.deadline;

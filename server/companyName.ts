@@ -50,6 +50,8 @@ export function normalizeCompanyDisplayName(name: string | null | undefined): st
   if (!raw) return null;
 
   raw = raw.replace(/(（株）|\(株\)|㈱)/g, "株式会社");
+  raw = raw.replace(/・.*(コース|職|採用|応募|選考)$/, "").trim();
+  raw = raw.replace(/への社名(?:改称|変更).*$/, "").trim();
   raw = raw.replace(RECRUITING_SUFFIXES, "").trim();
   raw = raw.replace(/[のよりからへ]$/, "").trim();
   raw = raw.replace(/[\s　]+/g, " ");
