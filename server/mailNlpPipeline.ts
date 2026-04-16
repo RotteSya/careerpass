@@ -67,7 +67,7 @@ export interface RecruitingNlpDecision extends MailDecisionLike {
     interviewRound: InterviewRound | null;
     negPenalty: number;
     ruleSignals: Array<{ eventType: MailEventType; confidence: number; reason: string }>;
-    hardOutcome?: "offer" | "rejection" | null;
+    hardOutcome?: "offer" | "rejection" | "withdrawn" | null;
     isResultNotificationSubject?: boolean;
     [key: string]: any;
   };
@@ -507,8 +507,14 @@ export function runRecruitingNlpPipeline(
   const isResultNotificationSubject = /(結果通知|選考結果|合否通知|合否のご連絡|お祈り|お見送り|不採用通知|不合格通知)/.test(input.subject);
 
   // Hard outcome logic extracted from gmail.ts
-  let hardOutcome: "offer" | "rejection" | null = null;
+  let hardOutcome: "offer" | "rejection" | "withdrawn" | null = null;
   if (
+    /(辞退させていただき|選考を辞退|辞退のご連絡|辞退の連絡)/.test(lowerText) ||
+    /【辞退のご連絡】/.test(input.subject) ||
+    /(withdraw|withdrawal|decline the offer)/.test(lowerText)
+  ) {
+    hardOutcome = "withdrawn";
+  } else if (
     /(不採用|見送り|お見送り|選考結果.{0,40}残念|残念ながら|ご縁がなく|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|不合格|不通過)/.test(lowerText) ||
     /(rejected|unfortunately|we regret|not selected)/.test(lowerText)
   ) {
@@ -524,8 +530,8 @@ export function runRecruitingNlpPipeline(
   let mergedEventType: MailEventType;
   if (hardOutcome === "offer") {
     mergedEventType = "offer";
-  } else if (hardOutcome === "rejection") {
-    mergedEventType = "rejection";
+  } else if (hardOutcome === "rejection" || hardOutcome === "withdrawn") {
+    mergedEventType = "rejection"; // we map withdrawn to rejection eventType internally for now
   } else if (isResultNotificationSubject) {
     // If the subject says "Result Notification" but we didn't explicitly catch a hardOutcome word,
     // it's highly likely a rejection unless it says offer. We default to 'other' or let LLM decide
