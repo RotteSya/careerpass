@@ -4,6 +4,7 @@ import { simpleParser } from "mailparser";
 import { extractBestDateTime, getDomainReputation } from "../server/mailNer";
 import { runRecruitingNlpPipeline } from "../server/mailNlpPipeline";
 import { extractForwardedOriginal } from "../server/forwardedMail";
+import { cleanQuotedText } from "../server/cleanQuotedText";
 
 type JobStatus =
   | "researching"
@@ -115,7 +116,7 @@ async function main() {
     });
     const mailSubject = (original.subject ?? "").trim();
     const mailFrom = (original.from ?? "").trim();
-    const mailBody = (original.body ?? "").trim();
+    const mailBody = cleanQuotedText((original.body ?? "").trim());
     const fallback = extractBestDateTime(`${mailSubject}\n${mailBody}`);
     const headerDate = original.date ? original.date.toISOString().slice(0, 10) : null;
     const fallbackDate = fallback.date ?? headerDate;
@@ -173,6 +174,13 @@ async function main() {
       prev.mailFrom = mailFrom || prev.mailFrom;
       prev.reason = reason || prev.reason;
       prev.sourceTs = sourceTs;
+    } else if (sourceTs === prev.sourceTs && jobStatusRank(status) > jobStatusRank(prev.status)) {
+      // Fallback: If dates are identical, use higher job status
+      prev.status = status;
+      prev.deadline = deadline || prev.deadline;
+      prev.mailSubject = mailSubject || prev.mailSubject;
+      prev.mailFrom = mailFrom || prev.mailFrom;
+      prev.reason = reason || prev.reason;
     }
   }
 

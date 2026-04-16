@@ -36,7 +36,7 @@ export function extractForwardedOriginal(input: ForwardedMailInput): ForwardedMa
   const lines = body.split(/\r?\n/);
   const indexes: number[] = [];
   for (let i = 0; i < lines.length; i++) {
-    if (/^\s*(From|差出人)\s*:/i.test(lines[i] ?? "")) indexes.push(i);
+    if (/^\s*(From|差出人|发件人)\s*[:：]/i.test(lines[i] ?? "")) indexes.push(i);
   }
   if (indexes.length === 0) {
     return { subject, from, body, date: input.date ?? null, isForwarded: false };
@@ -51,13 +51,13 @@ export function extractForwardedOriginal(input: ForwardedMailInput): ForwardedMa
   for (let i = start; i < Math.min(lines.length, start + 30); i++) {
     const line = lines[i] ?? "";
     endHeader = i;
-    const mFrom = line.match(/^\s*(?:From|差出人)\s*:\s*(.+)\s*$/i);
+    const mFrom = line.match(/^\s*(?:From|差出人|发件人)\s*[:：]\s*(.+)\s*$/i);
     if (mFrom?.[1]) extractedFrom = stripPrefix(mFrom[1]);
 
-    const mSubject = line.match(/^\s*(?:Subject|件名)\s*:\s*(.+)\s*$/i);
+    const mSubject = line.match(/^\s*(?:Subject|件名)\s*[:：]\s*(.+)\s*$/i);
     if (mSubject?.[1]) extractedSubject = stripPrefix(mSubject[1]);
 
-    const mSent = line.match(/^\s*(?:Sent|Date|送信日時)\s*:\s*(.+)\s*$/i);
+    const mSent = line.match(/^\s*(?:Sent|Date|送信日時)\s*[:：]\s*(.+)\s*$/i);
     if (mSent?.[1]) {
       extractedDate = safeParseDate(stripPrefix(mSent[1])) ?? extractedDate;
     }

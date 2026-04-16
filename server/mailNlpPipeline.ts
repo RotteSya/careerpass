@@ -131,7 +131,7 @@ const EVENT_RULES: EventRule[] = [
     reason: "rule:interview",
     specificity: 8,
     pattern:
-      /(面接|面談|interview|一次面接|二次面接|三次面接|最終面接|グループ面接|個別面接|面接日程|面接のご案内|カジュアル面談|書類選考通過|書類選考合格)/i,
+      /(カジュアル面談|書類選考通過|書類選考合格|グループ面接|一次面接|二次面接|三次面接|最終面接|個別面接|面接のご案内|面接日程|interview|面接|面談)/i,
   },
   {
     eventType: "test",
@@ -147,7 +147,7 @@ const EVENT_RULES: EventRule[] = [
     reason: "rule:deadline",
     specificity: 7,
     pattern:
-      /(締切|提出期限|deadline|提出期日|エントリーシート提出|es提出|回答期限|期限までに|応募締切|予約締切)/i,
+      /(締切|提出期限|deadline|提出期日|エントリーシート提出|es提出|回答期限|期限までに|応募締切|予約締切|提出をお願いします)/i,
   },
   {
     eventType: "briefing",
@@ -163,7 +163,7 @@ const EVENT_RULES: EventRule[] = [
     reason: "rule:entry",
     specificity: 5,
     pattern:
-      /(エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます|マイページ登録|プレエントリー|書類選考のご案内)/i,
+      /(エントリーシートご提出の御礼|エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます|マイページ登録|プレエントリー|書類選考のご案内)/i,
   },
 ];
 
@@ -522,12 +522,30 @@ export function runRecruitingNlpPipeline(
 
   // Event type resolution: hard outcome > result subject gating > LLM > best rule
   let mergedEventType: MailEventType;
-  if (isResultNotificationSubject) {
-    mergedEventType = hardOutcome === "offer" ? "offer" : hardOutcome === "rejection" ? "rejection" : "other";
-  } else if (hardOutcome) {
-    mergedEventType = hardOutcome;
+  if (hardOutcome === "offer") {
+    mergedEventType = "offer";
+  } else if (hardOutcome === "rejection") {
+    mergedEventType = "rejection";
+  } else if (isResultNotificationSubject) {
+    // If the subject says "Result Notification" but we didn't explicitly catch a hardOutcome word,
+    // it's highly likely a rejection unless it says offer. We default to 'other' or let LLM decide
+    // if it found something, but we don't want it to be 'interview' or 'test'.
+    if (rule.eventType === "interview" || rule.eventType === "test") {
+       mergedEventType = "other";
+    } else {
+       mergedEventType = rule.eventType;
+    }
   } else {
-    mergedEventType = llmEventType !== "other" ? llmEventType : rule.eventType;
+    mergedEventType = llmEventType !== "other" && llmEventType ? llmEventType : rule.eventType;
+  }
+  
+  // Override: If the email subject is purely an ES submission receipt, it should be an 'entry' event,
+  // not 'interview', even if 'interview' is mentioned in the body as future steps.
+  if (mergedEventType === "interview" || mergedEventType === "test") {
+    if (/(エントリーシートご提出の御礼|エントリー完了|応募完了|受付完了|応募受付|エントリー受付|ご応募ありがとうございます|書類選考のご案内)/i.test(input.subject)) {
+      mergedEventType = "entry";
+      rule.reason = "override:entry_receipt";
+    }
   }
 
   // ⑩ Dynamic confidence merging
@@ -557,11 +575,9 @@ export function runRecruitingNlpPipeline(
   }
 
   // ⑪ isJobRelated decision
-  const hasBasicProcessHints = PROCESS_HINTS.test(lowerText);
-  const hasProcessHintsForOther = hasBasicProcessHints || hasActionableProcessHints;
   const mergedIsJobRelated = llmDecision
     ? !!llmDecision.isJobRelated || mergedEventType !== "other"
-    : mergedEventType !== "other" || (domainRep.score >= 0.8 && !!input.fallbackDate && hasProcessHintsForOther);
+    : mergedEventType !== "other" || (domainRep.score >= 0.8 && !!input.fallbackDate && hasAnyProcessHints);
 
   // ⑫ Company name: NER result > LLM > rule-extracted
   const llmCompany = normalizeCompanyName(llmDecision?.companyName ?? null);
