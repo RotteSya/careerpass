@@ -46,14 +46,13 @@ function jobStatusRank(status: JobStatus): number {
 
 function inferStatus(params: {
   eventType: string;
-  hardOutcome?: "offer" | "rejection" | "withdrawn" | null;
+  hardOutcome?: "offer" | "rejection" | null;
   interviewRound?: string | null;
   subject: string;
   body: string;
 }): JobStatus {
   if (params.hardOutcome === "offer") return "offer";
   if (params.hardOutcome === "rejection") return "rejected";
-  if (params.hardOutcome === "withdrawn") return "withdrawn";
   if (params.eventType === "test") return "written_test";
   if (params.eventType === "deadline") return "es_preparing";
   if (params.eventType === "briefing") return "briefing";
@@ -168,19 +167,7 @@ async function main() {
       });
       continue;
     }
-    if (status === "withdrawn" || status === "rejected") {
-      // Once withdrawn or rejected, this status is terminal. Do not override it with future process emails
-      // (sometimes companies send automated generic emails even after rejection/withdrawal).
-      prev.status = status;
-      prev.deadline = deadline || prev.deadline;
-      prev.mailSubject = mailSubject || prev.mailSubject;
-      prev.mailFrom = mailFrom || prev.mailFrom;
-      prev.reason = reason || prev.reason;
-      prev.sourceTs = sourceTs;
-    } else if (prev.status === "withdrawn" || prev.status === "rejected") {
-      // Do not update status if it's already terminal, but we can update the sourceTs
-      prev.sourceTs = Math.max(prev.sourceTs, sourceTs);
-    } else if (sourceTs > prev.sourceTs) {
+    if (sourceTs > prev.sourceTs) {
       prev.status = status;
       prev.deadline = deadline || prev.deadline;
       prev.mailSubject = mailSubject || prev.mailSubject;
