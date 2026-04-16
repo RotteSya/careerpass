@@ -113,7 +113,7 @@ temp/
 client/public/__manus__/version.json
 
 # Test files
-testmail/
+testmail/*.eml
 testcsv/
 *.eml
 *.csv
