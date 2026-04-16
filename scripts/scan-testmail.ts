@@ -3,6 +3,7 @@ import path from "node:path";
 import { simpleParser } from "mailparser";
 import { extractBestDateTime, getDomainReputation } from "../server/mailNer";
 import { runRecruitingNlpPipeline } from "../server/mailNlpPipeline";
+import { extractForwardedOriginal } from "../server/forwardedMail";
 
 type JobStatus =
   | "researching"
@@ -96,6 +97,7 @@ async function main() {
       mailSubject: string;
       mailFrom: string;
       reason: string;
+      sourceTs: number;
     }
   >();
 
@@ -105,15 +107,24 @@ async function main() {
     const subject = (parsed.subject ?? "").trim();
     const from = (parsed.from?.text ?? "").trim();
     const body = ((parsed.text ?? parsed.html ?? "") as string).trim();
-    const fallback = extractBestDateTime(`${subject}\n${body}`);
-    const headerDate = parsed.date ? parsed.date.toISOString().slice(0, 10) : null;
+    const original = extractForwardedOriginal({
+      subject,
+      from,
+      body,
+      date: parsed.date ?? null,
+    });
+    const mailSubject = (original.subject ?? "").trim();
+    const mailFrom = (original.from ?? "").trim();
+    const mailBody = (original.body ?? "").trim();
+    const fallback = extractBestDateTime(`${mailSubject}\n${mailBody}`);
+    const headerDate = original.date ? original.date.toISOString().slice(0, 10) : null;
     const fallbackDate = fallback.date ?? headerDate;
     const fallbackTime = fallback.time ?? null;
-    const domainSignal = getDomainReputation(from).score;
+    const domainSignal = getDomainReputation(mailFrom).score;
     const decision = runRecruitingNlpPipeline({
-      subject,
-      body,
-      from,
+      subject: mailSubject,
+      body: mailBody,
+      from: mailFrom,
       domainSignal,
       fallbackDate,
       fallbackTime,
@@ -125,13 +136,21 @@ async function main() {
       eventType: decision.eventType,
       hardOutcome: decision._meta?.hardOutcome ?? null,
       interviewRound: decision._meta?.interviewRound ?? null,
-      subject,
-      body,
+      subject: mailSubject,
+      body: mailBody,
     });
     const key = companyName.toLowerCase();
     const prev = jobs.get(key);
     const reason = `${decision.reason} (eventType=${decision.eventType}, hardOutcome=${decision._meta?.hardOutcome ?? "none"})`;
     const deadline = decision.eventDate ?? "";
+    const sourceTs =
+      original.date?.getTime() ??
+      (fallbackDate
+        ? (() => {
+            const d = new Date(`${fallbackDate}T${fallbackTime ?? "00:00"}:00`);
+            return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+          })()
+        : 0);
     if (!prev) {
       jobs.set(key, {
         companyName,
@@ -140,19 +159,21 @@ async function main() {
         deadline,
         contact: "",
         priority: "medium",
-        mailSubject: subject,
-        mailFrom: from,
+        mailSubject,
+        mailFrom,
         reason,
+        sourceTs,
       });
       continue;
     }
-    if (jobStatusRank(status) > jobStatusRank(prev.status)) {
+    if (sourceTs > prev.sourceTs) {
       prev.status = status;
+      prev.deadline = deadline || prev.deadline;
+      prev.mailSubject = mailSubject || prev.mailSubject;
+      prev.mailFrom = mailFrom || prev.mailFrom;
+      prev.reason = reason || prev.reason;
+      prev.sourceTs = sourceTs;
     }
-    if (deadline && !prev.deadline) prev.deadline = deadline;
-    prev.mailSubject = subject || prev.mailSubject;
-    prev.mailFrom = from || prev.mailFrom;
-    prev.reason = reason || prev.reason;
   }
 
   const header = "\ufeff公司名称,申请状态,职位名称,締切,联系方式,优先级,来源邮件标题,来源邮箱,提取依据\n";
@@ -180,4 +201,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
