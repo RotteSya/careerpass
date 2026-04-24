@@ -52,6 +52,18 @@ const NON_TARGET_ORG_HINTS =
 
 const LEGAL_ENTITY_PREFIX = /(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)/;
 
+// Precompiled maekabu ("prefix-株") / atokabu ("suffix-株") scanners used by
+// `extractLegal` below.  Lifting them here avoids rebuilding both RegExp
+// objects from source on every email.
+const LEGAL_MAEKABU_RE = new RegExp(
+  `(?:^|[\\s【】\\[\\]<>「」/／\\n"'(（:：])(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n"'(（)）]+)`,
+  "g",
+);
+const LEGAL_ATOKABU_RE = new RegExp(
+  `([^\\s【】\\[\\]<>「」/／\\n"'(（:：)）]+)\\s*(?:${LEGAL_ENTITY_PREFIX.source})(?=$|[\\s【】\\[\\]<>「」/／\\n"')）:：])`,
+  "g",
+);
+
 const ORG_DATE_LIKE =
   /(?:\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}|\d{1,2}月\d{1,2}日|\d{1,2}月|\d{1,2}日|\d{1,2}時|\d{1,2}:\d{2})/;
 const ORG_DEADLINE_HINT = /(〆切|締切|締め切り|期限|応募締切|申込期限)/;
@@ -107,12 +119,10 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   // Helper to extract Maekabu and Atokabu legal entities
   const extractLegal = (text: string, sourcePrefix: string, baseConf: number) => {
     if (!text) return;
-    const reMaekabu = new RegExp(`(?:^|[\\s【】\\[\\]<>「」/／\\n"'(（:：])(${LEGAL_ENTITY_PREFIX.source}\\s*[^\\s【】\\[\\]<>「」/／\\n"'(（)）]+)`, "g");
-    for (const m of Array.from(text.matchAll(reMaekabu))) {
+    for (const m of text.matchAll(LEGAL_MAEKABU_RE)) {
       addCandidate(m[1], `${sourcePrefix}_maekabu`, baseConf);
     }
-    const reAtokabu = new RegExp(`([^\\s【】\\[\\]<>「」/／\\n"'(（:：)）]+)\\s*(?:${LEGAL_ENTITY_PREFIX.source})(?=$|[\\s【】\\[\\]<>「」/／\\n"')）:：])`, "g");
-    for (const m of Array.from(text.matchAll(reAtokabu))) {
+    for (const m of text.matchAll(LEGAL_ATOKABU_RE)) {
       const fullMatch = m[0];
       const prefixMatch = text.substring(0, m.index).match(/([a-zA-Z0-9\s.-]+)$/);
       if (prefixMatch) {
@@ -372,9 +382,9 @@ export function extractTimeCandidates(text: string): TimeCandidate[] {
 
   // 1. Absolute Dates
   for (const dp of NER_DATE_PATTERNS) {
-    const regex = new RegExp(dp.re.source, dp.re.flags);
+    dp.re.lastIndex = 0;
     let m: RegExpExecArray | null;
-    while ((m = regex.exec(text)) !== null) {
+    while ((m = dp.re.exec(text)) !== null) {
       let year: number, month: number, day: number;
       if (dp.hasYear) {
         year = parseInt(m[1]);
@@ -421,9 +431,9 @@ export function extractTimeCandidates(text: string): TimeCandidate[] {
 
   // 2. Relative Dates
   for (const rdp of NER_RELATIVE_DATE_PATTERNS) {
-    const regex = new RegExp(rdp.re.source, rdp.re.flags);
+    rdp.re.lastIndex = 0;
     let m: RegExpExecArray | null;
-    while ((m = regex.exec(text)) !== null) {
+    while ((m = rdp.re.exec(text)) !== null) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + rdp.offsetDays);
       const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
