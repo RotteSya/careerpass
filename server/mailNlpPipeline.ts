@@ -20,16 +20,34 @@ import {
 } from "./mailNer";
 import { normalizeCompanyDisplayName } from "./companyName";
 import { buildLimitedMailText } from "./_core/mailText";
-
-type MailEventType =
-  | "interview"
-  | "briefing"
-  | "test"
-  | "deadline"
-  | "entry"
-  | "offer"
-  | "rejection"
-  | "other";
+import {
+  type MailEventType,
+  type EventRule,
+  type CoOccurrenceRule,
+  EVENT_RULES,
+  CO_OCCURRENCE_RULES,
+  JOB_PLATFORM_HINTS,
+  PROCESS_HINTS,
+  ACTIONABLE_PROCESS_HINTS,
+  PLATFORM_SURVEY_HINTS,
+  PLATFORM_INCENTIVE_HINTS,
+  PLATFORM_NEWSLETTER_HINTS,
+  PLATFORM_MESSAGE_NOTIFICATION_HINTS,
+  PLATFORM_ACTIONABLE_RELAY_HINTS,
+  SUBJECT_DEADLINE_HINT,
+  SUBJECT_TEST_HINT,
+  SUBJECT_INTERVIEW_HINT,
+  STRONG_SELECTION_SUBJECT_HINT,
+  PLATFORM_SEMINAR_PROMO_SUBJECT_HINT,
+  SUBJECT_BRACKET_GUIDE_PATTERN,
+  SUBJECT_SELECTION_GUIDE_PATTERN,
+  RESULT_NOTIFICATION_SUBJECT_PATTERN,
+  ENTRY_RECEIPT_SUBJECT_PATTERN,
+  HARD_REJECTION_JP_PATTERN,
+  HARD_REJECTION_EN_PATTERN,
+  HARD_OFFER_JP_PATTERN,
+  HARD_OFFER_EN_PATTERN,
+} from "./_core/mailKeywords";
 
 interface MailDecisionLike {
   isJobRelated: boolean;
@@ -72,136 +90,6 @@ export interface RecruitingNlpDecision extends MailDecisionLike {
     [key: string]: any;
   };
 }
-
-// ─── Platform noise ──────────────────────────────────────────────────────────
-
-const JOB_PLATFORM_HINTS =
-  /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind)/i;
-const PROCESS_HINTS =
-  /(選考|面接|面談|説明会|webテスト|spi|適性検査|筆記試験|締切|提出期限|エントリー|応募|内定|不採用|お見送り|合否)/i;
-// Stronger signals for actionable process emails relayed by recruiting platforms.
-const ACTIONABLE_PROCESS_HINTS =
-  /(提出の御礼|提出ありがとう|ご応募ありがとうございます|ご応募ありがとうございました|今後のスケジュール|次のステップ|選考フロー|エントリーシート提出|es提出|カジュアル面談|適正検査|適性検査|面接\(個別\)|面接（個別）|内定)/i;
-const PLATFORM_SURVEY_HINTS =
-  /(アンケート|調査|ご協力のお願い|業界イメージ|意識調査|満足度調査|questant\.jp)/i;
-const PLATFORM_INCENTIVE_HINTS =
-  /(抽選|当たります|プレゼント|ギフトカード|ギフトコード|amazon\s*ギフト|amazonギフト)/i;
-const PLATFORM_NEWSLETTER_HINTS =
-  /(マイナビメール|ピックアップ|おすすめ企業|おすすめ求人|新着求人|求人をお届け|特集|キャンペーン|ランキング|就活講座|就活準備講座|就活対策|セミナー開催|合同説明会|合説|就活イベント|就活セミナー|本人確認|会員登録|サービスのご案内|利用規約|退会フォーム)/i;
-const PLATFORM_MESSAGE_NOTIFICATION_HINTS =
-  /(メッセージが届きました|新着メッセージ|企業から.{0,40}メッセージ|メッセージ受信)/i;
-const PLATFORM_ACTIONABLE_RELAY_HINTS =
-  /(応募者管理システム|miws\.mynavi\.jp|info-job@|提出の御礼|提出ありがとう|ご応募ありがとうございます|ご応募ありがとうございました)/i;
-
-// ─── Event rules (multi-signal — ALL evaluated) ─────────────────────────────
-
-interface EventRule {
-  eventType: MailEventType;
-  confidence: number;
-  reason: string;
-  pattern: RegExp;
-  /** Higher = more specific match. Used as tiebreaker. */
-  specificity: number;
-}
-
-const EVENT_RULES: EventRule[] = [
-  // ── Hard outcomes (highest priority, not overridden by LLM) ──
-  {
-    eventType: "rejection",
-    confidence: 0.97,
-    reason: "rule:rejection",
-    specificity: 10,
-    pattern:
-      /(不採用|見送り|お見送り|見送らせて|不合格|不通過|残念ながら|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|ご縁がなく|添いかねる|rejected|not selected|we regret|selection result.{0,50}unsuccessful)/i,
-  },
-  {
-    eventType: "offer",
-    confidence: 0.97,
-    reason: "rule:offer",
-    specificity: 10,
-    // Avoid bare "内定" because it often appears in process outlines
-    // (e.g. "今後のスケジュール: ... 内定") and can cause false positives.
-    pattern:
-      /(内々定|内定通知|内定のご連絡|内定のお知らせ|採用内定|採用決定|採用通知|job offer|offer letter)/i,
-  },
-  // ── Core event types ──
-  {
-    eventType: "interview",
-    confidence: 0.92,
-    reason: "rule:interview",
-    specificity: 8,
-    pattern:
-      /(カジュアル面談|書類選考通過|書類選考合格|グループ面接|一次面接|二次面接|三次面接|最終面接|個別面接|面接のご案内|面接日程|interview|面接|面談)/i,
-  },
-  {
-    eventType: "test",
-    confidence: 0.90,
-    reason: "rule:test",
-    specificity: 7,
-    pattern:
-      /(webテスト|\bspi\b|適性検査|筆記試験|テスト受検|受検案内|coding test|online assessment|assessment|玉手箱|\bgab\b|\bcab\b|テストセンター|コーディングテスト)/i,
-  },
-  {
-    eventType: "deadline",
-    confidence: 0.90,
-    reason: "rule:deadline",
-    specificity: 7,
-    pattern:
-      /(締切|提出期限|deadline|提出期日|エントリーシート提出|es提出|回答期限|期限までに|応募締切|予約締切|提出をお願いします)/i,
-  },
-  {
-    eventType: "briefing",
-    confidence: 0.86,
-    reason: "rule:briefing",
-    specificity: 6,
-    pattern:
-      /(説明会|セミナー|会社説明|briefing|会社紹介|オープンカンパニー|web説明会|オンライン説明会|座談会|懇親会)/i,
-  },
-  {
-    eventType: "entry",
-    confidence: 0.82,
-    reason: "rule:entry",
-    specificity: 5,
-    pattern:
-      /(エントリーシートご提出の御礼|エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます|マイページ登録|プレエントリー|書類選考のご案内)/i,
-  },
-];
-
-// ─── Co-occurrence boosting rules ────────────────────────────────────────────
-// When certain keyword combinations appear together, boost confidence.
-
-interface CoOccurrenceRule {
-  primary: RegExp;
-  secondary: RegExp;
-  boost: number;
-  appliesTo: MailEventType;
-}
-
-const CO_OCCURRENCE_RULES: CoOccurrenceRule[] = [
-  // "面接" + date/time near each other → strong interview signal
-  { primary: /面接|面談|interview/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{1,2}):(\d{2})|(\d{4})[\/年]/, boost: 0.05, appliesTo: "interview" },
-  // "面接" + Zoom/Teams/Meet → strong interview signal
-  { primary: /面接|面談|interview/i, secondary: /zoom|teams|google\s*meet|webex|skype|オンライン|web/i, boost: 0.05, appliesTo: "interview" },
-  // "説明会" + date → strong briefing signal
-  { primary: /説明会|セミナー/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{1,2}):(\d{2})/, boost: 0.04, appliesTo: "briefing" },
-  // "説明会" + viewing link → strong briefing signal
-  { primary: /説明会|セミナー/i, secondary: /視聴|参加|URL/i, boost: 0.03, appliesTo: "briefing" },
-  // "テスト" + URL → likely a real test invitation
-  { primary: /テスト|spi|適性検査|assessment/i, secondary: /https?:\/\/|URL|リンク|ログイン/i, boost: 0.04, appliesTo: "test" },
-  // "テスト" + deadline → real test invitation
-  { primary: /テスト|spi|適性検査|assessment/i, secondary: /受検期間|受検期限|締切|期限/i, boost: 0.04, appliesTo: "test" },
-  // "締切" + specific date → real deadline
-  { primary: /締切|期限|deadline/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{4})[\/年\-]/, boost: 0.04, appliesTo: "deadline" },
-  // Rejection + apology pattern → definite rejection
-  { primary: /見送り|不採用|不合格/i, secondary: /残念|お祈り|ご縁|沿いかねる/i, boost: 0.04, appliesTo: "rejection" },
-];
-
-const SUBJECT_DEADLINE_HINT =
-  /(提出期限|提出締切|提出のお願い|締切|〆切|締め切り|回答期限|期限までに|提出をお願いします)/i;
-const SUBJECT_TEST_HINT =
-  /(適性検査|webテスト|spi|筆記試験|テスト受検|受検案内|assessment|coding\s*test|オンラインアセスメント)/i;
-const SUBJECT_INTERVIEW_HINT =
-  /(面接|面談|interview|面接日程|日程調整|面接予約|面接のご案内|面談のご案内)/i;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -311,7 +199,6 @@ export function runRecruitingNlpPipeline(
   const limited = buildLimitedMailText({ subject: input.subject, body: input.body, from: input.from });
   const body = limited.body;
   const text = limited.text;
-  const lowerText = text.toLowerCase();
   const inputMeta = {
     inputBodyTruncated: limited.bodyTruncated,
     inputBodyOriginalLength: limited.originalBodyLength,
@@ -323,7 +210,7 @@ export function runRecruitingNlpPipeline(
   const domainRep = getDomainReputation(input.from);
 
   // ② Platform noise gate (unchanged behavior)
-  const obviousPlatformNoise = JOB_PLATFORM_HINTS.test(lowerText) && !PROCESS_HINTS.test(lowerText);
+  const obviousPlatformNoise = JOB_PLATFORM_HINTS.test(text) && !PROCESS_HINTS.test(text);
   if (obviousPlatformNoise) {
     return {
       isJobRelated: false,
@@ -341,11 +228,11 @@ export function runRecruitingNlpPipeline(
   }
 
   // ③ Negative signal penalty
-  const negPenalty = calculateNegativeSignalPenalty(lowerText);
+  const negPenalty = calculateNegativeSignalPenalty(text);
   const isPlatformSurveyPromo =
-    (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText)) &&
-    PLATFORM_SURVEY_HINTS.test(lowerText) &&
-    PLATFORM_INCENTIVE_HINTS.test(lowerText);
+    (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(text)) &&
+    PLATFORM_SURVEY_HINTS.test(text) &&
+    PLATFORM_INCENTIVE_HINTS.test(text);
   if (isPlatformSurveyPromo) {
     return {
       isJobRelated: false,
@@ -362,17 +249,17 @@ export function runRecruitingNlpPipeline(
     };
   }
   const isPlatformNewsletter =
-    (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText)) &&
-    PLATFORM_NEWSLETTER_HINTS.test(lowerText) &&
+    (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(text)) &&
+    PLATFORM_NEWSLETTER_HINTS.test(text) &&
     !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${body}`) &&
-    !(/【[^】]{2,40}】/.test(input.subject) && /面接のご案内|選考のご案内|書類選考/.test(input.subject)) &&
-    !/一次面接|二次面接|三次面接|四次面接|最終面接|最終選考|書類選考|適性検査|合否/.test(input.subject);
-  // If it's a platform promo, but the subject contains strong words like "面接攻略" or "就活講座", 
+    !(SUBJECT_BRACKET_GUIDE_PATTERN.test(input.subject) && SUBJECT_SELECTION_GUIDE_PATTERN.test(input.subject)) &&
+    !STRONG_SELECTION_SUBJECT_HINT.test(input.subject);
+  // If it's a platform promo, but the subject contains strong words like "面接攻略" or "就活講座",
   // it might be misclassified as a real interview.
   const isPlatformSeminarPromo =
-    (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText) || /人材紹介/.test(lowerText)) &&
-    /セミナー|就活講座|攻略法|合同説明会|合説|就活イベント|本人確認|会員登録/.test(input.subject) &&
-    !/一次面接|二次面接|三次面接|四次面接|最終面接|最終選考|書類選考|適性検査|合否/.test(input.subject);
+    (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(text) || /人材紹介/.test(text)) &&
+    PLATFORM_SEMINAR_PROMO_SUBJECT_HINT.test(input.subject) &&
+    !STRONG_SELECTION_SUBJECT_HINT.test(input.subject);
 
   if (isPlatformNewsletter || isPlatformSeminarPromo) {
     return {
@@ -419,8 +306,8 @@ export function runRecruitingNlpPipeline(
 
   const hasActionableProcessHints =
     ACTIONABLE_PROCESS_HINTS.test(`${input.subject}\n${body}`) ||
-    (/【[^】]{2,40}】/.test(input.subject) && PROCESS_HINTS.test(input.subject));
-  const hasAnyProcessHints = PROCESS_HINTS.test(lowerText) || hasActionableProcessHints;
+    (SUBJECT_BRACKET_GUIDE_PATTERN.test(input.subject) && PROCESS_HINTS.test(input.subject));
+  const hasAnyProcessHints = PROCESS_HINTS.test(text) || hasActionableProcessHints;
   const isObviousMarketing =
     negPenalty <= -0.6 &&
     !hasAnyProcessHints &&
@@ -443,7 +330,7 @@ export function runRecruitingNlpPipeline(
   }
   const isLikelyNoise =
     negPenalty <= -0.4 &&
-    (domainRep.tier === "noise_platform" || domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(lowerText)) &&
+    (domainRep.tier === "noise_platform" || domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(text)) &&
     !hasActionableProcessHints;
   if (isLikelyNoise) {
     return {
@@ -462,8 +349,8 @@ export function runRecruitingNlpPipeline(
   }
 
   // ④ Multi-signal rule evaluation
-  let ruleSignals = evaluateAllRules(lowerText);
-  ruleSignals = applyCoOccurrenceBoosts(lowerText, ruleSignals);
+  let ruleSignals = evaluateAllRules(text);
+  ruleSignals = applyCoOccurrenceBoosts(text, ruleSignals);
   let rule = pickBestRuleSignal(ruleSignals);
   if (!llmDecision) {
     const subject = input.subject ?? "";
@@ -504,19 +391,13 @@ export function runRecruitingNlpPipeline(
 
   // ⑨ Merge with LLM decision
   const llmEventType = normalizeEventType(llmDecision?.eventType ?? null);
-  const isResultNotificationSubject = /(結果通知|選考結果|合否通知|合否のご連絡|お祈り|お見送り|不採用通知|不合格通知)/.test(input.subject);
+  const isResultNotificationSubject = RESULT_NOTIFICATION_SUBJECT_PATTERN.test(input.subject);
 
   // Hard outcome logic extracted from gmail.ts
   let hardOutcome: "offer" | "rejection" | null = null;
-  if (
-    /(不採用|見送り|お見送り|見送らせて|選考結果.{0,40}残念|残念ながら|ご縁がなく|ご期待に添え|希望に沿いかね|ご希望に沿いかね|沿いかねる結果|意に沿え|添いかねる|不合格|不通過)/.test(lowerText) ||
-    /(rejected|unfortunately|we regret|not selected)/.test(lowerText)
-  ) {
+  if (HARD_REJECTION_JP_PATTERN.test(text) || HARD_REJECTION_EN_PATTERN.test(text)) {
     hardOutcome = "rejection";
-  } else if (
-    /(内定通知|内定のご連絡|内定のお知らせ|内定.{0,40}決定|採用内定|採用決定)/.test(lowerText) ||
-    /(offer\s*letter|job\s*offer|we are pleased to offer)/.test(lowerText)
-  ) {
+  } else if (HARD_OFFER_JP_PATTERN.test(text) || HARD_OFFER_EN_PATTERN.test(text)) {
     hardOutcome = "offer";
   }
 
@@ -544,7 +425,7 @@ export function runRecruitingNlpPipeline(
   // Override: If the email subject is purely an ES submission receipt, it should be an 'entry' event,
   // not 'interview', even if 'interview' is mentioned in the body as future steps.
   if (mergedEventType === "interview" || mergedEventType === "test") {
-    if (/(エントリーシートご提出の御礼|エントリー完了|応募完了|受付完了|応募受付|エントリー受付|ご応募ありがとうございます|書類選考のご案内)/i.test(input.subject)) {
+    if (ENTRY_RECEIPT_SUBJECT_PATTERN.test(input.subject)) {
       mergedEventType = "entry";
       rule.reason = "override:entry_receipt";
     }

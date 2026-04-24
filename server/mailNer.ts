@@ -18,6 +18,15 @@ import {
   resolveCanonicalCompanyName,
 } from "./companyName";
 import { limitMailBody, limitText, MAX_MAIL_TEXT_CHARS } from "./_core/mailText";
+import {
+  FREE_MAIL_DOMAINS,
+  NOISE_PLATFORM_DOMAINS,
+  RECRUITING_PLATFORM_DOMAINS,
+  PLATFORM_DOMAINS,
+  isDomainMatch,
+  extractDomain,
+} from "./_core/mailDomains";
+import { NEGATIVE_SIGNALS } from "./_core/mailKeywords";
 
 // ─── ORG (Company Name) Extraction ───────────────────────────────────────────
 
@@ -26,22 +35,6 @@ export interface OrgCandidate {
   source: string;
   confidence: number;
 }
-
-const PLATFORM_DOMAINS = new Set([
-  "rikunabi.com", "mynavi.jp", "en-japan.com", "wantedly.com",
-  "bizreach.jp", "doda.jp", "type.jp", "green-japan.com",
-  "openwork.jp", "vorkers.com", "onecareer.jp", "offerbox.jp",
-  "goodfind.jp", "unistyle.net", "syukatsu-kaigi.jp",
-  "careerselect.jp", "paiza.jp", "atcoder.jp", "career-tasu.jp",
-  "doda-student.jp", "iroots.jp", "massnavi.com", "gakujo.ne.jp",
-  "talentbase.co.jp", "linkedin.com"
-]);
-
-const FREE_MAIL_DOMAINS_NER = new Set([
-  "gmail.com", "yahoo.co.jp", "yahoo.com", "outlook.com", "outlook.jp",
-  "hotmail.com", "hotmail.co.jp", "icloud.com", "live.com", "live.jp",
-  "qq.com", "163.com", "126.com", "naver.com", "me.com", "mac.com"
-]);
 
 const NON_COMPANY_PATTERNS =
   /^(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster|mail|me|cs|job|job-s27|reply|zoom)$/i;
@@ -237,17 +230,9 @@ export function extractOrgCandidates(subject: string, from: string, body: string
 
   // Strategy 9: Email domain SLD (lowest confidence) — also suppressed for platforms
   if (!isFromPlatform) {
-    const domainMatch = from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-    if (domainMatch?.[1]) {
-      const fullDomain = domainMatch[1].toLowerCase();
-      const isDomainMatch = (dom: string, set: Set<string>) => {
-        if (set.has(dom)) return true;
-        for (const d of set) {
-          if (dom.endsWith("." + d)) return true;
-        }
-        return false;
-      };
-      if (!isDomainMatch(fullDomain, FREE_MAIL_DOMAINS_NER) && !isDomainMatch(fullDomain, PLATFORM_DOMAINS)) {
+    const fullDomain = extractDomain(from);
+    if (fullDomain) {
+      if (!isDomainMatch(fullDomain, FREE_MAIL_DOMAINS) && !isDomainMatch(fullDomain, PLATFORM_DOMAINS)) {
         const sld = fullDomain.split(".")[0];
         if (sld && sld.length >= 2 && !NON_COMPANY_PATTERNS.test(sld)) {
           candidates.push({ name: sld, source: "domain_sld", confidence: 0.40 });
@@ -567,35 +552,16 @@ export interface DomainReputation {
   domain: string | null;
 }
 
-const NOISE_PLATFORM_DOMAINS = new Set([
-  "openwork.jp", "vorkers.com", "onecareer.jp", "offerbox.jp",
-  "goodfind.jp", "unistyle.net", "syukatsu-kaigi.jp",
-]);
-
-const RECRUITING_PLATFORM_DOMAINS = new Set([
-  "rikunabi.com", "mynavi.jp", "en-japan.com", "wantedly.com",
-  "bizreach.jp", "doda.jp", "type.jp", "green-japan.com",
-]);
-
 const JOB_RELATED_DOMAIN_HINTS_NER = [
   "recruit", "career", "saiyo", "hr", "job", "talent",
   "mypage", "jinji", "saiyou", "entry",
 ];
 
 export function getDomainReputation(from: string): DomainReputation {
-  const m = from.match(/@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-  if (!m) return { tier: "unknown", score: 0.3, domain: null };
-  const domain = m[1].toLowerCase();
+  const domain = extractDomain(from);
+  if (!domain) return { tier: "unknown", score: 0.3, domain: null };
 
-  const isDomainMatch = (dom: string, set: Set<string>) => {
-    if (set.has(dom)) return true;
-    for (const d of set) {
-      if (dom.endsWith("." + d)) return true;
-    }
-    return false;
-  };
-
-  if (isDomainMatch(domain, FREE_MAIL_DOMAINS_NER)) return { tier: "free_mail", score: 0.15, domain };
+  if (isDomainMatch(domain, FREE_MAIL_DOMAINS)) return { tier: "free_mail", score: 0.15, domain };
   if (isDomainMatch(domain, NOISE_PLATFORM_DOMAINS)) return { tier: "noise_platform", score: 0.05, domain };
   if (isDomainMatch(domain, RECRUITING_PLATFORM_DOMAINS)) return { tier: "recruiting_platform", score: 0.70, domain };
 
@@ -614,18 +580,6 @@ export function getDomainReputation(from: string): DomainReputation {
 }
 
 // ─── Negative Signal Detection ───────────────────────────────────────────────
-
-const NEGATIVE_SIGNALS: Array<{ pattern: RegExp; weight: number }> = [
-  { pattern: /(配信停止|配信解除|unsubscribe|opt[\s-]?out|メール配信の停止|退会)/i, weight: -0.30 },
-  { pattern: /(メルマガ|ニュースレター|newsletter|magazine|お役立ち情報|コラム)/i, weight: -0.25 },
-  { pattern: /(キャンペーン|campaign|セール|sale|クーポン|coupon|割引)/i, weight: -0.20 },
-  { pattern: /(広告|PR|sponsored|advertisement|プロモーション)/i, weight: -0.20 },
-  { pattern: /(口コミ|レビュー|review|評判|ランキング|ranking|年収|給与データ)/i, weight: -0.15 },
-  { pattern: /(新着求人|おすすめ求人|求人情報|job alert|recommended jobs|あなたへのおすすめ)/i, weight: -0.10 },
-  { pattern: /(アンケート|アンケートのお願い|ご回答のお願い)/i, weight: -0.20 },
-  { pattern: /(自動配信|自動送信|自動返信|this is an automated message)/i, weight: -0.15 },
-  { pattern: /(登録完了|パスワード変更|パスワード再発行|メールアドレスの確認|セキュリティ通知|アカウント設定)/i, weight: -0.25 },
-];
 
 /** Returns a penalty score ∈ [-0.8, 0]. More negative = more likely noise. */
 export function calculateNegativeSignalPenalty(text: string): number {
