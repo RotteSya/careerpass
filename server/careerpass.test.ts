@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { appRouter } from "./routers";
+import { handleAgentChat } from "./agents";
 import type { TrpcContext } from "./_core/context";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -217,129 +218,32 @@ describe("jobs", () => {
   });
 });
 
-// ─── Agent Chat ────────────────────────────────────────────────────────────────
+// ─── Telegram Agent Chat ──────────────────────────────────────────────────────
 
-describe("agent.chat", () => {
+describe("handleAgentChat", () => {
   beforeEach(() => {
     mockLLM.mockReset();
     mockLLM.mockResolvedValue(llmReply("テスト回答です。"));
   });
 
   it("returns a reply from LLM", async () => {
-    const ctx = createMockContext();
-    const caller = appRouter.createCaller(ctx);
     // First turn (history=[]) returns fixed opening greeting, not LLM
-    const firstResult = await caller.agent.chat({
-      message: "こんにちは",
-      sessionId: "test-session",
-      history: [],
-    });
+    const firstResult = await handleAgentChat(1, "こんにちは", "test-session", []);
     expect(firstResult.reply).toContain("就活パス");
     expect(firstResult.sessionId).toBeDefined();
     // Subsequent turns (history non-empty) use LLM
-    const result = await caller.agent.chat({
-      message: "こんにちは",
-      sessionId: "test-session",
-      history: [{ role: "assistant", content: "ウェルカム" }],
-    });
+    const result = await handleAgentChat(1, "こんにちは", "test-session", [
+      { role: "assistant", content: "ウェルカム" },
+    ]);
     expect(result.reply).toBe("テスト回答です。");
     expect(result.sessionId).toBeDefined();
   });
 
   it("saves conversation to memory", async () => {
     const { saveAgentMemory } = await import("./db");
-    const ctx = createMockContext();
-    const caller = appRouter.createCaller(ctx);
-    await caller.agent.chat({ message: "テスト", sessionId: "s1", history: [] });
+    await handleAgentChat(1, "テスト", "s1", []);
     expect(saveAgentMemory).toHaveBeenCalledWith(
       expect.objectContaining({ memoryType: "conversation" })
     );
-  });
-});
-
-// ─── Agent ES Generation ───────────────────────────────────────────────────────
-
-describe("agent.generateES", () => {
-  it("generates ES with both required sections", async () => {
-    mockLLM.mockResolvedValue(
-      llmReply("## 志望動機\nテスト志望動機です。\n\n## 自己PR\nテスト自己PRです。")
-    );
-    const ctx = createMockContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.agent.generateES({
-      companyName: "株式会社テスト",
-      position: "エンジニア",
-      sessionId: "es-session",
-    });
-    expect(result.es).toContain("志望動機");
-    expect(result.es).toContain("自己PR");
-  });
-
-  it("retries when ES is missing required sections", async () => {
-    // First call returns incomplete ES, second call returns complete ES
-    mockLLM
-      .mockResolvedValueOnce(llmReply("不完全なES内容"))
-      .mockResolvedValueOnce(llmReply("## 志望動機\n志望動機です。\n\n## 自己PR\n自己PRです。"));
-
-    const ctx = createMockContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.agent.generateES({
-      companyName: "株式会社テスト",
-      position: "エンジニア",
-      sessionId: "es-retry-session",
-    });
-    // Should have called LLM at least twice (initial + retry)
-    expect(mockLLM.mock.calls.length).toBeGreaterThanOrEqual(2);
-    expect(result.es).toContain("志望動機");
-  });
-});
-
-// ─── Agent Interview (Single Question Enforcement) ────────────────────────────
-
-describe("agent.startInterview", () => {
-  it("starts interview with first question", async () => {
-    mockLLM.mockResolvedValue(llmReply("本日はお越しいただきありがとうございます。まず、自己紹介をお願いできますか？"));
-    const ctx = createMockContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.agent.startInterview({
-      companyName: "株式会社テスト",
-      position: "エンジニア",
-      history: [],
-    });
-    expect(result.question).toBeDefined();
-    expect(result.isFirstMessage).toBe(true);
-  });
-
-  it("enforces single question rule when LLM returns multiple questions", async () => {
-    mockLLM.mockResolvedValue(
-      llmReply("自己紹介をお願いします。また、なぜ弊社を志望されましたか？さらに、強みは何ですか？")
-    );
-    const ctx = createMockContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.agent.startInterview({
-      companyName: "株式会社テスト",
-      position: "エンジニア",
-      history: [],
-    });
-    // Count question marks in result - should be 1 or fewer
-    const qMarks = (result.question.match(/[？?]/g) ?? []).length;
-    expect(qMarks).toBeLessThanOrEqual(1);
-  });
-
-  it("continues interview with user answer", async () => {
-    mockLLM.mockResolvedValue(llmReply("ご回答ありがとうございます。次に、チームでの経験について教えていただけますか？"));
-    const ctx = createMockContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.agent.startInterview({
-      companyName: "株式会社テスト",
-      position: "エンジニア",
-      history: [
-        { role: "assistant", content: "自己紹介をお願いします。" },
-        { role: "user", content: "山田太郎と申します。立命館大学の修士課程に在籍しています。" },
-      ],
-      userAnswer: "山田太郎と申します。立命館大学の修士課程に在籍しています。",
-    });
-    expect(result.question).toBeDefined();
-    expect(result.isFirstMessage).toBe(false);
   });
 });

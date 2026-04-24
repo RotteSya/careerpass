@@ -29,12 +29,9 @@ import {
 
 import { invokeLLM } from "./_core/llm";
 import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
-import {
-  startCompanyWorkflow,
-} from "./agents";
-import { syncJobToNotionBoard, type SyncNotionJobInput } from "./notion";
 import { createCompanyBatchDeduper, sortMailItemsByTsAsc } from "./gmail_dedup";
 import { sendTelegramMessage } from "./telegramMessaging";
+import { dispatchNotification } from "./_core/messaging";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
 import { resolveCanonicalCompanyName, normalizeCompanyKey } from "./companyName";
 import { getDomainReputation, extractBestDateTime } from "./mailNer";
@@ -1158,25 +1155,6 @@ function buildLatestBoardScreenshotUrl(): string {
   return `${APP_DOMAIN.replace(/\/+$/, "")}/images/latest-dashboard-board.png`;
 }
 
-async function orchestrateSubAgents(userId: number, event: EmailEvent): Promise<string[]> {
-  const actions: string[] = [];
-  const companyName = event.companyName?.trim();
-  if (!companyName) return actions;
-
-  try {
-    // Mail-driven workflow trigger:
-    // careerpassmail identifies target company -> handoff to careerpass -> auto run recon -> ES -> interview.
-    if (["interview", "briefing", "test", "deadline", "entry", "offer"].includes(event.eventType)) {
-      const sid = `mail-${Date.now()}`;
-      await startCompanyWorkflow(userId, companyName, "総合職", sid);
-      actions.push(`careerpass:workflow-started:${companyName}`);
-    }
-  } catch (err) {
-    console.error("[Gmail] Sub-agent orchestration failed:", err);
-  }
-
-  return actions;
-}
 
 interface ComposeNotificationInput {
   userId: number;
@@ -1191,7 +1169,6 @@ interface ComposeNotificationInput {
   boardScreenshotLink: string | null;
   progressLabel: string | null;
   outcomeUncertain: boolean;
-  workflowTriggered: boolean;
 }
 
 const TELEGRAM_MAIL_NOTICE_TTL_MS = 15 * 60 * 1000;
@@ -1222,7 +1199,7 @@ export function __resetTelegramMailNoticeDedupForTests(): void {
 }
 
 function fallbackMailNotification(input: ComposeNotificationInput): string {
-  const { companyName, eventType, date, time, todoItems, mailLink, boardScreenshotLink, progressLabel, outcomeUncertain, workflowTriggered } = input;
+  const { companyName, eventType, date, time, todoItems, mailLink, boardScreenshotLink, progressLabel, outcomeUncertain } = input;
   const primaryAction =
     todoItems[0] ??
     (date
@@ -1243,7 +1220,6 @@ function fallbackMailNotification(input: ComposeNotificationInput): string {
   if (progressLabel) lines.push(`看板已更新到「${progressLabel}」。`);
   if (boardScreenshotLink) lines.push(`[查看最新看板截图](${boardScreenshotLink})`);
   if (outcomeUncertain) lines.push("这封邮件可能涉及结果，语义不够确定，我没有自动标记，方便时去看板确认。");
-  if (workflowTriggered) lines.push("这家公司的后续流程我已经帮你往前推进了。");
   return lines.join("\n");
 }
 
@@ -1263,7 +1239,6 @@ async function composeMailNotification(input: ComposeNotificationInput): Promise
       最新看板截图: input.boardScreenshotLink,
       看板已更新到: input.progressLabel,
       结果语义不确定: input.outcomeUncertain,
-      已自动推进后续流程: input.workflowTriggered,
     };
 
     const systemPrompt =
@@ -1313,7 +1288,6 @@ async function processGmailMessageIds(params: {
   notifyWindowDays?: number;
   suppressTelegramItemNotifications: boolean;
   enableAutoBoardWrite: boolean;
-  enableAutoWorkflow: boolean;
 }): Promise<MonitorResult> {
   const {
     userId,
@@ -1323,7 +1297,6 @@ async function processGmailMessageIds(params: {
     notifyWindowDays,
     suppressTelegramItemNotifications = false,
     enableAutoBoardWrite = true,
-    enableAutoWorkflow = true,
   } = params;
   const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
   const detectedEvents: EmailEvent[] = [];
@@ -1406,8 +1379,7 @@ async function processGmailMessageIds(params: {
     }
   });
 
-  const pendingNotionSyncs = new Map<string, SyncNotionJobInput>();
-  
+
   // Local DB cache for the user's job applications to prevent N+1 queries
   const localJobsCache = new Map<string, any>();
   if (enableAutoBoardWrite) {
@@ -1597,23 +1569,10 @@ async function processGmailMessageIds(params: {
         });
       }
 
-      if (enableAutoBoardWrite && companyName) {
-        pendingNotionSyncs.set(companyName.toLowerCase(), {
-          userId,
-          companyName,
-          status: progressUpdate?.nextStatus ?? inferredStatus ?? null,
-          eventType,
-          eventDate: date,
-          eventTime: time,
-          location,
-          mailSubject: detail.subject,
-          source: "gmail",
-        });
-      }
 
       // Decide whether to notify the user about this mail.
       // - First-scan window: skip notifications for mails older than notifyWindowDays
-      //   (the dashboard/Notion sync above still runs, so the board stays complete).
+      //   (the board update above still runs, so the board stays complete).
       // - Same-company dedup: only notify for the newest mail per company in this batch.
       const mailTs = item.mailTs;
       const isWithinWindow =
@@ -1625,17 +1584,11 @@ async function processGmailMessageIds(params: {
       const shouldNotify =
         !suppressTelegramItemNotifications && isWithinWindow && isNewestForCompany;
 
-      let orchestrationActions: string[] = [];
       if (telegramChatId && shouldNotify) {
         if (!shouldSendTelegramMailNoticeOnce({ userId, messageId })) {
           console.info("[Gmail] telegram-notice-dedup-skip", { userId, messageId });
           continue;
         }
-        orchestrationActions = enableAutoWorkflow
-          ? await orchestrateSubAgents(userId, emailEvent)
-          : [];
-        const workflowTriggered = orchestrationActions.length > 0;
-
         const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
         const boardScreenshotLink =
           progressUpdate && progressUpdate.jobId && progressUpdate.changed
@@ -1659,9 +1612,9 @@ async function processGmailMessageIds(params: {
               : null,
           outcomeUncertain:
             (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome,
-          workflowTriggered,
         });
-        await sendTelegramMessage(telegramChatId, notifText);
+
+        await dispatchNotification({ userId, body: notifText });
       }
 
       if (date && CALENDAR_WRITABLE_TYPES.includes(eventType)) {
@@ -1703,11 +1656,11 @@ async function processGmailMessageIds(params: {
         const written = await writeToGoogleCalendar(accessToken, calEvent);
         if (written) {
           calendarCount++;
-        } else if (telegramChatId) {
-          await sendTelegramMessage(
-            telegramChatId,
-            `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`
-          );
+        } else {
+          await dispatchNotification({
+            userId,
+            body: `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`,
+          });
         }
       }
     } catch (err) {
@@ -1719,14 +1672,12 @@ async function processGmailMessageIds(params: {
     }
   }
 
-  // Batch sync to Notion: only the latest state for each company
-  if (pendingNotionSyncs.size > 0) {
-    await mapWithConcurrency(Array.from(pendingNotionSyncs.values()), 3, async (syncPayload) => {
-      try {
-        await syncJobToNotionBoard(syncPayload);
-      } catch (e) {
-        console.warn("[Notion] Batch sync failed for", syncPayload.companyName, ":", (e as Error).message);
-      }
+  // Trigger proactive check for status-based suggestions (fire-and-forget)
+  if (detectedEvents.length > 0) {
+    import("./proactive/scheduler").then(({ runProactiveCheckForUser }) => {
+      runProactiveCheckForUser(userId).catch(err =>
+        console.error("[Gmail] Proactive check failed after mail processing:", err)
+      );
     });
   }
 
@@ -1745,7 +1696,6 @@ export async function monitorGmailAndSync(
     notifyWindowDays?: number;
     suppressTelegramItemNotifications?: boolean;
     enableAutoBoardWrite?: boolean;
-    enableAutoWorkflow?: boolean;
     fullMailboxScan?: boolean;
   }
 ): Promise<MonitorResult> {
@@ -1770,7 +1720,6 @@ export async function monitorGmailAndSync(
     notifyWindowDays: options?.notifyWindowDays,
     suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
     enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
-    enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
   });
 
   // When first initialized via /checkmail or fallback scan, persist the current
@@ -1810,7 +1759,6 @@ export async function syncGmailIncremental(
       notifyWindowDays: 14,
       suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
-      enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
       fullMailboxScan: true,
     });
     const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
@@ -1830,7 +1778,6 @@ export async function syncGmailIncremental(
       notifyWindowDays: 14,
       suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
-      enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
       fullMailboxScan: true,
     });
     const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
@@ -1849,7 +1796,6 @@ export async function syncGmailIncremental(
     messageIds: changes.messageIds,
     suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
     enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
-    enableAutoWorkflow: options?.enableAutoWorkflow ?? true,
   });
 
   if (changes.latestHistoryId) {

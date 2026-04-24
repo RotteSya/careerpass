@@ -15,9 +15,6 @@ import {
   handleAgentChat,
   buildFixedOpening,
   reconCompany as runAgentRecon,
-  generateES as runAgentES,
-  startInterview as runAgentInterview,
-  startCompanyWorkflow,
 } from "./agents";
 import { invokeLLM } from "./_core/llm";
 import { startMailMonitoringAndCheckmail, consumeBackgroundScanResult } from "./mailMonitoring";
@@ -72,52 +69,6 @@ telegramRouter.use(
  * Generate a basic USER.md from the user's registration profile.
  * This is the "seed" resume created automatically on Telegram binding.
  */
-function generateProfileResume(user: User, sessionId: string): string {
-  const educationMap: Record<string, string> = {
-    high_school: "高校卒",
-    associate: "短大・専門卒",
-    bachelor: "大学卒（学士）",
-    master: "大学院修士課程",
-    doctor: "大学院博士課程",
-    other: "その他",
-  };
-  const langMap: Record<string, string> = {
-    ja: "日本語",
-    zh: "中国語（普通話）",
-    en: "英語",
-  };
-  const edu = user.education ? (educationMap[user.education] ?? user.education) : "未記入";
-  const lang = user.preferredLanguage ? (langMap[user.preferredLanguage] ?? user.preferredLanguage) : "日本語";
-  const birthYear = user.birthDate ? user.birthDate.split("-")[0] : null;
-  const age = birthYear ? `${new Date().getFullYear() - parseInt(birthYear)}歳` : "未記入";
-
-  return `# USER_${sessionId} - 個人プロフィール（自動生成）
-
-## 基本情報
-- 氏名: ${user.name ?? "未記入"}
-- 年齢: ${age}
-- 生年月日: ${user.birthDate ?? "未記入"}
-- 希望コミュニケーション言語: ${lang}
-
-## 学歴
-- 最終学歴: ${edu}
-- 大学・学校名: ${user.universityName ?? "未記入"}
-
-## 職務・インターン経験（STAR形式）
-※ AIチャットで経験を詳しく話すと、ここが自動的に更新されます。
-
-## スキル・強み
-※ AIチャットで詳しく教えてください。
-
-## 自己分析
-※ AIチャットで深掘りします。
-
----
-*このファイルはCareerPassへの登録情報から自動生成されました。*
-*AIチャット機能でさらに詳しい情報を入力すると、ES生成・面接対策の精度が向上します。*
-`;
-}
-
 function languageOrDefault(user?: User | null): "ja" | "zh" | "en" {
   return (user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en";
 }
@@ -295,16 +246,6 @@ function buildScheduleDigestText(
   return `${header}\n${lines.join("\n")}`;
 }
 
-function buildDeepDiveOfferText(lang: "ja" | "zh" | "en"): string {
-  if (lang === "zh") {
-    return "从今天开始邮件和日程我帮你看，既然开启了我们的合作，让我先了解一下你的基础情况：\n\n1. 你的目标方向是什么？\n\n• 哪个业界？什么岗位？\n• 也不确定，想先聊聊\n\n2. 你有过什么经历？\n\n• 简单提提就可以\n• 我会看到你的闪光点\n\n简单回复即可，我会根据你的情况调整策略。";
-  }
-  if (lang === "en") {
-    return "From today on, I’ll watch your inbox and schedule for you. Now that we’ve started working together, let me quickly understand your basics:\n\n1. What direction are you aiming for?\n\n• Which industry? What role?\n• Not sure yet, want to talk first\n\n2. What experience do you have?\n\n• A simple overview is enough\n• I’ll find your strengths\n\nA short reply is enough. I’ll adjust the strategy based on your situation.";
-  }
-  return "今日からメールと日程は私が見ます。せっかく一緒に進めるので、まずはあなたの基本情報を軽く教えてください。\n\n1. 志望の方向性は？\n\n• どの業界？どの職種？\n• まだ決まっていないので、まず相談したい\n\n2. これまでの経験は？\n\n• ざっくりで大丈夫\n• あなたの強みは私が見つけます\n\n短く返信してくれればOKです。内容に合わせて戦略を調整します。";
-}
-
 function buildNoUpcomingScheduleText(lang: "ja" | "zh" | "en"): string {
   if (lang === "zh") {
     return "我看过这一轮了，接下来 14 天暂时没有需要你立刻处理的硬日程。我继续盯着，一有新安排就马上叫你。";
@@ -313,16 +254,6 @@ function buildNoUpcomingScheduleText(lang: "ja" | "zh" | "en"): string {
     return "I checked this round and don’t see urgent hard deadlines in the next 14 days. I’ll keep watching and ping you right away if anything lands.";
   }
   return "このラウンドでは、直近14日で至急対応が必要な予定は見当たりませんでした。引き続き監視し、新着があればすぐ知らせます。";
-}
-
-function buildInterviewDisabledText(lang: "ja" | "zh" | "en"): string {
-  if (lang === "zh") {
-    return "模拟面试功能暂时停用中，过段时间再开放。\n\n这段时间我可以帮你做企业调研、ES、看板更新或者整理面试要点。";
-  }
-  if (lang === "en") {
-    return "Mock interview is temporarily unavailable.\n\nFor now, I can help with company recon, ES drafting, board updates, or interview talking-point prep.";
-  }
-  return "模擬面接機能は一時停止中です。\n\nその間は、企業調査・ES作成・ボード更新・面接論点整理を手伝えます。";
 }
 
 function buildCheckmailStartedText(lang: "ja" | "zh" | "en"): string {
@@ -427,230 +358,11 @@ function parseConversationMemoryTurns(rawContent: string, metadata: unknown): Ar
   ];
 }
 
-function isDeepDiveOptIn(text: string): boolean {
-  const t = text.trim();
-  return /^(开始|開始|好|可以|行|要|来|やる|お願いします|はい|ok|okay|yes|yep|sure)\b/i.test(t);
-}
-
-function looksLikeExperienceNarrative(text: string): boolean {
-  const t = text.trim();
-  if (!t) return false;
-
-  // Heuristic 1: long, content-rich message (common when users dump experience details).
-  const longEnough = t.length >= 80;
-  const multiline = t.split(/\n+/).filter(Boolean).length >= 2;
-
-  // Heuristic 2: experience-related vocabulary in zh/ja/en.
-  const expKeywords =
-    /(实习|项目|经历|负责|成果|结果|参加|组织|志愿|兼职|社团|比赛|开发|intern|internship|project|experience|led|built|implemented|impact|成果|経験|プロジェクト|インターン|担当|実績|開発)/i;
-
-  // Heuristic 3: action/result pattern-like clues.
-  const actionHint =
-    /(我负责|我做了|我参与了|最后|结果是|学到了|担当しました|取り組みました|結果|I was responsible|I led|I built|as a result)/i;
-
-  return (longEnough || multiline) && (expKeywords.test(t) || actionHint.test(t));
-}
-
-async function shouldEnterDeepDiveByLLM(params: {
-  text: string;
-  lang: "ja" | "zh" | "en";
-}): Promise<boolean | null> {
-  const content = params.text.trim();
-  if (!content) return null;
-  try {
-    const systemPrompt =
-      "你是对话状态分类器。任务：判断用户这条消息是否表达了“愿意/正在提供经历内容，应该切到经历深挖模式（STAR）”。" +
-      "只输出JSON，不要输出其他内容：{\"enterDeepDive\": boolean, \"confidence\": number, \"reason\": string}";
-    const userPrompt =
-      `语言偏好: ${params.lang}\n` +
-      `用户消息:\n${content}\n\n` +
-      "判定标准：\n" +
-      "- 若用户明确说开始，或已经在描述实习/项目/志愿/工作经历细节，enterDeepDive=true\n" +
-      "- 若用户主要在问日程、提醒、看板、公司进度，enterDeepDive=false";
-
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      response_format: { type: "json_object" },
-    });
-    const raw = response.choices?.[0]?.message?.content;
-    if (typeof raw !== "string") return null;
-    const parsed = JSON.parse(raw) as { enterDeepDive?: unknown; confidence?: unknown };
-    if (typeof parsed.enterDeepDive !== "boolean") return null;
-    if (typeof parsed.confidence === "number" && parsed.confidence < 0.45) return null;
-    return parsed.enterDeepDive;
-  } catch {
-    return null;
-  }
-}
-
-function formatJobStatusLabel(lang: "ja" | "zh" | "en", status: string): string {
-  const zh: Record<string, string> = {
-    researching: "调研中",
-    applied: "エントリー済み",
-    briefing: "说明会",
-    es_preparing: "ES准备中",
-    es_submitted: "ES已投递",
-    document_screening: "書類選考中",
-    written_test: "筆記試験",
-    interview_1: "一面",
-    interview_2: "二面",
-    interview_3: "三次面接",
-    interview_4: "四次面接",
-    interview_final: "终面",
-    offer: "Offer",
-    rejected: "拒信",
-    withdrawn: "已撤回",
-  };
-  const ja: Record<string, string> = {
-    researching: "調査中",
-    applied: "エントリー済み",
-    briefing: "説明会",
-    es_preparing: "ES作成中",
-    es_submitted: "ES提出済み",
-    document_screening: "書類選考中",
-    written_test: "筆記試験",
-    interview_1: "一次面接",
-    interview_2: "二次面接",
-    interview_3: "三次面接",
-    interview_4: "四次面接",
-    interview_final: "最終面接",
-    offer: "内定",
-    rejected: "不合格",
-    withdrawn: "辞退",
-  };
-  const en: Record<string, string> = {
-    researching: "Researching",
-    applied: "Entry Submitted",
-    briefing: "Briefing",
-    es_preparing: "ES Preparing",
-    es_submitted: "ES Submitted",
-    document_screening: "Document Screening",
-    written_test: "Written Test",
-    interview_1: "Interview 1",
-    interview_2: "Interview 2",
-    interview_3: "Interview 3",
-    interview_4: "Interview 4",
-    interview_final: "Final Interview",
-    offer: "Offer",
-    rejected: "Rejected",
-    withdrawn: "Withdrawn",
-  };
-  const map = lang === "zh" ? zh : lang === "en" ? en : ja;
-  return map[status] ?? status;
-}
-
 function formatDateYmd(date: Date | string | null | undefined): string {
   if (!date) return "";
   const d = typeof date === "string" ? new Date(date) : date;
   if (Number.isNaN(d.getTime())) return "";
   return d.toISOString().slice(0, 10);
-}
-
-function truncateForBoard(input: string, maxLen: number): string {
-  const s = input.replace(/[\r\n]+/g, " ").trim();
-  const chars = Array.from(s);
-  if (chars.length <= maxLen) return s;
-  return `${chars.slice(0, Math.max(0, maxLen - 1)).join("")}…`;
-}
-
-function padForBoard(input: string, width: number): string {
-  const s = truncateForBoard(input, width);
-  return s.length >= width ? s : s.padEnd(width, " ");
-}
-
-function computePriorityLabel(params: {
-  lang: "ja" | "zh" | "en";
-  status: string;
-  nextActionAt?: Date | null;
-}): string {
-  const now = Date.now();
-  const nextAt = params.nextActionAt ? new Date(params.nextActionAt).getTime() : null;
-  const daysToNext = nextAt ? Math.floor((nextAt - now) / (24 * 3600 * 1000)) : null;
-
-  const terminal = ["offer", "rejected", "withdrawn"].includes(params.status);
-  if (terminal) return params.lang === "en" ? "-" : "—";
-
-  const high =
-    ["written_test", "interview_1", "interview_2", "interview_3", "interview_4", "interview_final"].includes(params.status) ||
-    (daysToNext !== null && daysToNext <= 3);
-  const mid =
-    ["applied", "briefing", "es_preparing", "es_submitted", "document_screening"].includes(params.status) ||
-    (daysToNext !== null && daysToNext <= 7);
-
-  if (params.lang === "en") return high ? "High" : mid ? "Med" : "Low";
-  if (params.lang === "ja") return high ? "高" : mid ? "中" : "低";
-  return high ? "高" : mid ? "中" : "低";
-}
-
-function buildBoardText(params: {
-  lang: "ja" | "zh" | "en";
-  apps: Array<{ id: number; companyNameJa: string; companyNameEn: string | null; status: string; updatedAt: Date; nextActionAt?: Date | null }>;
-  lastEvents: Array<{ reason?: string | null; createdAt: Date } | null>;
-}): string {
-  const header =
-    params.lang === "zh"
-      ? "📌 求职动态看板（最近更新在前）"
-      : params.lang === "en"
-      ? "📌 Job Board (most recently updated first)"
-      : "📌 就活ボード（更新順）";
-
-  const dashboardUrl = `${APP_DOMAIN.replace(/\/+$/, "")}/dashboard`;
-  const dashboardLink =
-    params.lang === "zh"
-      ? `🔗 [打开网页看板](${dashboardUrl})`
-      : params.lang === "en"
-      ? `🔗 [Open Web Board](${dashboardUrl})`
-      : `🔗 [Webボードを開く](${dashboardUrl})`;
-
-  const colCompany = params.lang === "en" ? "Company" : params.lang === "ja" ? "会社名" : "公司名";
-  const colStatus = params.lang === "en" ? "Status" : params.lang === "ja" ? "状態" : "状态";
-  const colType = params.lang === "en" ? "Type" : params.lang === "ja" ? "種類" : "类型";
-  const colPri = params.lang === "en" ? "Pri" : params.lang === "ja" ? "優先" : "优先";
-  const colUpdated = params.lang === "en" ? "Updated" : params.lang === "ja" ? "更新" : "更新";
-
-  const typeLabel = params.lang === "en" ? "Job" : params.lang === "ja" ? "就活" : "求职";
-
-  const wCompany = 18;
-  const wStatus = 10;
-  const wType = 6;
-  const wPri = 4;
-  const wUpdated = 10;
-
-  const tableHeader =
-    `${padForBoard(colCompany, wCompany)}  ` +
-    `${padForBoard(colStatus, wStatus)}  ` +
-    `${padForBoard(colType, wType)}  ` +
-    `${padForBoard(colPri, wPri)}  ` +
-    `${padForBoard(colUpdated, wUpdated)}`;
-  const tableSep =
-    `${"-".repeat(wCompany)}  ${"-".repeat(wStatus)}  ${"-".repeat(wType)}  ${"-".repeat(wPri)}  ${"-".repeat(wUpdated)}`;
-
-  const rows = params.apps.map((a) => {
-    const company = a.companyNameJa || a.companyNameEn || "—";
-    const status = formatJobStatusLabel(params.lang, a.status);
-    const pri = computePriorityLabel({ lang: params.lang, status: a.status, nextActionAt: a.nextActionAt ?? null });
-    const updated = formatDateYmd(a.updatedAt);
-    return (
-      `${padForBoard(company, wCompany)}  ` +
-      `${padForBoard(status, wStatus)}  ` +
-      `${padForBoard(typeLabel, wType)}  ` +
-      `${padForBoard(pri, wPri)}  ` +
-      `${padForBoard(updated, wUpdated)}`
-    );
-  });
-
-  const footer =
-    params.lang === "zh"
-      ? "\n查看单家公司：/recon 公司名 或 /es 公司名\n开始面试：/interview 公司名（需要你主动）"
-      : params.lang === "en"
-      ? "\nCompany detail: /recon <company> or /es <company>\nStart interview: /interview <company> (explicit opt-in)"
-      : "\n企業別：/recon 企業名 または /es 企業名\n面接開始：/interview 企業名（明示同意）";
-
-  const table = `\`\`\`\n${tableHeader}\n${tableSep}\n${rows.join("\n")}\n\`\`\``;
-  return `${header}\n${dashboardLink}\n${table}${footer}`;
 }
 
 import { normalizeCompanyKey as standardNormalizeCompanyKey } from "./companyName";
@@ -675,70 +387,6 @@ function uniqueCompanyNamesFromEvents(
     names.push(raw);
   }
   return names;
-}
-
-function buildAutoWorkflowKickoffText(lang: "ja" | "zh" | "en", companies: string[]): string {
-  const list = companies.slice(0, 6).join(lang === "zh" ? "、" : ", ");
-  if (lang === "zh") {
-    return `我已经识别到你正在推进这些公司：${list}。\n\n我现在先自动帮你跑「企业调研 + ES 初稿」。模拟面试不会自动开始，需要你确认后才进入。`;
-  }
-  if (lang === "en") {
-    return `I found you’re active with: ${list}.\n\nI’ll automatically run company recon + an ES draft next. Mock interview will NOT start automatically; it will require your consent.`;
-  }
-  return `進行中の企業：${list}\n\nこれから自動で「企業調査 + ES初稿」を作成します。模擬面接は自動開始しません（同意が必要です）。`;
-}
-
-async function autoStartWorkflowsIfNeeded(params: {
-  userId: number;
-  sessionId: string;
-  chatId: string | number;
-  lang: "ja" | "zh" | "en";
-  events: Array<{ companyName: string | null; eventType?: string | null }>;
-}) {
-  const companyNames = uniqueCompanyNamesFromEvents(params.events).slice(0, 3);
-  if (companyNames.length === 0) return;
-
-  const memories = await getAgentMemory(params.userId);
-  const hasReport = (company: string) =>
-    memories.some((m) => m.memoryType === "company_report" && m.title.includes(company));
-  const hasEs = (company: string) =>
-    memories.some((m) => m.memoryType === "es_draft" && m.title.includes(company));
-
-  const toRun = companyNames.filter((c) => !(hasReport(c) && hasEs(c)));
-  if (toRun.length === 0) return;
-
-  await sendTelegramMessage(params.chatId, buildAutoWorkflowKickoffText(params.lang, toRun));
-  for (const company of toRun) {
-    await sendTelegramMessage(
-      params.chatId,
-      params.lang === "zh"
-        ? `🔍 正在生成 ${company} 的调研与 ES 初稿...`
-        : params.lang === "en"
-        ? `🔍 Generating recon + ES draft for ${company}...`
-        : `🔍 ${company} の調査とES初稿を作成中です...`
-    );
-    try {
-      await startCompanyWorkflow(params.userId, company, "総合職", params.sessionId);
-      await sendTelegramMessage(
-        params.chatId,
-        params.lang === "zh"
-          ? `✅ ${company}：调研与 ES 初稿已生成。`
-          : params.lang === "en"
-          ? `✅ ${company}: recon + ES draft generated.`
-          : `✅ ${company}：調査とES初稿が完成しました。`
-      );
-    } catch (err) {
-      console.error("[Telegram] autoStartWorkflows failed:", err);
-      await sendTelegramMessage(
-        params.chatId,
-        params.lang === "zh"
-          ? `⚠️ ${company}：自动生成调研/ES 失败了，你可以稍后用 /recon 或 /es 手动触发。`
-          : params.lang === "en"
-          ? `⚠️ ${company}: auto recon/ES failed. You can trigger it later via /recon or /es.`
-          : `⚠️ ${company}：自動生成に失敗しました。後で /recon または /es で手動実行できます。`
-      );
-    }
-  }
 }
 
 async function maybeSendTrialLifecycleNudges(userId: number, chatId: string | number) {
@@ -846,19 +494,6 @@ telegramRouter.post("/webhook", async (req, res) => {
             const session = await getOrCreateAgentSession(userId, String(chatId));
             const sessionId = String(session?.id ?? userId);
 
-            // Auto-generate USER.md from registration profile if not already exists
-            const existingResumes = await getAgentMemory(userId, "resume");
-            if (existingResumes.length === 0) {
-              const resumeContent = generateProfileResume(user, sessionId);
-              await saveAgentMemory({
-                userId,
-                memoryType: "resume",
-                title: `USER_${sessionId}.md`,
-                content: resumeContent,
-                metadata: { sessionId, source: "auto_from_profile" },
-              });
-              console.log(`[Telegram] Auto-generated USER.md for user ${userId}`);
-            }
 
             const greeting = buildFixedOpening(user, sessionId);
             const lang = languageOrDefault(user);
@@ -1007,7 +642,7 @@ telegramRouter.post("/webhook", async (req, res) => {
               maxItems: 4,
             });
             await sendTelegramMessage(chatId, digest ?? buildNoUpcomingScheduleText(lang));
-            await sendTelegramMessage(chatId, buildDeepDiveOfferText(lang));
+
           } catch (err) {
             console.error("[Telegram] nickname-confirmed initial mail scan failed:", err);
             await sendTelegramMessage(chatId, buildCheckmailFailedText(lang));
@@ -1034,7 +669,7 @@ telegramRouter.post("/webhook", async (req, res) => {
       await maybeSendTrialLifecycleNudges(uid, chatId);
 
       // Simple routing based on session state or commands
-      if (text.startsWith("/board") || text.startsWith("/kanban") || /看板|进度|求职.{0,40}板|board|kanban/i.test(text)) {
+      if (text.startsWith("/status") || text.startsWith("/board") || text.startsWith("/kanban") || /看板|进度|求职.{0,40}板|board|kanban|status/i.test(text)) {
         const user = await getUserById(uid);
         const lang = ((user?.preferredLanguage ?? "ja") as "ja" | "zh" | "en");
         const apps = await getJobApplications(uid);
@@ -1042,22 +677,51 @@ telegramRouter.post("/webhook", async (req, res) => {
           await sendTelegramMessage(
             chatId,
             lang === "zh"
-              ? "📌 你的看板还是空的。等我从邮件里识别到公司事件后，会自动帮你建卡并更新状态。"
+              ? "📌 你还没有投递记录。等我从邮件里识别到公司事件后，会自动帮你建卡并更新状态。"
               : lang === "en"
-              ? "📌 Your board is empty. Once I detect company-related events from email, I’ll auto-create and update entries."
-              : "📌 まだボードが空です。メールから企業イベントを検知すると自動で作成・更新します。"
+              ? "📌 No applications yet. Once I spot company-related events in your email, I’ll create and update entries automatically."
+              : "📌 まだ応募記録がありません。メールから企業イベントを検知すると自動で作成・更新します。"
           );
           return res.json({ ok: true });
         }
 
-        const topApps = apps.slice(0, 12);
-        const lastEvents = await Promise.all(
-          topApps.map(async (a) => {
-            const rows = await listJobStatusEvents(uid, a.id, 1);
-            return rows[0] ?? null;
-          })
-        );
-        await sendTelegramMessage(chatId, buildBoardText({ lang, apps: topApps as any, lastEvents: lastEvents as any }));
+        // Simple text-based status summary
+        const topApps = apps.slice(0, 15);
+        const lines = topApps.map((a) => {
+          const statusMapZh: Record<string, string> = {
+            researching: "调研中", applied: "已投递", briefing: "说明会",
+            es_preparing: "ES准备中", es_submitted: "ES已提交",
+            document_screening: "書類選考", written_test: "筆記試験",
+            interview_1: "一面", interview_2: "二面", interview_3: "三次面接",
+            interview_4: "四次面接", interview_final: "终面",
+            offer: "内定", rejected: "未通过", withdrawn: "已辞退",
+          };
+          const statusMapEn: Record<string, string> = {
+            researching: "Researching", applied: "Applied", briefing: "Briefing",
+            es_preparing: "ES Prep", es_submitted: "ES Submitted",
+            document_screening: "Screening", written_test: "Written Test",
+            interview_1: "1st Interview", interview_2: "2nd Interview",
+            interview_3: "3rd Interview", interview_4: "4th Interview",
+            interview_final: "Final Interview",
+            offer: "Offer", rejected: "Rejected", withdrawn: "Withdrawn",
+          };
+          const statusMapJa: Record<string, string> = {
+            researching: "調査中", applied: "エントリー済み", briefing: "説明会",
+            es_preparing: "ES作成中", es_submitted: "ES提出済み",
+            document_screening: "書類選考中", written_test: "筆記試験",
+            interview_1: "一次面接", interview_2: "二次面接",
+            interview_3: "三次面接", interview_4: "四次面接",
+            interview_final: "最終面接",
+            offer: "内定", rejected: "不合格", withdrawn: "辞退",
+          };
+          const map = lang === "zh" ? statusMapZh : lang === "en" ? statusMapEn : statusMapJa;
+          const status = map[a.status] ?? a.status;
+          const company = a.companyNameJa || a.companyNameEn || "—";
+          return `${company}：${status}`;
+        });
+        const header =
+          lang === "zh" ? "📌 你的求职进度" : lang === "en" ? "📌 Your Job Progress" : "📌 就活の進捗";
+        await sendTelegramMessage(chatId, `${header}\n\n${lines.join("\n")}`);
       } else if (text.startsWith("/recon")) {
         const companyName = text.replace("/recon", "").trim();
         if (!companyName) {
@@ -1068,24 +732,25 @@ telegramRouter.post("/webhook", async (req, res) => {
           await sendTelegramMessage(chatId, `✅ ${companyName} の調査レポートが完成しました：\n\n${report.slice(0, 4000)}`);
         }
       } else if (text.startsWith("/es")) {
-        const parts = text.replace("/es", "").trim().split(" ");
-        const companyName = parts[0];
-        const position = parts[1] ?? "総合職";
-        if (!companyName) {
-          await sendTelegramMessage(chatId, "企業名を入力してください。例: `/es トヨタ 営業職`", "Markdown");
-        } else {
-          await sendTelegramMessage(chatId, `📄 ${companyName} のESを作成しています...`);
-          const es = await runAgentES(uid, companyName, position, sessionId);
-          await sendTelegramMessage(chatId, `✅ ${companyName} のES案が完成しました：\n\n${es.slice(0, 4000)}`);
-        }
+        await sendTelegramMessage(chatId, "ES 自动生成功能已下线。你可以直接告诉我你想写哪家公司的志望动机，我帮你理思路。");
       } else if (text.startsWith("/interview")) {
-        // 模擬面接モジュールは一時的に停止中。
-        const user = await getUserById(uid);
-        const lang = languageOrDefault(user);
-        await sendTelegramMessage(
-          chatId,
-          buildInterviewDisabledText(lang)
-        );
+        await sendTelegramMessage(chatId, "模拟面试功能已下线。不过你可以告诉我面试的公司，我帮你整理面试要点。");
+      } else if (text === "/mute") {
+        await updateAgentSession(uid, {
+          sessionState: {
+            ...((session.sessionState as Record<string, unknown> | null) ?? {}),
+            nudgesMutedUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          },
+        });
+        await sendTelegramMessage(chatId, "🔕 主动提醒已静音 24 小时。紧急邮件事件仍会通知你。");
+      } else if (text === "/unmute") {
+        await updateAgentSession(uid, {
+          sessionState: {
+            ...((session.sessionState as Record<string, unknown> | null) ?? {}),
+            nudgesMutedUntil: null,
+          },
+        });
+        await sendTelegramMessage(chatId, "🔔 主动提醒已恢复。");
       } else if (text === "/stop") {
         await updateAgentSession(uid, { interviewMode: false, currentAgent: "careerpass" });
         await sendTelegramMessage(chatId, "対話を終了し、メインメニューに戻ります。");
@@ -1124,77 +789,26 @@ telegramRouter.post("/webhook", async (req, res) => {
             await updateAgentSession(userId!, {
               sessionState: {
                 ...((session.sessionState as Record<string, unknown> | null) ?? {}),
-                onboarding: { stage: "experience_offer", updatedAt: new Date().toISOString() },
+                onboarding: { stage: "active", updatedAt: new Date().toISOString() },
               },
             });
             const digest = buildScheduleDigestText(lang, result.events, { onlyRecentDays: 14, maxItems: 4 });
             await sendTelegramMessage(chatId, `${digest ?? buildNoUpcomingScheduleText(lang)}${upsell}`);
-            await sendTelegramMessage(chatId, buildDeepDiveOfferText(lang));
           } catch (err) {
             console.error("[Telegram] /checkmail async monitor failed:", err);
             await sendTelegramMessage(chatId, buildCheckmailFailedText(lang));
           }
         })();
       } else {
-        // Natural Language Processing via Orchestrator
+        // Natural Language Processing — chat with the proactive companion
         const memories = await getAgentMemory(userId, "conversation");
         const history = memories
           .slice(0, 5)
           .reverse()
           .flatMap((m) => parseConversationMemoryTurns(m.content, m.metadata));
 
-        if (session.interviewMode) {
-          // Continue interview
-          const sessionState = (session.sessionState as Record<string, unknown> | null) ?? {};
-          const workflow = (sessionState.workflow as Record<string, unknown> | null) ?? {};
-          const companyName =
-            typeof workflow.companyName === "string" && workflow.companyName.trim()
-              ? workflow.companyName
-              : "企業名不明";
-          const position =
-            typeof workflow.position === "string" && workflow.position.trim()
-              ? workflow.position
-              : "総合職";
-          const question = await runAgentInterview(userId, companyName, position, history, text);
-          await sendTelegramMessage(chatId, question);
-        } else {
-          // Regular Chat
-          const sessionState = (session.sessionState as Record<string, any> | null) ?? {};
-          const onboardingStage = sessionState?.onboarding?.stage as string | undefined;
-          let extraSystemInstruction: string | undefined;
-
-          if (onboardingStage === "schedule" || onboardingStage === "experience_offer") {
-            const base =
-              `当前处于“日程/看板优先”阶段：不要追问用户经历，不要进入STAR深挖。` +
-              `优先处理日程、截止、冲突与下一步行动。若用户无明确问题，提示可以开始STAR深挖并征求同意。`;
-
-            extraSystemInstruction = base;
-
-            if (onboardingStage === "experience_offer") {
-              const llmDecision = await shouldEnterDeepDiveByLLM({ text, lang: languageOrDefault(await getUserById(userId)) });
-              const shouldDeepDive =
-                llmDecision === true ||
-                isDeepDiveOptIn(text) ||
-                looksLikeExperienceNarrative(text);
-              if (!shouldDeepDive) {
-                // keep schedule-first mode
-              } else {
-              await updateAgentSession(userId, {
-                sessionState: {
-                  ...sessionState,
-                  onboarding: { stage: "deep_dive", updatedAt: new Date().toISOString() },
-                },
-              });
-              extraSystemInstruction =
-                `用户已同意开始经历深挖。请用STAR开始对其经历进行结构化追问：` +
-                `一次只问一个问题，优先从最近/最强的一段经历开始，最多连续追问3轮后收束为结构化要点。`;
-              }
-            }
-          }
-
-          const { reply } = await handleAgentChat(userId, text, sessionId, history, extraSystemInstruction);
-          await sendTelegramBubbles(chatId, reply);
-        }
+        const { reply } = await handleAgentChat(userId, text, sessionId, history);
+        await sendTelegramBubbles(chatId, reply);
       }
     } else {
       // Not bound

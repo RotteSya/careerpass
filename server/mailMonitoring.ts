@@ -57,7 +57,6 @@ export async function startMailMonitoringAndCheckmail(params: {
   const result = await monitorGmailAndSync(params.userId, params.telegramChatId, {
     suppressTelegramItemNotifications: true,
     enableAutoBoardWrite: access.autoBoardWriteEnabled,
-    enableAutoWorkflow: access.autoWorkflowEnabled,
   });
   return {
     needsOAuth: false as const,
@@ -112,7 +111,6 @@ export function startBackgroundMailScan(
       // writes.  Telegram notifications will be sent separately after the greeting.
       return await monitorGmailAndSync(userId, undefined, {
         enableAutoBoardWrite: access.autoBoardWriteEnabled,
-        enableAutoWorkflow: false, // heavy workflows deferred to Telegram flow
         ...(options?.forceFullMailboxScan ? { fullMailboxScan: true } : {}),
       });
     } catch (err) {

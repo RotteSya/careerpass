@@ -361,7 +361,7 @@ const NER_DATE_PATTERNS: Array<{ re: RegExp; hasYear: boolean; confidence: numbe
   { re: /(\d{4})年(\d{1,2})月(\d{1,2})日(?:\s*\([^)]+\))?/g, hasYear: true, confidence: 0.95 },
   { re: /(\d{4})\/(\d{1,2})\/(\d{1,2})/g, hasYear: true, confidence: 0.90 },
   { re: /(\d{4})-(\d{1,2})-(\d{1,2})/g, hasYear: true, confidence: 0.90 },
-  { re: /(?<!\d)(\d{1,2})月(\d{1,2})日/g, hasYear: false, confidence: 0.75 },
+  { re: /(?<![\d年])(\d{1,2})月(\d{1,2})日/g, hasYear: false, confidence: 0.75 },
 ];
 
 const NER_RELATIVE_DATE_PATTERNS: Array<{ re: RegExp; offsetDays: number; confidence: number }> = [

@@ -55,8 +55,8 @@ describe("searchMemories", () => {
     { title: "トヨタ_Recon_Report.md", content: "トヨタ自動車 DX 中期経営計画 EV戦略", memoryType: "company_report" },
     { title: "ソニー_Recon_Report.md", content: "ソニーグループ エンタメ AI 半導体", memoryType: "company_report" },
     { title: "USER_abc123.md", content: "自己PR リーダーシップ STAR法則 コミュニケーション", memoryType: "resume" },
-    { title: "トヨタ_ES.md", content: "志望動機 自己PR トヨタ 製造業 グローバル", memoryType: "es_draft" },
-    { title: "面接ログ_2024.md", content: "面接 質問 回答 フィードバック", memoryType: "interview_log" },
+    { title: "トヨタ_Conversation.md", content: "志望動機 自己PR トヨタ 製造業 グローバル", memoryType: "conversation" },
+    { title: "面接メモ_2024.md", content: "面接 質問 回答 フィードバック", memoryType: "conversation" },
   ];
 
   it("returns top-K results sorted by relevance", () => {

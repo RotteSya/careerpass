@@ -11,13 +11,16 @@ import { registerGmailPushWatch } from "../gmail";
 import { listUserIdsByOauthProvider } from "../db";
 import { appRouter } from "../routers";
 import { registerCalendarOAuthRoute } from "../calendarOAuth";
-import { registerNotionOAuthRoute } from "../notionOAuth";
+
 import { createContext } from "./context";
 import { createCsrfMiddleware } from "./csrfMiddleware";
 import { internalBypassRouter } from "../internalBypass";
 import { serveStatic, setupVite } from "./vite";
 import { createRateLimiter } from "./rateLimit";
 import { createRateLimitMiddleware } from "./rateLimitMiddleware";
+import { registerDispatcher } from "./messaging";
+import { TelegramDispatcher } from "./messaging";
+import { startProactiveScheduler } from "../proactive/scheduler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -39,6 +42,14 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Register messaging channel dispatchers
+  registerDispatcher(new TelegramDispatcher());
+
+  // Start proactive notification scheduler
+  if (process.env.NODE_ENV === "production") {
+    startProactiveScheduler();
+  }
+
   const app = express();
   app.set("trust proxy", true);
   const server = createServer(app);
@@ -48,8 +59,7 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Google Calendar OAuth callback — server-side Express route to avoid SPA routing issues
   registerCalendarOAuthRoute(app);
-  // Notion OAuth callback
-  registerNotionOAuthRoute(app);
+
   // Telegram Bot Webhook under /api/telegram
   app.use("/api/telegram", telegramRouter);
   // Gmail push notifications (Google Pub/Sub push endpoint)

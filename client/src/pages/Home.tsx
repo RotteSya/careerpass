@@ -34,55 +34,55 @@ const stagger = {
 // ── Data ──────────────────────────────────────────────────────────────────────
 const features = [
   {
+    icon: Calendar,
+    title: "メール自動検知",
+    sub: "面接・説明会メールを即時通知",
+    desc: "Gmailを見守り、面接・説明会・筆記試験のメールを自動でカレンダーに登録。Telegramですぐお知らせします。",
+  },
+  {
     icon: MessageSquare,
-    title: "AI 就活コーチ",
-    sub: "STAR法則で経験を深掘り",
-    desc: "あなたの経験をSTAR法則で体系化し、唯一無二の履歴書を自動生成します。",
+    title: "あなた専属の就活秘書",
+    sub: "次にやるべきことをリマインド",
+    desc: "「この会社3日連絡なし」「明日面接、準備は？」など、あなたのペースに合わせて次のアクションを提案します。",
   },
   {
     icon: Search,
     title: "企業深度偵察",
     sub: "OpenWork・就活会議を分析",
-    desc: "匿名口コミ・IR資料・ニュースを横断分析し、企業の本当の姿を暴露します。",
+    desc: "匿名口コミ・IR資料・ニュースを横断分析し、企業の本当の姿をレポートにまとめます。",
   },
   {
-    icon: FileText,
-    title: "ES 自動生成",
-    sub: "志望動機・自己PRを日本語で",
-    desc: "企業の痛点に直撃する志望動機と自己PRを、あなたの経験と紐づけて作成します。",
+    icon: TrendingUp,
+    title: "進捗ダッシュボード",
+    sub: "全社の選考状況を一目で",
+    desc: "各社の選考ステータス・直近の予定・次にやるべきことを一覧で把握できます。",
   },
   {
-    icon: BrainCircuit,
-    title: "模擬面接",
-    sub: "厳格な日本企業面接官が深掘り",
-    desc: "提出したESを元に、一問一答形式で本番さながらの面接練習ができます。",
+    icon: Zap,
+    title: "Google カレンダー連携",
+    sub: "面接日程を自動登録",
+    desc: "メールから検知した面接・説明会・締切を、あなたのGoogleカレンダーに自動で書き込みます。",
   },
   {
-    icon: Calendar,
-    title: "日程自動管理",
-    sub: "面接メールを自動検知",
-    desc: "Gmailを監視し、面接・説明会メールを自動でカレンダーに登録。Telegramで通知します。",
-  },
-  {
-    icon: Sparkles,
-    title: "記憶ライブラリ",
-    sub: "全情報をAIが記憶",
-    desc: "企業情報・ES・面接ログをすべて記憶し、次の就活でも即座に活用できます。",
+    icon: Shield,
+    title: "プライバシー保護",
+    sub: "あなたのデータはあなたのもの",
+    desc: "メール本文はカレンダーに記載しません。必要な時だけGmailを開いて確認できます。",
   },
 ];
 
 const steps = [
   { step: "01", title: "アカウント登録", desc: "基本情報を入力して登録", icon: Shield },
-  { step: "02", title: "Telegram 連携", desc: "専属ボットと接続", icon: MessageSquare },
-  { step: "03", title: "経験を深掘り", desc: "AIがSTAR法則で分析", icon: Zap },
-  { step: "04", title: "内定獲得", desc: "ES・面接を完璧に準備", icon: TrendingUp },
+  { step: "02", title: "Google 連携", desc: "Gmail・カレンダーを接続", icon: Calendar },
+  { step: "03", title: "Telegram 連携", desc: "専属ボットと接続", icon: MessageSquare },
+  { step: "04", title: "内定獲得", desc: "秘書があなたの就活を全面的にサポート", icon: TrendingUp },
 ];
 
 const telegramBenefits = [
-  "ES・履歴書の自動生成",
+  "面接・説明会メールの自動検知と日程登録",
   "企業情報のリアルタイム分析",
-  "面接メールの自動検知と日程登録",
-  "模擬面接でのフィードバック",
+  "次にやるべきことのリマインド",
+  "求職進捗の一目把握",
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────

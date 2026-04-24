@@ -10,30 +10,18 @@ import {
   upsertOauthToken,
   getOauthToken,
   deleteOauthToken,
-  patchOauthTokenScope,
   getTelegramBinding,
   getJobApplications,
   createJobApplication,
   createJobStatusEvent,
   updateJobApplicationStatus,
   listJobStatusEvents,
-  getAgentMemory,
   deleteUserAccountData,
   addToWaitlist,
   getWaitlistCount,
 } from "./db";
-import { invokeLLM } from "./_core/llm";
-import { reconCompany as runRecon, searchMemories } from "./recon";
-import { getValidAccessToken, monitorGmailAndSync, sendTelegramMessage } from "./gmail";
-import { createNotionJobBoardFromTemplate, syncJobToNotionBoard } from "./notion";
+import { getValidAccessToken } from "./gmail";
 import { ENV } from "./_core/env";
-import {
-  handleAgentChat,
-  generateResume,
-  reconCompany as runAgentRecon,
-  generateES as runAgentES,
-  startInterview as runAgentInterview,
-} from "./agents";
 import {
   registerWithEmail,
   loginWithEmail,
@@ -43,6 +31,7 @@ import {
   sendWaitlistEmail,
 } from "./emailAuth";
 import { sdk } from "./_core/sdk";
+import { runProactiveCheckForUser } from "./proactive/scheduler";
 import { buildOauthSignedState, verifyOauthSignedState } from "./_core/oauthSignedState";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -51,7 +40,7 @@ function buildGoogleOAuthUrl(userId: number, _origin: string): string {
   const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
   // Always use the canonical production domain to avoid redirect_uri_mismatch
   // when users access via alternate URLs (e.g. Cloud Run preview domains)
-  const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.com";
+  const appDomain = "https://careerpax.com";
   const redirectUri = `${appDomain}/api/calendar/callback`;
   const scope = encodeURIComponent(
     "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly"
@@ -61,19 +50,6 @@ function buildGoogleOAuthUrl(userId: number, _origin: string): string {
     ENV.cookieSecret
   );
   return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
-}
-function buildNotionOAuthUrl(userId: number): string {
-  const clientId = (process.env.NOTION_CLIENT_ID ?? "").trim();
-  if (!clientId || clientId === "0") {
-    throw new Error("NOTION_CLIENT_ID is not configured correctly");
-  }
-  const appDomain = process.env.APP_DOMAIN ?? "https://careerpax.com";
-  const redirectUri = `${appDomain}/api/notion/callback`;
-  const state = buildOauthSignedState(
-    { userId, provider: "notion", exp: Date.now() + 10 * 60 * 1000 },
-    ENV.cookieSecret
-  );
-  return `https://api.notion.com/v1/oauth/authorize?owner=user&client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${encodeURIComponent(state)}`;
 }
 
 async function exchangeGoogleCode(code: string, redirectUri: string) {
@@ -257,96 +233,6 @@ export const appRouter = router({
       }),
   }),
 
-  notion: router({
-    getAuthUrl: protectedProcedure.query(({ ctx }) => {
-      try {
-        return { url: buildNotionOAuthUrl(ctx.user.id) };
-      } catch (e) {
-        throw new Error(`Notion OAuth misconfigured: ${(e as Error).message}`);
-      }
-    }),
-    getStatus: protectedProcedure.query(async ({ ctx }) => {
-      const notion = await getOauthToken(ctx.user.id, "notion");
-      let dbId: string | null = null;
-      const fallbackDbId = (process.env.NOTION_JOB_BOARD_DATABASE_ID ?? "").trim();
-      let workspaceName: string | null = null;
-      let databaseUrl: string | null = null;
-      if (notion?.scope) {
-        try {
-          const meta = JSON.parse(notion.scope) as {
-            workspaceName?: string;
-            notionDatabaseId?: string;
-            notionDatabaseUrl?: string;
-          };
-          workspaceName = meta.workspaceName ?? null;
-          dbId = (meta.notionDatabaseId ?? "").trim() || null;
-          databaseUrl = (meta.notionDatabaseUrl ?? "").trim() || null;
-        } catch {
-          workspaceName = null;
-        }
-      }
-      return {
-        connected: !!notion,
-        workspaceName,
-        databaseConfigured: !!(dbId || fallbackDbId),
-        databaseId: dbId || fallbackDbId || null,
-        databaseUrl,
-      };
-    }),
-    createBoardFromTemplate: protectedProcedure.mutation(async ({ ctx }) => {
-      const created = await createNotionJobBoardFromTemplate(ctx.user.id);
-      await patchOauthTokenScope({
-        userId: ctx.user.id,
-        provider: "notion",
-        patch: { notionDatabaseId: created.databaseId, notionDatabaseUrl: created.url },
-      });
-      return { success: true, databaseId: created.databaseId, url: created.url };
-    }),
-    setBoardDatabase: protectedProcedure
-      .input(z.object({ databaseIdOrUrl: z.string().min(1).max(500) }))
-      .mutation(async ({ ctx, input }) => {
-        const notion = await getOauthToken(ctx.user.id, "notion");
-        if (!notion?.accessToken) throw new Error("Notion 未连接");
-
-        const raw = input.databaseIdOrUrl.trim();
-        const last = raw
-          .replace(/^https?:\/\/(www\.)?notion\.so\//, "")
-          .split("?")[0]
-          ?.split("#")[0]
-          ?.split("/")
-          .filter(Boolean)
-          .pop();
-        const candidate = (last ?? raw).replace(/-/g, "");
-        if (!/^[0-9a-fA-F]{32}$/.test(candidate)) {
-          throw new Error("请输入 Notion Database 链接或 32 位 database_id");
-        }
-
-        const NOTION_VERSION = "2022-06-28";
-        const res = await fetch(`https://api.notion.com/v1/databases/${candidate}`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${notion.accessToken}`,
-            "Notion-Version": NOTION_VERSION,
-          },
-        });
-        if (!res.ok) {
-          throw new Error("无法访问该 Notion Database：请在 Notion 中将该 Database 分享给此集成（Integration）");
-        }
-        const meta = (await res.json().catch(() => null)) as { url?: string } | null;
-
-        await patchOauthTokenScope({
-          userId: ctx.user.id,
-          provider: "notion",
-          patch: { notionDatabaseId: candidate, notionDatabaseUrl: meta?.url ?? null },
-        });
-        return { success: true };
-      }),
-    disconnect: protectedProcedure.mutation(async ({ ctx }) => {
-      await deleteOauthToken(ctx.user.id, "notion");
-      return { success: true };
-    }),
-  }),
-
   // ── User Profile ─────────────────────────────────────────────────────────────
   user: router({
     getProfile: protectedProcedure.query(async ({ ctx }) => {
@@ -363,16 +249,25 @@ export const appRouter = router({
             .optional(),
           universityName: z.string().max(255).optional(),
           preferredLanguage: z.enum(["zh", "ja", "en"]).optional(),
+          notificationSchedule: z.string().regex(/^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/).optional(),
+          nudgeCategoriesEnabled: z.record(z.string(), z.boolean()).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
+        const current = await getUserById(ctx.user.id);
+        const nextProfile = {
+          name: input.name ?? current?.name,
+          birthDate: input.birthDate ?? current?.birthDate,
+          education: input.education ?? current?.education,
+          universityName: input.universityName ?? current?.universityName,
+        };
         await updateUserProfile(ctx.user.id, {
           ...input,
           profileCompleted: !!(
-            input.name &&
-            input.birthDate &&
-            input.education &&
-            input.universityName
+            nextProfile.name &&
+            nextProfile.birthDate &&
+            nextProfile.education &&
+            nextProfile.universityName
           ),
         });
         return { success: true };
@@ -539,18 +434,7 @@ export const appRouter = router({
           nextStatus: input.status,
         });
         if (target?.companyNameJa) {
-          try {
-            await syncJobToNotionBoard({
-              userId: ctx.user.id,
-              companyName: target.companyNameJa,
-              position: target.position ?? null,
-              status: input.status,
-              nextActionAt: target.nextActionAt ?? null,
-              source: "manual",
-            });
-          } catch (e) {
-            console.warn("[Notion] Manual status sync failed:", (e as Error).message);
-          }
+          // Notion sync removed — job board is maintained internally
         }
         return { success: true };
       }),
@@ -562,115 +446,11 @@ export const appRouter = router({
       }),
   }),
 
-  // ── Agent Memory ──────────────────────────────────────────────────────────────
-  memory: router({
-    list: protectedProcedure
-      .input(
-        z.object({
-          type: z
-            .enum(["resume", "company_report", "conversation", "es_draft", "interview_log"])
-            .optional(),
-        })
-      )
-      .query(async ({ ctx, input }) => {
-        return getAgentMemory(ctx.user.id, input.type);
-      }),
-  }),
-
-  // ── AI Agent Chat (careerpass central) ────────────────────────────────────────
-  agent: router({
-    chat: protectedProcedure
-      .input(
-        z.object({
-          message: z.string().min(1).max(4000),
-          sessionId: z.string().optional(),
-          history: z
-            .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
-            .optional(),
-        })
-      )
-      .mutation(async ({ ctx, input }) => {
-        return handleAgentChat(ctx.user.id, input.message, input.sessionId, input.history);
-      }),
-
-    generateResume: protectedProcedure
-      .input(
-        z.object({
-          experiences: z.string().min(10),
-          sessionId: z.string(),
-        })
-      )
-      .mutation(async ({ ctx, input }) => {
-        const resume = await generateResume(ctx.user.id, input.experiences, input.sessionId);
-        return { resume, sessionId: input.sessionId };
-      }),
-
-    reconCompany: protectedProcedure
-      .input(
-        z.object({
-          companyName: z.string().min(1),
-          jobApplicationId: z.number().optional(),
-        })
-      )
-      .mutation(async ({ ctx, input }) => {
-        const report = await runAgentRecon(ctx.user.id, input.companyName, input.jobApplicationId);
-        return {
-          report,
-          companyName: input.companyName,
-        };
-      }),
-
-    generateES: protectedProcedure
-      .input(
-        z.object({
-          companyName: z.string().min(1),
-          position: z.string().min(1),
-          sessionId: z.string(),
-        })
-      )
-      .mutation(async ({ ctx, input }) => {
-        const es = await runAgentES(ctx.user.id, input.companyName, input.position, input.sessionId);
-        return { es };
-      }),
-
-    startInterview: protectedProcedure
-      .input(
-        z.object({
-          companyName: z.string().min(1),
-          position: z.string().min(1),
-          history: z
-            .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
-            .optional(),
-          userAnswer: z.string().optional(),
-        })
-      )
-      .mutation(async ({ ctx, input }) => {
-        const question = await runAgentInterview(ctx.user.id, input.companyName, input.position, input.history, input.userAnswer);
-        return { question, isFirstMessage: !input.history || input.history.length === 0 };
-      }),
-
-    monitorEmails: protectedProcedure.mutation(async ({ ctx }) => {
-      // Get user's Telegram chat ID for notifications
-      const binding = await getTelegramBinding(ctx.user.id);
-      const telegramChatId = binding?.telegramId ?? undefined;
-
-      const result = await monitorGmailAndSync(ctx.user.id, telegramChatId);
-      return result;
-    }),
-
-    searchMemory: protectedProcedure
-      .input(z.object({ query: z.string().min(1), topK: z.number().min(1).max(20).optional() }))
-      .query(async ({ ctx, input }) => {
-        const memories = await getAgentMemory(ctx.user.id);
-        const results = searchMemories(memories, input.query, input.topK ?? 5);
-        return { results, total: memories.length };
-      }),
-
-    notifyTelegram: protectedProcedure
-      .input(z.object({ chatId: z.string(), message: z.string().min(1) }))
-      .mutation(async ({ input }) => {
-        const ok = await sendTelegramMessage(input.chatId, input.message);
-        return { success: ok };
+  proactive: router({
+    triggerCheck: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const nudges = await runProactiveCheckForUser(ctx.user.id);
+        return { count: nudges.length, nudges };
       }),
   }),
 });

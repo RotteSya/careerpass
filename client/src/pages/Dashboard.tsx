@@ -18,6 +18,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/trpc";
 import {
   BrainCircuit,
@@ -25,17 +34,13 @@ import {
   Calendar,
   CheckCircle2,
   ExternalLink,
-  FileText,
   Loader2,
   LogOut,
   MessageSquare,
-  Mic,
-  ShieldCheck,
   KeyRound,
   Trash2,
   User,
   XCircle,
-  Download,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -53,17 +58,14 @@ export default function Dashboard() {
   const [currentPath, navigate] = useLocation();
   const pathOnly = currentPath.split("?")[0] ?? currentPath;
   const isCalendarPage = pathOnly === "/dashboard/calendar";
-  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
   const [companyQuery, setCompanyQuery] = useState("");
-  const [notionGuideOpen, setNotionGuideOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
-  const [notionDatabaseIdOrUrl, setNotionDatabaseIdOrUrl] = useState("");
-  const [showManualNotionBind, setShowManualNotionBind] = useState(false);
   const utils = trpc.useUtils();
 
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = trpc.user.getProfile.useQuery(undefined, {
@@ -94,40 +96,6 @@ export default function Dashboard() {
 
   const { data: googleAuthUrl } = trpc.calendar.getAuthUrl.useQuery(undefined, {
     enabled: isAuthenticated,
-  });
-  const { data: notionStatus, refetch: refetchNotionStatus } = trpc.notion.getStatus.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
-  const { data: notionAuthUrl } = trpc.notion.getAuthUrl.useQuery(undefined, {
-    enabled: isAuthenticated,
-    retry: false,
-  });
-  const disconnectNotion = trpc.notion.disconnect.useMutation({
-    onSuccess: () => {
-      toast.success("Notion 連携を解除しました");
-      refetchNotionStatus();
-    },
-  });
-  const setNotionBoardDatabase = trpc.notion.setBoardDatabase.useMutation({
-    onSuccess: () => {
-      toast.success("Notion 看板已绑定");
-      setNotionDatabaseIdOrUrl("");
-      refetchNotionStatus();
-    },
-    onError: (err: any) => {
-      toast.error(err.message);
-    },
-  });
-  const createNotionBoardFromTemplate = trpc.notion.createBoardFromTemplate.useMutation({
-    onSuccess: (res: any) => {
-      toast.success("Notion 看板已创建并绑定");
-      setShowManualNotionBind(false);
-      refetchNotionStatus();
-      if (res?.url) window.open(res.url, "_blank", "noopener,noreferrer");
-    },
-    onError: (err: any) => {
-      toast.error(err.message);
-    },
   });
 
   const disconnectCalendar = trpc.calendar.disconnect.useMutation({
@@ -176,21 +144,18 @@ export default function Dashboard() {
     data: statusEvents = [],
     refetch: refetchStatusEvents,
   } = trpc.jobs.listStatusEvents.useQuery(
-    { id: selectedJobId ?? 0 },
-    { enabled: isAuthenticated && !!selectedJobId }
+    { id: expandedJobId ?? 0 },
+    { enabled: isAuthenticated && !!expandedJobId }
   );
-  const { data: reconMemories = [] } = trpc.memory.list.useQuery(
-    { type: "company_report" },
-    { enabled: isAuthenticated }
-  );
-  const { data: esMemories = [] } = trpc.memory.list.useQuery(
-    { type: "es_draft" },
-    { enabled: isAuthenticated }
-  );
-  const { data: interviewMemories = [] } = trpc.memory.list.useQuery(
-    { type: "interview_log" },
-    { enabled: isAuthenticated }
-  );
+  const updateProfileMutation = trpc.user.updateProfile.useMutation({
+    onSuccess: () => {
+      toast.success("提醒偏好已保存");
+      refetchProfile();
+    },
+    onError: (err: any) => {
+      toast.error(`保存失败: ${err.message}`);
+    },
+  });
 
   useEffect(() => {
     if (!loading && isAuthenticated && pathOnly === "/dashboard") {
@@ -209,35 +174,16 @@ export default function Dashboard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const calendarResult = params.get("calendar");
-    const notionResult = params.get("notion");
-    if (!calendarResult && !notionResult) return;
-    if (calendarResult) {
-      if (calendarResult === "success") {
-        toast.success("カレンダー連携が完了しました！");
-        refetchCalendar();
-      } else if (calendarResult === "error") {
-        const reason = params.get("reason") ?? "unknown";
-        toast.error(`カレンダー連携に失敗しました: ${reason}`);
-      }
+    if (!calendarResult) return;
+    if (calendarResult === "success") {
+      toast.success("カレンダー連携が完了しました！");
+      refetchCalendar();
+    } else if (calendarResult === "error") {
+      const reason = params.get("reason") ?? "unknown";
+      toast.error(`カレンダー連携に失敗しました: ${reason}`);
     }
-    if (notionResult) {
-      if (notionResult === "success") {
-        toast.success("Notion 連携が完了しました！");
-        refetchNotionStatus();
-      } else if (notionResult === "error") {
-        const reason = params.get("reason") ?? "unknown";
-        toast.error(`Notion 連携に失敗しました: ${reason}`);
-      }
-    }
-    // Remove query params from URL without triggering navigation
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    // When Notion OAuth URL fetch fails, show a direct configuration hint.
-    if (notionAuthUrl === undefined) return;
-  }, [isAuthenticated, notionAuthUrl]);
 
   // Poll Telegram binding status every 5s after page load
   useEffect(() => {
@@ -272,67 +218,24 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [isAuthenticated, refetchJobs]);
 
-  const boardCards = useMemo(() => {
+  const filteredJobs = useMemo(() => {
     const normalized = (s?: string | null) => (s ?? "").toLowerCase();
     const q = normalized(companyQuery);
     return jobs
-      .map((job: any) => {
-      const companyJa = normalized(job.companyNameJa);
-      const companyEn = normalized(job.companyNameEn);
-      const companyMatch = (text: string) => {
-        const t = normalized(text);
-        return (!!companyJa && t.includes(companyJa)) || (!!companyEn && t.includes(companyEn));
-      };
-      const recon = reconMemories
-        .filter((m: any) => companyMatch(`${m.title}\n${m.content}`))
-        .sort((a: any, b: any) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0];
-      const es = esMemories
-        .filter((m: any) => companyMatch(`${m.title}\n${m.content}`))
-        .sort((a: any, b: any) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0];
-      const interview = interviewMemories
-        .filter((m: any) => companyMatch(`${m.title}\n${m.content}`))
-        .sort((a: any, b: any) => +new Date(b.updatedAt) - +new Date(a.updatedAt))[0];
-      return { job, recon, es, interview };
-    })
-      .filter((card: any) => {
+      .filter((job: any) => {
         if (!q) return true;
-        const target = `${normalized(card.job.companyNameJa)} ${normalized((card.job as { companyNameEn?: string | null }).companyNameEn)}`;
+        const target = `${normalized(job.companyNameJa)} ${normalized((job as { companyNameEn?: string | null }).companyNameEn)}`;
         return target.includes(q);
       })
-      .sort((a: any, b: any) => +new Date(b.job.updatedAt) - +new Date(a.job.updatedAt));
-  }, [jobs, reconMemories, esMemories, interviewMemories, companyQuery]);
+      .sort((a: any, b: any) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
+  }, [jobs, companyQuery]);
 
-  const columns = useMemo(() => {
-    const todo = boardCards.filter((c: any) => ["researching"].includes(c.job.status));
-    const inProgress = boardCards.filter((c: any) =>
-      [
-        "applied",
-        "briefing",
-        "es_preparing",
-        "es_submitted",
-        "document_screening",
-        "written_test",
-        "interview_1",
-        "interview_2",
-        "interview_3",
-        "interview_4",
-        "interview_final",
-      ].includes(
-        c.job.status
-      )
-    );
-    const complete = boardCards.filter((c: any) => ["offer", "rejected", "withdrawn"].includes(c.job.status));
-    return { todo, inProgress, complete };
-  }, [boardCards]);
+  const activeJobCount = useMemo(() => {
+    return jobs.filter((job: any) => !["offer", "rejected", "withdrawn"].includes(job.status)).length;
+  }, [jobs]);
 
-  const selectedCard = boardCards.find((c: any) => c.job.id === selectedJobId) ?? null;
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    if (selectedJobId != null) return;
-    if (boardCards.length === 0) return;
-    setSelectedJobId(boardCards[0].job.id);
-  }, [isAuthenticated, selectedJobId, boardCards]);
+  const nudgeCategories = normalizeNudgeCategories(profile?.nudgeCategoriesEnabled);
+  const notificationSchedule = profile?.notificationSchedule ?? "09:00-21:00";
 
   if (loading) {
     return (
@@ -811,303 +714,76 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Module 3: Career Dashboard Board */}
           <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
               <div>
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   <BriefcaseBusiness className="w-5 h-5 text-primary" />
-                  日本求职进度追踪
+                  求职进度列表
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  与 Notion 模板保持一致的动态看板（状态/字段按模板同步）
+                  帮你留意每家公司的选考进度，点击公司可查看状态历史。
                 </p>
               </div>
               <div className="text-xs text-muted-foreground">
-                企業数: {jobs.length} / 進行中: {columns.todo.length + columns.inProgress.length}
+                企業数: {jobs.length} / 進行中: {activeJobCount}
               </div>
             </div>
 
-            <div className="mb-4 p-4 rounded-xl border border-border bg-secondary/20">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">Notion 动态看板同步</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    将邮件识别和状态更新自动同步到 Notion Database
-                    {notionStatus?.workspaceName ? `（${notionStatus.workspaceName}）` : ""}
-                  </p>
-                  {!notionStatus?.databaseConfigured && (
-                    <p className="text-xs text-amber-400 mt-1">
-                      尚未创建/绑定你的 Notion 看板：点击“一键创建”将按模板自动创建并绑定。
-                    </p>
-                  )}
+            <Input
+              value={companyQuery}
+              onChange={(e) => setCompanyQuery(e.target.value)}
+              placeholder="搜索公司（中文/日文/英文）"
+              className="w-full sm:max-w-md"
+            />
+
+            <div className="mt-4 divide-y divide-border rounded-xl border border-border overflow-hidden">
+              {jobsLoading ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">読み込み中...</div>
+              ) : filteredJobs.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  暂无求职记录。绑定邮箱后，新的求职邮件会自动整理到这里。
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="bg-transparent"
-                    onClick={() => setNotionGuideOpen(true)}
-                  >
-                    <FileText className="w-3.5 h-3.5 mr-1.5" />
-                    使用指南
-                  </Button>
-                  {notionStatus?.connected ? (
-                    <>
-                      <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/30">
-                        已连接
-                      </span>
-                      {!notionStatus?.databaseConfigured ? null : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="bg-transparent"
-                          onClick={() => {
-                            if (notionStatus?.databaseUrl) window.open(notionStatus.databaseUrl, "_blank", "noopener,noreferrer");
-                          }}
-                          disabled={!notionStatus?.databaseUrl}
-                        >
-                          打开看板
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-transparent text-destructive border-destructive/30 hover:bg-destructive/10"
-                        onClick={() => disconnectNotion.mutate()}
-                        disabled={disconnectNotion.isPending}
+              ) : (
+                filteredJobs.map((job: any) => {
+                  const expanded = expandedJobId === job.id;
+                  return (
+                    <div key={job.id} className="bg-background/50">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedJobId(expanded ? null : job.id)}
+                        className="w-full px-4 py-3 text-left hover:bg-secondary/50 transition-colors"
                       >
-                        断开
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        if (notionAuthUrl?.url) {
-                          window.location.href = notionAuthUrl.url;
-                          return;
-                        }
-                        toast.error("Notion OAuth 未正确配置，请检查 NOTION_CLIENT_ID");
-                      }}
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                      连接 Notion
-                    </Button>
-                  )}
-                </div>
-              </div>
-              {notionStatus?.connected && !notionStatus?.databaseConfigured ? (
-                <div className="mt-3 flex flex-col gap-2">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => createNotionBoardFromTemplate.mutate()}
-                      disabled={createNotionBoardFromTemplate.isPending}
-                      className="bg-[var(--color-notion-blue)] hover:bg-[var(--color-notion-blue-active)] text-white"
-                    >
-                      {createNotionBoardFromTemplate.isPending ? "创建中..." : "一键创建 Notion 看板"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="bg-transparent"
-                      onClick={() => setShowManualNotionBind((v) => !v)}
-                    >
-                      {showManualNotionBind ? "收起手动绑定" : "已有看板？手动绑定"}
-                    </Button>
-                  </div>
-                  {showManualNotionBind ? (
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Input
-                        value={notionDatabaseIdOrUrl}
-                        onChange={(e) => setNotionDatabaseIdOrUrl(e.target.value)}
-                        placeholder="粘贴 Notion Database 链接或 database_id"
-                        className="bg-background"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => setNotionBoardDatabase.mutate({ databaseIdOrUrl: notionDatabaseIdOrUrl })}
-                        disabled={setNotionBoardDatabase.isPending || !notionDatabaseIdOrUrl.trim()}
-                      >
-                        {setNotionBoardDatabase.isPending ? "绑定中..." : "绑定"}
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-              ) : notionStatus?.connected && notionStatus?.databaseId ? (
-                <div className="mt-3 text-xs text-muted-foreground">已绑定 Database: {notionStatus.databaseId}</div>
-              ) : null}
-            </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold truncate">{job.companyNameJa}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {[job.companyNameEn, job.position].filter(Boolean).join(" · ") || "职位未填写"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold status-${job.status}`}>
+                              {statusLabel(job.status)}
+                            </span>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {formatDateTime(job.updatedAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
 
-            <Dialog open={notionGuideOpen} onOpenChange={setNotionGuideOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Notion 看板使用指南</DialogTitle>
-                  <DialogDescription>按模板一键创建/绑定，看板与系统状态自动同步</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 text-sm text-muted-foreground">
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">快速开始</p>
-                    <div className="space-y-2">
-                      <div className="flex items-start gap-2">
-                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">
-                          1
-                        </span>
-                        <span>先点击「连接 Notion」完成授权（只需要一次）。</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">
-                          2
-                        </span>
-                        <span>点击「一键创建 Notion 看板」，系统会按模板创建「日本求职进度追踪」并自动绑定到你的账号。</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">
-                          3
-                        </span>
-                        <span>之后邮件识别、网页改状态、Agent 更新都会同步到该 Notion Database。</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">常见问题</p>
-                    <div className="space-y-2">
-                      <div className="flex items-start gap-2">
-                        <span className="w-5 h-5 rounded-full bg-secondary text-muted-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">
-                          Q
-                        </span>
-                        <span>
-                          如果提示“未找到可用于创建 Database 的 Notion 页面”，请在 Notion 新建任意页面并分享给本集成（Share → Invite →
-                          选择该 Integration），然后再点一次「一键创建」。
-                        </span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="w-5 h-5 rounded-full bg-secondary text-muted-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">
-                          Q
-                        </span>
-                        <span>如果你已经有自己的看板，用「已有看板？手动绑定」粘贴 Database 链接或 database_id 绑定即可。</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="font-medium text-foreground">同步内容</p>
-                    <div className="text-xs leading-relaxed">
-                      公司名称、申请状态（To-do / In progress / Complete）、职位名称、下次跟进日期，以及邮件识别的事件类型/时间/来源等会写入到你的
-                      Notion Database（字段名按模板匹配）。你可以在 Notion 里自由补充信息，不影响同步。
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setNotionGuideOpen(false)}>
-                    关闭
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <div className="mt-4 rounded-2xl border border-black/10 bg-white text-[rgba(0,0,0,0.95)] shadow-[0_1px_3px_rgba(0,0,0,0.01),0_3px_7px_rgba(0,0,0,0.02),0_7px_15px_rgba(0,0,0,0.02),0_14px_28px_rgba(0,0,0,0.04),0_23px_52px_rgba(0,0,0,0.05)]">
-              <div className="px-6 pt-6 pb-4 border-b border-black/10">
-                <div className="flex flex-col gap-1">
-                  <p className="text-[22px] font-bold tracking-[-0.25px]">日本求职进度追踪（动态看板）</p>
-                  <p className="text-[14px] text-[var(--color-warm-gray-500)]">
-                    全部企業一覧 — 公司名称 / 申请状态 / 职位名称 / 締切 / 联系方式 / 优先级
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[12px] items-center">
-                    <span className="px-2 py-1 rounded-full border border-black/10 bg-[var(--color-warm-white)] text-[var(--color-warm-gray-500)]">
-                      企業数 {jobs.length}
-                    </span>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="h-7 text-xs bg-transparent"
-                      onClick={() => {
-                        const header = "公司名称,申请状态,职位名称,締切,联系方式,优先级,来源邮件标题,来源邮箱,提取依据\n";
-                        const csv = boardCards.map((c: any) => {
-                          const name = `"${(c.job.companyNameJa ?? '').replace(/"/g, '""')}"`;
-                          const status = `"${(c.job.status ?? '').replace(/"/g, '""')}"`;
-                          const position = `"${(c.job.position ?? '').replace(/"/g, '""')}"`;
-                          const deadline = `"${c.job.nextActionAt ? new Date(c.job.nextActionAt).toLocaleDateString('ja-JP') : ''}"`;
-                          const contact = `"${(c.job.contactInfo ?? '').replace(/"/g, '""')}"`;
-                          const priority = `"${(c.job.priority ?? '').replace(/"/g, '""')}"`;
-                          const mailSubject = `"${(c.job._latestMailSubject ?? '').replace(/"/g, '""')}"`;
-                          const mailFrom = `"${(c.job._latestMailFrom ?? '').replace(/"/g, '""')}"`;
-                          const reason = `"${(c.job._latestReason ?? '').replace(/"/g, '""')}"`;
-                          return `${name},${status},${position},${deadline},${contact},${priority},${mailSubject},${mailFrom},${reason}`;
-                        }).join("\n");
-                        
-                        // Add BOM for Excel UTF-8 support
-                        const blob = new Blob(["\ufeff" + header + csv], { type: "text/csv;charset=utf-8;" });
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.setAttribute("download", "job_applications.csv");
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                      }}
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      导出 CSV
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-6 py-4">
-                <input
-                  value={companyQuery}
-                  onChange={(e) => setCompanyQuery(e.target.value)}
-                  placeholder="搜索公司（中文/日文/英文）"
-                  className="w-full sm:max-w-md h-10 rounded-[4px] border border-black/10 bg-white px-3 text-[14px] text-[rgba(0,0,0,0.95)] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
-                />
-
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full text-[14px]">
-                    <thead className="bg-[var(--color-warm-white)] text-[12px] text-[var(--color-warm-gray-500)]">
-                      <tr>
-                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">公司名称</th>
-                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">申请状态</th>
-                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">职位名称</th>
-                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">締切</th>
-                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">联系方式</th>
-                        <th className="text-left font-medium px-4 py-2 whitespace-nowrap">优先级</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {jobsLoading ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-6 text-center text-[14px] text-[var(--color-warm-gray-500)]">
-                            読み込み中...
-                          </td>
-                        </tr>
-                      ) : boardCards.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-6 text-center text-[14px] text-[var(--color-warm-gray-500)]">
-                            暂无
-                          </td>
-                        </tr>
-                      ) : (
-                        boardCards.map((c: any) => (
-                          <tr key={c.job.id} className="border-t border-black/5">
-                            <td className="px-4 py-3 min-w-[220px]">
-                              <div className="font-semibold truncate">{c.job.companyNameJa}</div>
-                              {c.job.companyNameEn ? (
-                                <div className="text-[12px] text-[var(--color-warm-gray-500)] truncate">
-                                  {c.job.companyNameEn}
-                                </div>
-                              ) : null}
-                            </td>
-                            <td className="px-4 py-3 min-w-[160px]">
+                      {expanded ? (
+                        <div className="px-4 pb-4">
+                          <div className="rounded-lg border border-border bg-card p-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                              <p className="text-sm font-medium">状态历史</p>
                               <select
-                                value={c.job.status}
+                                value={job.status}
                                 onChange={(e) => {
                                   const status = e.target.value as JobStatusValue;
-                                  updateJobStatusMutation.mutate({ id: c.job.id, status });
+                                  updateJobStatusMutation.mutate({ id: job.id, status });
                                 }}
-                                className="h-8 w-full rounded-[4px] border border-black/10 bg-white px-2 text-[14px] outline-none focus:ring-2 focus:ring-[#097fe8]/30"
+                                className="h-8 rounded-md border border-border bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                               >
                                 {JOB_STATUS_OPTIONS.map((opt) => (
                                   <option key={opt.value} value={opt.value}>
@@ -1115,27 +791,98 @@ export default function Dashboard() {
                                   </option>
                                 ))}
                               </select>
-                            </td>
-                            <td className="px-4 py-3 min-w-[180px] truncate">{c.job.position ?? "—"}</td>
-                            <td className="px-4 py-3 min-w-[120px] whitespace-nowrap">
-                              {c.job.nextActionAt ? new Date(c.job.nextActionAt).toLocaleDateString("ja-JP") : "—"}
-                            </td>
-                            <td className="px-4 py-3 min-w-[140px] truncate" title={c.job.contactInfo ?? ""}>{c.job.contactInfo ?? "—"}</td>
-                            <td className="px-4 py-3 min-w-[100px] whitespace-nowrap">
-                              {c.job.priority === "high" ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">高</span>
-                              ) : c.job.priority === "medium" ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">中</span>
-                              ) : c.job.priority === "low" ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">低</span>
-                              ) : "—"}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                            </div>
+
+                            {statusEvents.length === 0 ? (
+                              <p className="py-3 text-sm text-muted-foreground">还没有状态变更记录。</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {statusEvents.map((event: any) => (
+                                  <div key={event.id} className="flex items-start justify-between gap-3 text-sm">
+                                    <div className="min-w-0">
+                                      <p className="font-medium">
+                                        {event.prevStatus ? `${statusLabel(event.prevStatus)} → ` : ""}
+                                        {statusLabel(event.nextStatus)}
+                                      </p>
+                                      {event.reason || event.mailSubject ? (
+                                        <p className="text-xs text-muted-foreground truncate">
+                                          {event.reason ?? event.mailSubject}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                      {formatDateTime(event.createdAt)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="mb-5">
+              <h2 className="text-lg font-bold">通知偏好</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                设置贴身求职秘书通过 Telegram 主动提醒你的时间和类别。
+              </p>
+            </div>
+
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label>安静时段</Label>
+                <Select
+                  value={notificationSchedule}
+                  onValueChange={(value) => {
+                    updateProfileMutation.mutate({ notificationSchedule: value });
+                  }}
+                  disabled={updateProfileMutation.isPending}
+                >
+                  <SelectTrigger className="w-full sm:max-w-xs">
+                    <SelectValue placeholder="选择提醒时间" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NOTIFICATION_SCHEDULE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label>提醒类别</Label>
+                {NUDGE_CATEGORY_OPTIONS.map((category) => (
+                  <div
+                    key={category.value}
+                    className="flex items-center justify-between gap-4 rounded-lg border border-border bg-background/50 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{category.label}</p>
+                      <p className="text-xs text-muted-foreground">{category.description}</p>
+                    </div>
+                    <Switch
+                      checked={nudgeCategories[category.value]}
+                      disabled={updateProfileMutation.isPending}
+                      onCheckedChange={(checked) => {
+                        updateProfileMutation.mutate({
+                          nudgeCategoriesEnabled: {
+                            ...nudgeCategories,
+                            [category.value]: checked,
+                          },
+                        });
+                      }}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -1258,97 +1005,61 @@ function langLabel(lang?: string | null) {
   return lang ? (map[lang] ?? lang) : "-";
 }
 
-type BoardCard = {
-  job: {
-    id: number;
-    companyNameJa: string;
-    companyNameEn?: string | null;
-    position?: string | null;
-    status: string;
-    nextActionAt?: string | Date | null;
-    updatedAt: string | Date;
-  };
-  recon?: { content: string } | undefined;
-  es?: { content: string } | undefined;
-  interview?: { content: string } | undefined;
-};
-
 const JOB_STATUS_OPTIONS = [
+  { value: "researching", label: "调研中" },
   { value: "applied", label: "エントリー済み" },
   { value: "briefing", label: "说明会" },
   { value: "es_preparing", label: "ES准备中" },
+  { value: "es_submitted", label: "ES已提交" },
   { value: "document_screening", label: "書類選考中" },
+  { value: "written_test", label: "筆記試験" },
   { value: "interview_1", label: "一面" },
   { value: "interview_2", label: "二面" },
   { value: "interview_3", label: "三次面接" },
   { value: "interview_4", label: "四次面接" },
-  { value: "written_test", label: "筆記試験" },
   { value: "interview_final", label: "终面" },
   { value: "offer", label: "内定" },
+  { value: "rejected", label: "未通过" },
   { value: "withdrawn", label: "辞退" },
 ] as const;
 
 type JobStatusValue = (typeof JOB_STATUS_OPTIONS)[number]["value"];
 
-function BoardColumn(props: {
-  title: string;
-  subtitle: string;
-  count: number;
-  cards: BoardCard[];
-  selectedJobId: number | null;
-  onSelect: (id: number) => void;
-}) {
-  const { title, subtitle, count, cards, selectedJobId, onSelect } = props;
-  return (
-    <div className="min-w-[260px] w-[260px] rounded-xl border border-black/10 bg-[var(--color-warm-white)] p-3">
-      <div className="flex items-start justify-between mb-3">
-        <div className="min-w-0">
-          <p className="text-[15px] font-semibold truncate">{title}</p>
-          <p className="text-[12px] text-[var(--color-warm-gray-500)]">{subtitle}</p>
-        </div>
-        <span className="text-[12px] px-2 py-0.5 rounded-full bg-white border border-black/10 text-[var(--color-warm-gray-500)]">
-          {count}
-        </span>
-      </div>
-      <div className="space-y-2">
-        {cards.length === 0 ? (
-          <div className="text-[12px] text-[var(--color-warm-gray-300)] py-6 text-center">暂无</div>
-        ) : (
-          cards.map((c) => {
-            const selected = c.job.id === selectedJobId;
-            return (
-              <button
-                key={c.job.id}
-                onClick={() => onSelect(c.job.id)}
-                className={`w-full text-left p-3 rounded-xl border bg-white transition-shadow ${
-                  selected
-                    ? "border-[#097fe8] shadow-[0_0_0_2px_rgba(9,127,232,0.15)]"
-                    : "border-black/10 shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.84688px_rgba(0,0,0,0.027),0_0.8px_2.925px_rgba(0,0,0,0.02),0_0.175px_1.04062px_rgba(0,0,0,0.01)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.045),0_2.5px_9px_rgba(0,0,0,0.03),0_1px_3.5px_rgba(0,0,0,0.02)]"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[14px] font-semibold truncate">{c.job.companyNameJa}</p>
-                    <p className="text-[12px] text-[var(--color-warm-gray-500)] mt-0.5">
-                      {[
-                        c.job.position,
-                        c.job.updatedAt ? new Date(c.job.updatedAt).toLocaleDateString() : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <span className={`shrink-0 inline-flex items-center rounded-full px-2 py-1 text-[12px] font-semibold tracking-[0.125px] status-${c.job.status}`}>
-                    {statusLabel(c.job.status)}
-                  </span>
-                </div>
-              </button>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
+const NOTIFICATION_SCHEDULE_OPTIONS = [
+  { value: "09:00-21:00", label: "09:00-21:00" },
+  { value: "08:00-20:00", label: "08:00-20:00" },
+  { value: "10:00-22:00", label: "10:00-22:00" },
+  { value: "07:00-23:00", label: "07:00-23:00" },
+] as const;
+
+const NUDGE_CATEGORY_OPTIONS = [
+  { value: "status_suggestion", label: "状态建议", description: "发现邮件里可能有新的选考进度时提醒你确认。" },
+  { value: "time_nudge", label: "时间提醒", description: "临近需要行动的时间点时轻轻提醒。" },
+  { value: "inactivity", label: "停滞提醒", description: "某家公司太久没有进展时帮你留意。" },
+  { value: "deadline_warning", label: "截止提醒", description: "ES、说明会或面试截止前提醒你。" },
+  { value: "follow_up", label: "跟进提醒", description: "面试或关键沟通后提醒你补充跟进。" },
+] as const;
+
+type NudgeCategoryValue = (typeof NUDGE_CATEGORY_OPTIONS)[number]["value"];
+
+function normalizeNudgeCategories(value: unknown): Record<NudgeCategoryValue, boolean> {
+  const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return NUDGE_CATEGORY_OPTIONS.reduce((acc, category) => {
+    acc[category.value] = raw[category.value] !== false;
+    return acc;
+  }, {} as Record<NudgeCategoryValue, boolean>);
+}
+
+function formatDateTime(value?: string | Date | null): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("ja-JP", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function statusLabel(status: string): string {

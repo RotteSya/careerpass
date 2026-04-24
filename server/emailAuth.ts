@@ -8,7 +8,7 @@ import { getDb } from "./db";
 import { emailAuth, users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resendClient: Resend | null = null;
 const FROM_EMAIL = "CareerPass <noreply@careerpax.com>";
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
 
@@ -20,6 +20,12 @@ function generateToken(): string {
 
 function tokenExpiresAt(hours = 24): Date {
   return new Date(Date.now() + hours * 60 * 60 * 1000);
+}
+
+function getResendClient(): Resend {
+  if (!process.env.RESEND_API_KEY) throw new Error("RESEND_API_KEY_MISSING");
+  resendClient ??= new Resend(process.env.RESEND_API_KEY);
+  return resendClient;
 }
 
 // ── DB helpers ───────────────────────────────────────────────────────────────
@@ -166,7 +172,7 @@ export async function resendVerificationEmail(email: string) {
 
 async function sendVerificationEmail(email: string, token: string) {
   const verifyUrl = `${APP_DOMAIN}/email-verified?token=${token}`;
-  await resend.emails.send({
+  await getResendClient().emails.send({
     from: FROM_EMAIL,
     to: email,
     subject: "【就活パス】メールアドレスの確認",
@@ -225,7 +231,7 @@ export async function changePassword(
 // ── Waitlist Email ──────────────────────────────────────────────────────────
 export async function sendWaitlistEmail(email: string) {
   try {
-    await resend.emails.send({
+    await getResendClient().emails.send({
       from: "no-reply@careerpass.co", // Replace with actual verified domain if needed
       to: email,
       subject: "先行リストへのご登録ありがとうございます！",

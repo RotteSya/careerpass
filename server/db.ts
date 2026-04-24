@@ -105,7 +105,7 @@ export async function getUserByEmail(email: string) {
 
 export async function updateUserProfile(
   userId: number,
-  data: Partial<Pick<InsertUser, "name" | "birthDate" | "education" | "universityName" | "preferredLanguage" | "profileCompleted" | "calendarColorBriefing" | "calendarColorInterview" | "calendarColorDeadline">>
+  data: Partial<Pick<InsertUser, "name" | "birthDate" | "education" | "universityName" | "preferredLanguage" | "profileCompleted" | "calendarColorBriefing" | "calendarColorInterview" | "calendarColorDeadline" | "notificationSchedule" | "nudgeCategoriesEnabled">>
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -660,6 +660,31 @@ export async function listJobStatusEvents(userId: number, jobApplicationId: numb
     .where(and(eq(jobStatusEvents.userId, userId), eq(jobStatusEvents.jobApplicationId, jobApplicationId)))
     .orderBy(desc(jobStatusEvents.createdAt))
     .limit(limit);
+}
+
+// ─── Messaging Bindings ────────────────────────────────────────────────────
+export async function getActiveMessagingBinding(userId: number): Promise<{
+  provider: string;
+  externalId: string;
+} | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Prefer unified messagingBindings table
+  const unified = await db
+    .select({ provider: messagingBindings.provider, externalId: messagingBindings.externalId })
+    .from(messagingBindings)
+    .where(and(eq(messagingBindings.userId, userId), eq(messagingBindings.isActive, true)))
+    .limit(1);
+  if (unified[0]) return unified[0];
+
+  // Fallback to legacy telegramBindings
+  const legacy = await getTelegramBinding(userId);
+  if (legacy?.isActive && legacy.telegramId) {
+    return { provider: "telegram", externalId: legacy.telegramId };
+  }
+
+  return null;
 }
 
 // ─── Agent Memory ──────────────────────────────────────────────────────────
