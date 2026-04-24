@@ -6,6 +6,7 @@ const INTERVIEW_STATUSES = new Set([
 ]);
 
 const STALE_APP_DAYS = 14;
+const ABANDON_SUGGESTION_DAYS = 30;
 const INACTIVITY_DAYS = 7;
 const DEADLINE_WARNING_DAYS = 3;
 const POST_INTERVIEW_SILENCE_DAYS = 5;
@@ -35,6 +36,11 @@ const MESSAGES = {
     zh: { title: "面试后跟进", body: "「{company}」面试后已过 {days} 天，考虑发送感谢信或确认进度。" },
     en: { title: "Post-interview follow-up", body: "It's been {days} days since your interview with \"{company}\". Consider sending a thank-you note or checking the status." },
   },
+  abandonSuggestion: {
+    ja: { title: "放置中の選考があります", body: "「{company}」は{days}日以上ステータス更新がありません。まだ進めるならフォローアップ、動かさないなら辞退済みとして整理するか確認しましょう。" },
+    zh: { title: "有公司可能该整理了", body: "「{company}」已经 {days} 天以上没有状态进展。还想继续就跟进一下；不打算继续的话，可以确认后标记为放弃。" },
+    en: { title: "Application may need cleanup", body: "No status progress on \"{company}\" for {days}+ days. Follow up if you're still pursuing it, or confirm and mark it withdrawn if not." },
+  },
 };
 
 function localize(
@@ -62,7 +68,7 @@ const staleAppRule: NudgeRule = {
       if (TERMINAL_STATUSES.has(app.status)) continue;
       const lastEvent = app.lastStatusEventAt ?? app.updatedAt;
       const daysSince = daysBetween(lastEvent, context.now);
-      if (daysSince < STALE_APP_DAYS) continue;
+      if (daysSince < STALE_APP_DAYS || daysSince >= ABANDON_SUGGESTION_DAYS) continue;
 
       const msg = localize(MESSAGES.stale, context.preferredLanguage, {
         company: app.companyNameJa,
@@ -74,6 +80,41 @@ const staleAppRule: NudgeRule = {
         jobApplicationId: app.id,
         companyName: app.companyNameJa,
         priority: "medium",
+        ...msg,
+        scheduledAt: context.now,
+        expiresAt: new Date(context.now.getTime() + 7 * 24 * 60 * 60 * 1000),
+      });
+    }
+    return nudges;
+  },
+};
+
+// Abandon suggestion: non-terminal with no status progress for 30+ days.
+// This does not mutate the board; it asks the user to confirm whether to
+// follow up or mark the application as withdrawn.
+const abandonSuggestionRule: NudgeRule = {
+  id: "follow_up_abandon_suggestion",
+  category: "follow_up",
+  evaluate(context: UserJobContext): ProactiveNudge[] {
+    const nudges: ProactiveNudge[] = [];
+    for (const app of context.applications) {
+      if (TERMINAL_STATUSES.has(app.status)) continue;
+      if (app.nextActionAt && app.nextActionAt > context.now) continue;
+
+      const lastEvent = app.lastStatusEventAt ?? app.updatedAt;
+      const daysSince = daysBetween(lastEvent, context.now);
+      if (daysSince < ABANDON_SUGGESTION_DAYS) continue;
+
+      const msg = localize(MESSAGES.abandonSuggestion, context.preferredLanguage, {
+        company: app.companyNameJa,
+        days: ABANDON_SUGGESTION_DAYS,
+      });
+      nudges.push({
+        userId: context.userId,
+        category: "follow_up",
+        jobApplicationId: app.id,
+        companyName: app.companyNameJa,
+        priority: "low",
         ...msg,
         scheduledAt: context.now,
         expiresAt: new Date(context.now.getTime() + 7 * 24 * 60 * 60 * 1000),
@@ -173,6 +214,7 @@ const postInterviewRule: NudgeRule = {
 
 export const timeNudgeRules: NudgeRule[] = [
   staleAppRule,
+  abandonSuggestionRule,
   inactivityRule,
   deadlineRule,
   postInterviewRule,

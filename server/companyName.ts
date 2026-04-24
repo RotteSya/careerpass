@@ -15,6 +15,90 @@ const COMPANY_VARIANT_GROUPS: VariantGroup[] = [
       "㈱ミライト・ワン",
     ],
   },
+  {
+    canonical: "株式会社アイ・エス・ビー",
+    aliases: [
+      "株式会社アイ・エス・ビー",
+      "アイ・エス・ビー",
+      "ISB",
+      "株式会社ISB",
+    ],
+  },
+  {
+    canonical: "イーソル株式会社",
+    aliases: [
+      "イーソル株式会社",
+      "イーソル",
+      "eSOL",
+    ],
+  },
+  {
+    canonical: "株式会社スクウェア・エニックス",
+    aliases: [
+      "株式会社スクウェア・エニックス",
+      "スクウェア・エニックス",
+      "スクエアエニックス",
+      "SQUARE ENIX",
+      "SQUARE ENIX CO., LTD.",
+    ],
+  },
+  {
+    canonical: "株式会社メイテックフィルダーズ",
+    aliases: [
+      "株式会社メイテックフィルダーズ",
+      "メイテックフィルダーズ",
+    ],
+  },
+  {
+    canonical: "テクバン株式会社",
+    aliases: [
+      "テクバン株式会社",
+      "テクバン",
+      "TECHVAN",
+    ],
+  },
+  {
+    canonical: "株式会社ゲームフリーク",
+    aliases: [
+      "株式会社ゲームフリーク",
+      "ゲームフリーク",
+      "GAME FREAK",
+    ],
+  },
+  {
+    canonical: "株式会社リコー",
+    aliases: [
+      "株式会社リコー",
+      "リコー",
+      "RICOH",
+    ],
+  },
+  {
+    canonical: "株式会社オロ",
+    aliases: [
+      "株式会社オロ",
+      "オロ",
+      "ORO",
+    ],
+  },
+  {
+    canonical: "パナソニックグループ",
+    aliases: [
+      "パナソニックグループ",
+      "Panasonic Group",
+      "PANASONIC",
+      "パナソニック",
+    ],
+  },
+  {
+    canonical: "ルートイングループ",
+    aliases: [
+      "ルートイングループ",
+      "ROUTE INN GROUP",
+      "ROUTE INN HOTELS",
+      "ROUTE-INN GROUP",
+    ],
+  },
 ];
 
 const BLOCKED_COMPANY_TOKENS = new Set([

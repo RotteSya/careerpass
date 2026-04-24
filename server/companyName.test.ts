@@ -21,6 +21,13 @@ describe("companyName normalization", () => {
     expect(resolveCanonicalCompanyName("株式会社ミライト・ワン")).toBe("株式会社ミライト・ワン");
   });
 
+  it("resolves common recruiting-mail aliases to canonical display names", () => {
+    expect(resolveCanonicalCompanyName("SQUARE ENIX")).toBe("株式会社スクウェア・エニックス");
+    expect(resolveCanonicalCompanyName("メイテックフィルダーズ")).toBe("株式会社メイテックフィルダーズ");
+    expect(resolveCanonicalCompanyName("TECHVAN")).toBe("テクバン株式会社");
+    expect(resolveCanonicalCompanyName("ROUTE INN GROUP")).toBe("ルートイングループ");
+  });
+
   it("normalizes newlines in display name", () => {
     const d = normalizeCompanyDisplayName("株式会社\nアイ・エス・ビー");
     expect(d).toBeTruthy();

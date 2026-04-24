@@ -85,6 +85,14 @@ export interface RecruitingNlpDecision extends MailDecisionLike {
     interviewRound: InterviewRound | null;
     negPenalty: number;
     ruleSignals: Array<{ eventType: MailEventType; confidence: number; reason: string }>;
+    companyExtraction: {
+      name: string | null;
+      confidence: number;
+      source: string | null;
+      sources: string[];
+      selectedBy: "ner_high_confidence" | "llm" | "ner_low_confidence" | "none";
+      llmCompanyName: string | null;
+    };
     hardOutcome?: "offer" | "rejection" | null;
     isResultNotificationSubject?: boolean;
     [key: string]: any;
@@ -132,6 +140,17 @@ function defaultTodo(eventType: MailEventType, text?: string): string[] {
   if (eventType === "offer") return ["确认 offer 条件与回复期限"];
   if (eventType === "rejection") return ["记录未通过原因并更新后续投递策略"];
   return [];
+}
+
+function emptyCompanyExtraction(): NonNullable<RecruitingNlpDecision["_meta"]>["companyExtraction"] {
+  return {
+    name: null,
+    confidence: 0,
+    source: null,
+    sources: [],
+    selectedBy: "none",
+    llmCompanyName: null,
+  };
 }
 
 // ─── Multi-signal rule evaluation ────────────────────────────────────────────
@@ -223,7 +242,14 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
-      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty: 0, ruleSignals: [] },
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty: 0,
+        ruleSignals: [],
+        companyExtraction: emptyCompanyExtraction(),
+      },
     };
   }
 
@@ -245,7 +271,14 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
-      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty,
+        ruleSignals: [],
+        companyExtraction: emptyCompanyExtraction(),
+      },
     };
   }
   const isPlatformNewsletter =
@@ -273,7 +306,14 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
-      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty,
+        ruleSignals: [],
+        companyExtraction: emptyCompanyExtraction(),
+      },
     };
   }
 
@@ -300,7 +340,21 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: ["マイページにログインしてメッセージを確認する"],
       shouldSkipLlm: true,
-      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty,
+        ruleSignals: [],
+        companyExtraction: {
+          name: cleanedCompanyName,
+          confidence: cleanedCompanyName ? nerCompany.confidence : 0,
+          source: cleanedCompanyName ? nerCompany.source : null,
+          sources: cleanedCompanyName ? nerCompany.sources : [],
+          selectedBy: cleanedCompanyName ? "ner_high_confidence" : "none",
+          llmCompanyName: null,
+        },
+      },
     };
   }
 
@@ -325,7 +379,14 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
-      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty,
+        ruleSignals: [],
+        companyExtraction: emptyCompanyExtraction(),
+      },
     };
   }
   const isLikelyNoise =
@@ -344,7 +405,14 @@ export function runRecruitingNlpPipeline(
       location: null,
       todoItems: [],
       shouldSkipLlm: true,
-      _meta: { ...inputMeta, domainReputation: domainRep, interviewRound: null, negPenalty, ruleSignals: [] },
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty,
+        ruleSignals: [],
+        companyExtraction: emptyCompanyExtraction(),
+      },
     };
   }
 
@@ -468,12 +536,16 @@ export function runRecruitingNlpPipeline(
   //   3. Fall back to the best low-confidence NER candidate.
   const llmCompany = normalizeCompanyName(llmDecision?.companyName ?? null);
   let mergedCompany: string | null = null;
+  let companySelectedBy: NonNullable<RecruitingNlpDecision["_meta"]>["companyExtraction"]["selectedBy"] = "none";
   if (nerCompany.name && nerCompany.confidence >= 0.70) {
     mergedCompany = nerCompany.name;
+    companySelectedBy = "ner_high_confidence";
   } else if (llmCompany) {
     mergedCompany = llmCompany;
+    companySelectedBy = "llm";
   } else if (nerCompany.name) {
     mergedCompany = nerCompany.name;
+    companySelectedBy = "ner_low_confidence";
   }
 
   // ⑬ Date/time: LLM > NER > fallback
@@ -523,6 +595,17 @@ export function runRecruitingNlpPipeline(
       interviewRound,
       negPenalty,
       ruleSignals,
+      companyExtraction: {
+        name: mergedCompany ?? null,
+        confidence:
+          companySelectedBy === "llm"
+            ? Math.max(0, Math.min(1, llmConfidence || 0))
+            : nerCompany.confidence,
+        source: companySelectedBy === "llm" ? "llm" : nerCompany.source,
+        sources: companySelectedBy === "llm" ? ["llm"] : nerCompany.sources,
+        selectedBy: companySelectedBy,
+        llmCompanyName: llmCompany,
+      },
       hardOutcome,
       isResultNotificationSubject
     },

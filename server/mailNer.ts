@@ -36,6 +36,15 @@ export interface OrgCandidate {
   confidence: number;
 }
 
+export interface CompanyNameExtraction {
+  name: string | null;
+  confidence: number;
+  /** Primary source that produced the winning company candidate. */
+  source: string | null;
+  /** All sources that agreed on the winning normalized company key. */
+  sources: string[];
+}
+
 const NON_COMPANY_PATTERNS =
   /^(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster|mail|me|cs|job|job-s27|reply|zoom)$/i;
 
@@ -299,7 +308,7 @@ export function extractBestCompanyName(
   body: string,
   fromDomainTier?: DomainTier,
   recipientNames: string[] = []
-): { name: string | null; confidence: number } {
+): CompanyNameExtraction {
   body = limitMailBody(body).text;
   // Extract candidates using multi-strategy approach
   const candidates = extractOrgCandidates(subject, from, body, fromDomainTier, recipientNames);
@@ -307,7 +316,7 @@ export function extractBestCompanyName(
     .map((c) => ({ ...c, name: isValidExtractedCompany(c.name, recipientNames) ?? "" }))
     .filter((c) => c.name.length >= 2);
 
-  if (normalized.length === 0) return { name: null, confidence: 0 };
+  if (normalized.length === 0) return { name: null, confidence: 0, source: null, sources: [] };
 
   // Group by normalized key and aggregate
   const groups = new Map<
@@ -326,18 +335,24 @@ export function extractBestCompanyName(
     }
   }
 
-  let best = { name: "", confidence: 0 };
+  let best = { name: "", confidence: 0, source: null as string | null, sources: [] as string[] };
   for (const g of Array.from(groups.values())) {
     // Multi-source agreement bonus: +0.05 per extra source, max +0.15
     const sourceBonus = Math.min(g.sources.length - 1, 3) * 0.05;
     const score = Math.min(g.maxConfidence + sourceBonus, 1);
     if (score > best.confidence) {
-      best = { name: resolveCanonicalCompanyName(g.name) ?? g.name, confidence: score };
+      const primary = g.sources[0] ?? null;
+      best = {
+        name: resolveCanonicalCompanyName(g.name) ?? g.name,
+        confidence: score,
+        source: primary,
+        sources: [...g.sources],
+      };
     }
   }
 
   if (best.name && (body.includes(`${best.name}様`) || body.includes(`${best.name} 様`))) {
-    return { name: null, confidence: 0 };
+    return { name: null, confidence: 0, source: null, sources: [] };
   }
   return best;
 }

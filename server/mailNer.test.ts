@@ -19,6 +19,8 @@ describe("extractBestCompanyName", () => {
     );
     expect(r.name).toBe("株式会社メルカリ");
     expect(r.confidence).toBeGreaterThan(0.9);
+    expect(r.source).toBe("legal_subject_maekabu");
+    expect(r.sources).toContain("legal_subject_maekabu");
   });
 
   it("extracts inverted legal entity (CompanyName株式会社)", () => {

@@ -143,7 +143,13 @@ async function main() {
     });
     const key = normalizeCompanyKey(companyName) ?? companyName.toLowerCase();
     const prev = jobs.get(key);
-    const reason = `${decision.reason} (eventType=${decision.eventType}, hardOutcome=${decision._meta?.hardOutcome ?? "none"})`;
+    const companyExtraction = decision._meta?.companyExtraction;
+    const reason =
+      `${decision.reason} ` +
+      `(eventType=${decision.eventType}, hardOutcome=${decision._meta?.hardOutcome ?? "none"}, ` +
+      `companySource=${companyExtraction?.source ?? "none"}, ` +
+      `companyConfidence=${companyExtraction?.confidence?.toFixed(2) ?? "0.00"}, ` +
+      `companySelectedBy=${companyExtraction?.selectedBy ?? "none"})`;
     const deadline = decision.eventDate ?? "";
     const sourceTs =
       original.date?.getTime() ??

@@ -82,6 +82,8 @@ describe("runRecruitingNlpPipeline", () => {
       },
     );
     expect(d.companyName).toBe("株式会社サンプル");
+    expect(d._meta?.companyExtraction.source).toBeTruthy();
+    expect(d._meta?.companyExtraction.confidence).toBeGreaterThan(0);
   });
 
   it("uses stronger test rule for online assessment mails", () => {
