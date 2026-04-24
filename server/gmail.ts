@@ -58,7 +58,7 @@ export interface EmailEvent {
   from: string;
   date: string;
   body: string;
-  eventType: "interview" | "briefing" | "test" | "deadline" | "entry" | "offer" | "rejection" | "other";
+  eventType: "interview" | "briefing" | "test" | "deadline" | "entry" | "offer" | "rejection" | "document_screening" | "casual_interview" | "other";
   companyName: string | null;
   eventDate: string | null; // ISO 8601 if detected
   eventTime: string | null;
@@ -797,6 +797,8 @@ const typeLabels: Record<EmailEvent["eventType"], string> = {
   entry: "【エントリー】",
   offer: "【内定】",
   rejection: "【結果通知】",
+  document_screening: "【書類選考】",
+  casual_interview: "【カジュアル面談】",
   other: "【就活】",
 };
 

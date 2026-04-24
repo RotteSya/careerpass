@@ -47,6 +47,7 @@ import {
   HARD_REJECTION_EN_PATTERN,
   HARD_OFFER_JP_PATTERN,
   HARD_OFFER_EN_PATTERN,
+  LIFESTYLE_NON_RECRUITING_HINTS,
 } from "./_core/mailKeywords";
 
 interface MailDecisionLike {
@@ -105,7 +106,7 @@ function normalizeEventType(v: string | null | undefined): MailEventType {
   if (
     v === "interview" || v === "briefing" || v === "test" ||
     v === "deadline" || v === "entry" || v === "offer" ||
-    v === "rejection" || v === "other"
+    v === "rejection" || v === "document_screening" || v === "casual_interview" || v === "other"
   ) {
     return v;
   }
@@ -256,6 +257,53 @@ export function runRecruitingNlpPipeline(
     };
   }
 
+  // ①.6 Generic meeting invite hard-negative (Zoom/Teams invite without recruiting context)
+  const isGenericMeetingDomain = /no-reply@zoom\.us|no-reply@teams\.microsoft\.com|noreply@webex\.com/i.test(input.from);
+  if (isGenericMeetingDomain && !PROCESS_HINTS.test(text)) {
+    return {
+      isJobRelated: false,
+      confidence: 0.98,
+      reason: "hard-negative:generic-meeting-invite",
+      eventType: "other",
+      companyName: null,
+      eventDate: input.fallbackDate,
+      eventTime: input.fallbackTime,
+      location: null,
+      todoItems: [],
+      shouldSkipLlm: true,
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty: 0,
+        ruleSignals: [],
+        companyExtraction: emptyCompanyExtraction(),
+      },
+    };
+  }
+  // ①.7 Lifestyle noise hard-negative (rent, e-commerce, banking, delivery)
+  if (LIFESTYLE_NON_RECRUITING_HINTS.test(text) && !PROCESS_HINTS.test(text)) {
+    return {
+      isJobRelated: false,
+      confidence: 0.97,
+      reason: "hard-negative:lifestyle-noise",
+      eventType: "other",
+      companyName: null,
+      eventDate: input.fallbackDate,
+      eventTime: input.fallbackTime,
+      location: null,
+      todoItems: [],
+      shouldSkipLlm: true,
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty: 0,
+        ruleSignals: [],
+        companyExtraction: emptyCompanyExtraction(),
+      },
+    };
+  }
   // ② Platform noise gate (unchanged behavior)
   const obviousPlatformNoise = JOB_PLATFORM_HINTS.test(text) && !PROCESS_HINTS.test(text);
   if (obviousPlatformNoise) {
