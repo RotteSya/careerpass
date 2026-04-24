@@ -228,6 +228,34 @@ export function runRecruitingNlpPipeline(
   // ① Domain reputation
   const domainRep = getDomainReputation(input.from);
 
+  // ①.5 Non-recruiting structural hard-negative
+  //   Consumer services (e-commerce, ticketing, delivery, utility, govt),
+  //   bounce senders (mailer-daemon/postmaster) and student-mailing
+  //   subdomains are never recruiting even when they contain overlapping
+  //   tokens like 「締切」「予約」「抽選結果」「unfortunately」.
+  if (domainRep.tier === "non_recruiting") {
+    return {
+      isJobRelated: false,
+      confidence: 0.98,
+      reason: "hard-negative:non-recruiting-domain",
+      eventType: "other",
+      companyName: null,
+      eventDate: input.fallbackDate,
+      eventTime: input.fallbackTime,
+      location: null,
+      todoItems: [],
+      shouldSkipLlm: true,
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty: 0,
+        ruleSignals: [],
+        companyExtraction: emptyCompanyExtraction(),
+      },
+    };
+  }
+
   // ② Platform noise gate (unchanged behavior)
   const obviousPlatformNoise = JOB_PLATFORM_HINTS.test(text) && !PROCESS_HINTS.test(text);
   if (obviousPlatformNoise) {

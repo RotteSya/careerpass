@@ -16,6 +16,49 @@ export const NOISE_PLATFORM_DOMAINS = new Set<string>([
   "goodfind.jp", "unistyle.net", "syukatsu-kaigi.jp",
 ]);
 
+/**
+ * Domains that are structurally NOT recruiting — consumer services,
+ * e-commerce, ticketing, transport, utilities, govt, generic newsletters.
+ * Matched via {@link isDomainMatch} so subdomains are covered.
+ *
+ * Keep entries specific enough that we don't accidentally block a real
+ * recruiting subdomain (e.g. use `mail-unyu.hankyu.co.jp`, not `hankyu.co.jp`).
+ */
+export const NON_RECRUITING_DOMAINS = new Set<string>([
+  // E-commerce / lifestyle
+  "chocozap.jp", "info.chocozap.jp",
+  "grailnet.jp",
+  "oliveyoung.com",
+  "paypay-card.co.jp", "mail.paypay-card.co.jp",
+  "abceed.com",
+  // Ticketing / events / music
+  "eplus.co.jp",
+  "livepocket.jp",
+  "l-tike.com",
+  "pia.co.jp",
+  // Transport / travel / reservations
+  "highwaybus.com",
+  "expy.jp",
+  "mail-unyu.hankyu.co.jp",
+  "hotpepper.jp",
+  // Delivery / post / govt / utilities
+  "sagawa-exp.co.jp",
+  "delivery.post.japanpost.jp", "post.japanpost.jp",
+  "mail.net.kojinbango-card.go.jp", "kojinbango-card.go.jp",
+  "tokyo.suidoapp.jp", "suidoapp.jp",
+  "ens-immi.moj.go.jp",
+  "e4.kepco.co.jp", "a3.kepco.co.jp",
+  // Publishing / newsletters unrelated to recruiting
+  "theletter.jp",
+  "news.statista.com",
+  "shukatsu.jp",
+  "chuoshoten.co.jp",
+  "uc-navi.jp",           // 大学生協 seminar/travel reservations
+  "unistyleinc.com",      // unistyle newsletter (distinct from unistyle.net platform)
+  // University student-mailing subdomains (forwarded to self)
+  "st.ritsumei.ac.jp", "fc.ritsumei.ac.jp",
+]);
+
 export const RECRUITING_PLATFORM_DOMAINS = new Set<string>([
   "rikunabi.com", "mynavi.jp", "en-japan.com", "wantedly.com",
   "bizreach.jp", "doda.jp", "type.jp", "green-japan.com",

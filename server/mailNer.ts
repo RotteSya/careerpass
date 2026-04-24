@@ -21,6 +21,7 @@ import { limitMailBody, limitText, MAX_MAIL_TEXT_CHARS } from "./_core/mailText"
 import {
   FREE_MAIL_DOMAINS,
   NOISE_PLATFORM_DOMAINS,
+  NON_RECRUITING_DOMAINS,
   RECRUITING_PLATFORM_DOMAINS,
   PLATFORM_DOMAINS,
   isDomainMatch,
@@ -49,7 +50,7 @@ const NON_COMPANY_PATTERNS =
   /^(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster|mail|me|cs|job|job-s27|reply|zoom)$/i;
 
 const AD_TITLE_PATTERNS =
-  /^(外国人留学生必見|.{0,20}の知識を活かせます|.{0,20}向け|.{0,20}卒(?:の方限定)?|27卒.*|26卒.*|これから就活.*|先着\d+名|最大\d+.*|1次|2次|3次|一次|二次|三次|四次|最終|面接|選考|説明会|セミナー|エントリー|案内|結果|通知|お知らせ|重要|緊急|締切|ご連絡|ご案内|就活|速報|オファー|スカウト|メッセージ|おすすめ|ピックアップ|特集|キャンペーン|ランキング|本人確認|会員登録|利用規約|退会フォーム|履歴書送付|資料提出|日程調整|書類選考|適性検査)$/i;
+  /^(外国人留学生必見|.{0,20}の知識を活かせます|.{0,20}向け|.{0,20}卒(?:の方限定)?|27卒.*|26卒.*|これから就活.*|先着\d+名|最大\d+.*|1次|2次|3次|一次|二次|三次|四次|最終|最後|面接|選考|説明会|セミナー|エントリー|案内|結果|通知|お知らせ|重要|緊急|締切|ご連絡|ご案内|就活|就活(?:前半|後半)戦|速報|オファー|スカウト|メッセージ|おすすめ|ピックアップ|特集|キャンペーン|ランキング|本人確認|会員登録|利用規約|退会フォーム|履歴書送付|資料提出|日程調整|書類選考|適性検査|まだ参加可能.*|活動状況.*|日本で唯一.*|限定特典.*|ワンランク上.*|海外事業.*|グローバル×.*|お役立ち情報.*|ビジネストレンド.*|早トク.*|お申込.*|ご注文.*|予約受付.*|支払期限.*)$/i;
 
 const HR_SUFFIXES = /(採用担当|採用チーム|人事部|人事課|リクルート|Recruiting|recruit|HR|人材|キャリア|新卒採用|中途採用|採用事務局|運営事務局|事務局|マイページ|team|Team|採用|新卒)$/i;
 
@@ -267,6 +268,13 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   return candidates;
 }
 
+/** "コンサルティング合同会社" style: generic business noun glued to a
+ *  legal-entity suffix with no actual company token in front. Typically
+ *  produced by the atokabu extractor when a full-width space separates
+ *  the real company name from the suffix. */
+const GENERIC_NOUN_ONLY_LEGAL_ENTITY =
+  /^(コンサルティング|サービス|ソリューション(?:ズ)?|システム(?:ズ)?|グループ|ホールディングス?|テクノロジー|トランスフォーメー?ション|アドバイザリー|ビジネス|事業|採用|人事|新卒|中途)(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)$/;
+
 function normalizeOrgName(raw: string): string | null {
   const c = normalizeCompanyDisplayName(raw);
   if (!c) return null;
@@ -275,6 +283,7 @@ function normalizeOrgName(raw: string): string | null {
   if (PLATFORM_NAME_HINTS.test(c)) return null;
   if (NON_COMPANY_PATTERNS.test(c)) return null;
   if (AD_TITLE_PATTERNS.test(c)) return null;
+  if (GENERIC_NOUN_ONLY_LEGAL_ENTITY.test(c)) return null;
   if (c.length < 2) return null;
   return c;
 }
@@ -617,6 +626,7 @@ export type DomainTier =
   | "corporate"       // *.com / other TLD with non-free domain
   | "recruiting_platform" // rikunabi, mynavi, etc.
   | "noise_platform"  // openwork, 就活会議 — review / info sites
+  | "non_recruiting"  // e-commerce / ticketing / delivery / utility / student — structurally never recruiting
   | "free_mail"
   | "unknown";
 
@@ -635,6 +645,18 @@ export function getDomainReputation(from: string): DomainReputation {
   const domain = extractDomain(from);
   if (!domain) return { tier: "unknown", score: 0.3, domain: null };
 
+  // Bounce / system senders are never recruiting regardless of parent domain
+  // (e.g. mailer-daemon@googlemail.com, postmaster@anywhere).
+  // Address local-part signals that structurally rule out recruiting:
+  //   - bounce/system senders (mailer-daemon, postmaster)
+  //   - Google Forms submission receipts
+  //   - mynavi part-time-job alert feed (mb-noreply-user@mynavi.jp)
+  const addr = from.trim().replace(/^[^<]*<\s*/, "");
+  if (/^(mailer-daemon|postmaster|forms-receipts-noreply|mb-noreply-user)@/i.test(addr)) {
+    return { tier: "non_recruiting", score: 0.01, domain };
+  }
+
+  if (isDomainMatch(domain, NON_RECRUITING_DOMAINS)) return { tier: "non_recruiting", score: 0.01, domain };
   if (isDomainMatch(domain, FREE_MAIL_DOMAINS)) return { tier: "free_mail", score: 0.15, domain };
   if (isDomainMatch(domain, NOISE_PLATFORM_DOMAINS)) return { tier: "noise_platform", score: 0.05, domain };
   if (isDomainMatch(domain, RECRUITING_PLATFORM_DOMAINS)) return { tier: "recruiting_platform", score: 0.70, domain };

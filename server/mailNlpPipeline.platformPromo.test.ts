@@ -73,6 +73,97 @@ describe("runRecruitingNlpPipeline platform seminar promo", () => {
     expect(r.companyName).toBeNull();
   });
 
+  it("blocks consumer service emails that share vocabulary with recruiting", () => {
+    // Each of these previously slipped into the CSV via deadline/entry/
+    // rejection rules (締切迫る / 予約受付完了 / 抽選結果 / unfortunately).
+    const cases = [
+      {
+        subject: "【最大2ヶ月無料】締切迫る！この機会に再開しませんか？",
+        from: '"chocoZAP" <no-reply@info.chocozap.jp>',
+        body: "chocoZAPへの再入会キャンペーン締切迫る。",
+      },
+      {
+        subject: "[LivePocket-Ticket-]抽選結果のお知らせ（81429487）",
+        from: '"LivePocket-Ticket-" <noreply@livepocket.jp>',
+        body: "抽選結果は残念ながら落選となりました。",
+      },
+      {
+        subject: "[highwaybus.com]予約新規受付報告のお知らせ",
+        from: '"highwaybus.com" <info@highwaybus.com>',
+        body: "ご予約ありがとうございました。予約受付完了しました。",
+      },
+      {
+        subject: "【e+より】支払期限のご案内",
+        from: '"eplus" <info@eplus.co.jp>',
+        body: "お支払い期限が迫っています。",
+      },
+      {
+        subject: "WEST.／UVERworld／Saucy Dog 他 豪華アーティスト公演情報",
+        from: '"ぴあ/音楽" <mail_info@pia.co.jp>',
+        body: "ご縁がなく残念ながら抽選に外れました。",
+      },
+    ];
+    for (const c of cases) {
+      const r = runRecruitingNlpPipeline({
+        ...c,
+        domainSignal: 0.5,
+        fallbackDate: "2026-05-01",
+        fallbackTime: null,
+      });
+      expect(r.isJobRelated, `case=${c.subject}`).toBe(false);
+      expect(r.eventType, `case=${c.subject}`).toBe("other");
+      expect(r.companyName, `case=${c.subject}`).toBeNull();
+      expect(r.reason, `case=${c.subject}`).toMatch(/non-recruiting/);
+    }
+  });
+
+  it("blocks bounce/system sender emails (mailer-daemon, Google Forms receipt)", () => {
+    for (const from of [
+      '"Mail Delivery Subsystem" <mailer-daemon@googlemail.com>',
+      '"Google Forms" <forms-receipts-noreply@google.com>',
+    ]) {
+      const r = runRecruitingNlpPipeline({
+        subject: "Delivery Status Notification (Failure)",
+        from,
+        body: "Unfortunately the message could not be delivered.",
+        domainSignal: 0,
+        fallbackDate: null,
+        fallbackTime: null,
+      });
+      expect(r.isJobRelated, from).toBe(false);
+      expect(r.companyName, from).toBeNull();
+    }
+  });
+
+  it("blocks mynavi part-time-job alert feed (mb-noreply-user@mynavi.jp)", () => {
+    const r = runRecruitingNlpPipeline({
+      subject: "オーケー北赤羽店/パート・アルバイトの求人情報",
+      from: "mb-noreply-user@mynavi.jp",
+      body: "新着の求人情報をお届けします。",
+      domainSignal: 0.5,
+      fallbackDate: "2026-05-01",
+      fallbackTime: null,
+    });
+    expect(r.isJobRelated).toBe(false);
+    expect(r.companyName).toBeNull();
+  });
+
+  it("still classifies real ATS-relay selection emails as job-related", () => {
+    // Regression guard: the new non_recruiting gate must NOT swallow
+    // applicant-management systems (axol / snar / saiyo.jp / miws / hrmos).
+    const r = runRecruitingNlpPipeline({
+      subject: "【株式会社サンプル】一次面接のご案内",
+      from: '"株式会社サンプル 採用担当" <sample@mail.axol.jp>',
+      body: "一次面接の日程調整をお願いします。2026年5月10日 10:00開始予定です。",
+      domainSignal: 0.7,
+      fallbackDate: "2026-05-10",
+      fallbackTime: "10:00",
+    });
+    expect(r.isJobRelated).toBe(true);
+    expect(r.eventType).toBe("interview");
+    expect(r.companyName).toContain("株式会社サンプル");
+  });
+
   it("blocks ITmedia recommended seminar newsletters", () => {
     const r = runRecruitingNlpPipeline({
       subject: "厳選セミナー「AIによる好循環が営業の未来を変える」ほか [おすすめのセミナー情報 2025/03/12]",

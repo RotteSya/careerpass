@@ -110,6 +110,41 @@ describe("extractBestCompanyName", () => {
     expect(r.name).toBeNull();
   });
 
+  it("does not treat generic-noun-only legal entity strings as companies", () => {
+    // From "ＰｗＣ　コンサルティング合同会社" where full-width space splits the
+    // real name from the suffix; the atokabu extractor used to yield the bare
+    // "コンサルティング合同会社".
+    for (const name of [
+      "コンサルティング合同会社",
+      "サービス株式会社",
+      "ソリューションズ株式会社",
+      "グループ株式会社",
+      "ホールディングス株式会社",
+    ]) {
+      const r = extractBestCompanyName(name, "hr@example.co.jp", "");
+      expect(r.name, `name=${name}`).not.toBe(name);
+    }
+  });
+
+  it("rejects marketing bracket fragments as company names", () => {
+    // Titles that showed up as bracket_subject candidates on real recruiting
+    // senders (e.g. 富士薬品, openhouse, mynavi newsletters).
+    for (const subject of [
+      "【まだ参加可能です】インターンシップのご案内",
+      "【就活後半戦】",
+      "【活動状況表示の検索条件】",
+      "【最後】もうすぐ締切です",
+      "【限定特典・10月】",
+      "【日本で唯一の複合型医薬品企業】",
+      "【ワンランク上のインターンシップ】",
+    ]) {
+      const r = extractBestCompanyName(subject, "hr@example.co.jp", "");
+      // The bracket fragment itself must not survive as a company name.
+      const fragment = subject.match(/【([^】]+)】/)?.[1] ?? "";
+      expect(r.name ?? "", `subject=${subject}`).not.toBe(fragment);
+    }
+  });
+
   it("does not return noreply as company", () => {
     const r = extractBestCompanyName(
       "お知らせ",
@@ -402,6 +437,47 @@ describe("getDomainReputation", () => {
   it("handles missing @ in from field", () => {
     const r = getDomainReputation("unknown sender");
     expect(r.tier).toBe("unknown");
+  });
+
+  it("classifies consumer ticketing/ec/transport domains as non_recruiting", () => {
+    for (const from of [
+      '"chocoZAP" <no-reply@info.chocozap.jp>',
+      '"LivePocket-Ticket-" <noreply@livepocket.jp>',
+      '"GRL" <grail@grailnet.jp>',
+      '"highwaybus.com" <info@highwaybus.com>',
+      '"ぴあ/音楽" <mail_info@pia.co.jp>',
+      '"abceed" <no-reply@abceed.com>',
+      '"阪急電鉄" <yoyaku@mail-unyu.hankyu.co.jp>',
+    ]) {
+      const r = getDomainReputation(from);
+      expect(r.tier, `from=${from}`).toBe("non_recruiting");
+    }
+  });
+
+  it("classifies bounce/system senders as non_recruiting regardless of domain", () => {
+    for (const from of [
+      '"Mail Delivery Subsystem" <mailer-daemon@googlemail.com>',
+      "postmaster@example.com",
+      '"Google Forms" <forms-receipts-noreply@google.com>',
+      "mb-noreply-user@mynavi.jp",
+    ]) {
+      const r = getDomainReputation(from);
+      expect(r.tier, `from=${from}`).toBe("non_recruiting");
+    }
+  });
+
+  it("classifies student-mailing subdomains as non_recruiting", () => {
+    const r = getDomainReputation("<ryuugaku@st.ritsumei.ac.jp>");
+    expect(r.tier).toBe("non_recruiting");
+  });
+
+  it("keeps real recruiting platform/ATS domains intact", () => {
+    // Regression guard: the non_recruiting additions must not swallow ATS
+    // relays or interview-scheduling tools.
+    expect(getDomainReputation("info-job@miws.mynavi.jp").tier).toBe("recruiting_platform");
+    expect(getDomainReputation("noreply@receptionist.jp").tier).not.toBe("non_recruiting");
+    expect(getDomainReputation("noreply_web@arorua.net").tier).not.toBe("non_recruiting");
+    expect(getDomainReputation("<xxx@mail.axol.jp>").tier).not.toBe("non_recruiting");
   });
 });
 
