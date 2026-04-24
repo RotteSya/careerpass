@@ -245,6 +245,21 @@ describe("extractTimeCandidates / extractBestDateTime", () => {
     expect(r.date).toBe("2030-06-15");
   });
 
+  it("filters out far-future footer years (e.g. 2099)", () => {
+    const r = extractBestDateTime(
+      "説明会: 2026年5月1日 10:00\n(C) Copyright 2099-01-01 会社",
+    );
+    expect(r.date).toBe("2026-05-01");
+  });
+
+  it("returns null when only far-past candidates are present", () => {
+    // A 2010 date is ~16 years before the JST "today" used in tests; it's
+    // outside the plausibility window and must be discarded rather than
+    // silently returned.
+    const r = extractBestDateTime("過去の実績: 2010-03-15");
+    expect(r.date).toBeNull();
+  });
+
   it("finds multiple candidates and returns highest confidence", () => {
     const candidates = extractTimeCandidates(
       "説明会は2026年5月10日(土) 10:00〜11:00に開催。締切は2026/05/08です。",

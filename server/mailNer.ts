@@ -375,10 +375,35 @@ const NER_TIME_PATTERNS: Array<{ re: RegExp; hasEnd: boolean }> = [
 const EVENT_DATE_CONTEXT =
   /(面接|面談|説明会|セミナー|テスト|試験|締切|期限|日時|開始|集合|開催|実施|予約|interview|test|deadline)/i;
 
+// Japanese recruiting mail dates are written in JST.  Compute "today in JST"
+// regardless of server timezone so that year-rollover and past/future guards
+// behave consistently (e.g. a server in UTC must not treat a JST-Dec-15 email
+// as UTC-Dec-14).
+function nowInJst(): { year: number; month: number; day: number; dateStr: string } {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  // en-CA formats as YYYY-MM-DD.
+  const parts = fmt.format(new Date()).split("-");
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  return { year, month, day, dateStr: `${parts[0]}-${parts[1]}-${parts[2]}` };
+}
+
+// Reasonable bounds for recruiting-email dates.  Candidates outside this
+// window are almost always OCR/regex noise (e.g. "2099-05-01" from a
+// footer, or an old "2010-xx-xx" archived in quoted text).
+const MAX_DATE_PAST_YEARS = 3;
+const MAX_DATE_FUTURE_YEARS = 5;
+
 export function extractTimeCandidates(text: string): TimeCandidate[] {
   text = limitText(text ?? "", MAX_MAIL_TEXT_CHARS).text;
   const candidates: TimeCandidate[] = [];
-  const now = new Date();
+  const jstNow = nowInJst();
 
   // 1. Absolute Dates
   for (const dp of NER_DATE_PATTERNS) {
@@ -393,9 +418,15 @@ export function extractTimeCandidates(text: string): TimeCandidate[] {
       } else {
         month = parseInt(m[1]);
         day = parseInt(m[2]);
-        year = now.getFullYear();
-        const candidate = new Date(year, month - 1, day);
-        if (candidate < new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)) {
+        year = jstNow.year;
+        // Year-rollover heuristic (month-only dates): if the resulting date
+        // is more than a week in the JST past, assume the writer meant the
+        // next calendar year.  Compared in YYYY-MM-DD string form to avoid
+        // local-timezone drift.
+        const candidateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const cutoff = new Date(Date.UTC(jstNow.year, jstNow.month - 1, jstNow.day - 7));
+        const cutoffStr = `${cutoff.getUTCFullYear()}-${String(cutoff.getUTCMonth() + 1).padStart(2, "0")}-${String(cutoff.getUTCDate()).padStart(2, "0")}`;
+        if (candidateStr < cutoffStr) {
           year += 1;
         }
       }
@@ -434,8 +465,10 @@ export function extractTimeCandidates(text: string): TimeCandidate[] {
     rdp.re.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = rdp.re.exec(text)) !== null) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + rdp.offsetDays);
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      // Offset JST today by the relative term (本日/明日/明後日) in UTC math
+      // to avoid a DST-free but still-possible cross-day mismatch.
+      const d = new Date(Date.UTC(jstNow.year, jstNow.month - 1, jstNow.day + rdp.offsetDays));
+      const dateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 
       const afterDate = text.slice(m.index + m[0].length, m.index + m[0].length + 60);
       let time: string | null = null;
@@ -483,12 +516,22 @@ export function extractBestDateTime(text: string): {
   endTime: string | null;
 } {
   text = limitText(text ?? "", MAX_MAIL_TEXT_CHARS).text;
-  const candidates = extractTimeCandidates(text);
+  const rawCandidates = extractTimeCandidates(text);
+  if (rawCandidates.length === 0) return { date: null, time: null, endTime: null };
+
+  const jstNow = nowInJst();
+  const minYear = jstNow.year - MAX_DATE_PAST_YEARS;
+  const maxYear = jstNow.year + MAX_DATE_FUTURE_YEARS;
+  // Filter out candidates whose year is outside the recruiting-email plausibility
+  // window (catches footer years like "2099" and quoted-email dates from years
+  // ago). The sanity check inspects the YYYY prefix of the canonical dateStr.
+  const candidates = rawCandidates.filter((c) => {
+    const y = parseInt(c.date.slice(0, 4), 10);
+    return y >= minYear && y <= maxYear;
+  });
   if (candidates.length === 0) return { date: null, time: null, endTime: null };
 
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const future = candidates.filter((c) => c.date >= todayStr);
+  const future = candidates.filter((c) => c.date >= jstNow.dateStr);
   const best = future.length > 0 ? future[0] : candidates[0];
 
   return { date: best.date, time: best.time, endTime: best.endTime };
