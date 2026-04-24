@@ -25,6 +25,8 @@ import {
   upsertOauthProviderAccount,
   trackCompanyForBilling,
   createJobApplication,
+  getCalendarEventSync,
+  upsertCalendarEventSync,
 } from "./db";
 
 import { invokeLLM } from "./_core/llm";
@@ -32,6 +34,7 @@ import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import { createCompanyBatchDeduper, sortMailItemsByTsAsc } from "./gmail_dedup";
 import { sendTelegramMessage } from "./telegramMessaging";
 import { dispatchNotification } from "./_core/messaging";
+import { enqueueGmailJob } from "./gmailJobQueue";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
 import { resolveCanonicalCompanyName, normalizeCompanyKey } from "./companyName";
 import { getDomainReputation, extractBestDateTime } from "./mailNer";
@@ -233,10 +236,40 @@ export async function ensureGoogleProviderAccountMapping(
   return true;
 }
 
+const FIRST_FULL_SCAN_DAYS = 30;
+const BACKGROUND_OLDER_MAIL_BATCH_SIZE = 100;
+
+async function fetchInboxMessageIdPage(params: {
+  accessToken: string;
+  q: string;
+  maxResults: number;
+  pageToken?: string;
+}): Promise<{ messageIds: string[]; nextPageToken: string | null }> {
+  const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+  url.searchParams.set("maxResults", String(params.maxResults));
+  url.searchParams.set("q", params.q);
+  if (params.pageToken) url.searchParams.set("pageToken", params.pageToken);
+
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${params.accessToken}` },
+  });
+  if (!res.ok) return { messageIds: [], nextPageToken: null };
+
+  const data = (await res.json()) as {
+    messages?: Array<{ id: string }>;
+    nextPageToken?: string;
+  };
+  return {
+    messageIds: (data.messages ?? []).map((m) => m.id).filter(Boolean),
+    nextPageToken: data.nextPageToken ?? null,
+  };
+}
+
 async function fetchInboxMessageIds(params: {
   accessToken: string;
   fullMailbox: boolean;
   maxResults: number | null;
+  query?: string;
 }): Promise<string[]> {
   const { accessToken, fullMailbox, maxResults } = params;
   try {
@@ -246,33 +279,24 @@ async function fetchInboxMessageIds(params: {
     const pageSize = fullMailbox ? 500 : Math.min(Math.max(recentCap, 1), 100);
 
     // Broad pull (without hard keyword gate). Actual job-related decision is delegated to monitor agent.
-    // First full scan removes time window so we can reconstruct the board from the entire inbox.
-    const q = fullMailbox
-      ? "-category:social -category:promotions"
-      : "newer_than:5d -category:social -category:promotions";
+    // First bootstrap scan is capped to recent mail; older mail is backfilled in batches.
+    const q = params.query ?? (fullMailbox
+      ? `newer_than:${FIRST_FULL_SCAN_DAYS}d -category:social -category:promotions`
+      : "newer_than:5d -category:social -category:promotions");
 
     while (maxResults === null || messageIds.length < maxResults) {
-      const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
-      url.searchParams.set("maxResults", String(pageSize));
-      url.searchParams.set("q", q);
-      if (pageToken) url.searchParams.set("pageToken", pageToken);
-
-      const res = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      const page = await fetchInboxMessageIdPage({
+        accessToken,
+        q,
+        maxResults: pageSize,
+        pageToken,
       });
-      if (!res.ok) return messageIds;
-
-      const data = (await res.json()) as {
-        messages?: Array<{ id: string }>;
-        nextPageToken?: string;
-      };
-      for (const m of data.messages ?? []) {
-        if (!m.id) continue;
-        messageIds.push(m.id);
+      for (const id of page.messageIds) {
+        messageIds.push(id);
         if (maxResults !== null && messageIds.length >= maxResults) break;
       }
-      if (!data.nextPageToken || !fullMailbox) break;
-      pageToken = data.nextPageToken;
+      if (!page.nextPageToken || !fullMailbox) break;
+      pageToken = page.nextPageToken;
     }
 
     return messageIds;
@@ -915,8 +939,6 @@ async function runCareerpassmailAgent(input: {
   });
   if (preflight.shouldSkipLlm) {
     console.info("[careerpassmail] preflight-skip-llm", {
-      from: input.from.slice(0, 120),
-      subject: input.subject.slice(0, 120),
       reason: preflight.reason,
       eventType: preflight.eventType,
       companyName: preflight.companyName,
@@ -1136,7 +1158,7 @@ async function reportToCareerpassAgent(userId: number, event: EmailEvent, reason
 async function writeToGoogleCalendar(
   accessToken: string,
   event: CalendarEvent
-): Promise<boolean> {
+): Promise<string | null> {
   try {
     const res = await fetch(
       "https://www.googleapis.com/calendar/v3/calendars/primary/events",
@@ -1149,9 +1171,11 @@ async function writeToGoogleCalendar(
         body: JSON.stringify(event),
       }
     );
-    return res.ok;
+    if (!res.ok) return null;
+    const data = (await res.json()) as { id?: string };
+    return data.id ?? null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -1302,6 +1326,7 @@ async function processGmailMessageIds(params: {
   messageIds: string[];
   notifyWindowDays?: number;
   suppressTelegramItemNotifications: boolean;
+  suppressCalendarFailureNotifications?: boolean;
   enableAutoBoardWrite: boolean;
 }): Promise<MonitorResult> {
   const {
@@ -1311,6 +1336,7 @@ async function processGmailMessageIds(params: {
     messageIds,
     notifyWindowDays,
     suppressTelegramItemNotifications = false,
+    suppressCalendarFailureNotifications = false,
     enableAutoBoardWrite = true,
   } = params;
   const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
@@ -1479,8 +1505,6 @@ async function processGmailMessageIds(params: {
         console.info("[Gmail] analyze-drop", {
           userId,
           messageId,
-          subject: detail.subject.slice(0, 120),
-          from: detail.from.slice(0, 120),
           isJobRelated: decision.isJobRelated,
           companyName,
           reason: decision.reason,
@@ -1516,8 +1540,6 @@ async function processGmailMessageIds(params: {
         console.info("[Gmail] board-write-skip", {
           userId,
           messageId,
-          subject: detail.subject.slice(0, 120),
-          from: detail.from.slice(0, 120),
           companyName,
           eventType,
           rawEventType,
@@ -1628,6 +1650,15 @@ async function processGmailMessageIds(params: {
       }
 
       if (date && CALENDAR_WRITABLE_TYPES.includes(eventType)) {
+        const existingCalendarSync = await getCalendarEventSync({
+          userId,
+          provider: "google",
+          mailMessageId: messageId,
+        });
+        if (existingCalendarSync) {
+          continue;
+        }
+
         const startDateTime = time ? `${date}T${time}:00` : `${date}T09:00:00`;
         const endDateTime = time
           ? `${date}T${String(parseInt(time.split(":")[0]) + 1).padStart(2, "0")}:${time.split(":")[1]}:00`
@@ -1663,10 +1694,16 @@ async function processGmailMessageIds(params: {
           colorId,
         };
 
-        const written = await writeToGoogleCalendar(accessToken, calEvent);
-        if (written) {
+        const calendarEventId = await writeToGoogleCalendar(accessToken, calEvent);
+        if (calendarEventId) {
+          await upsertCalendarEventSync({
+            userId,
+            provider: "google",
+            mailMessageId: messageId,
+            calendarEventId,
+          });
           calendarCount++;
-        } else {
+        } else if (!suppressCalendarFailureNotifications) {
           await dispatchNotification({
             userId,
             body: `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`,
@@ -1697,6 +1734,65 @@ async function processGmailMessageIds(params: {
     calendarEvents: calendarCount,
     events: detectedEvents,
   };
+}
+
+function startOlderMailboxBackfill(params: {
+  userId: number;
+  enableAutoBoardWrite: boolean;
+}): void {
+  void enqueueGmailJob(
+    {
+      name: "older-mailbox-backfill",
+      userId: params.userId,
+      dedupeKey: `older-mailbox-backfill:${params.userId}`,
+    },
+    async () => {
+      let pageToken: string | undefined;
+      let batch = 0;
+      const q = `older_than:${FIRST_FULL_SCAN_DAYS}d -category:social -category:promotions`;
+
+      try {
+        while (true) {
+          const accessToken = await getValidAccessToken(params.userId);
+          if (!accessToken) return;
+
+          const page = await fetchInboxMessageIdPage({
+            accessToken,
+            q,
+            maxResults: BACKGROUND_OLDER_MAIL_BATCH_SIZE,
+            pageToken,
+          });
+          if (page.messageIds.length === 0) return;
+
+          batch++;
+          const result = await processGmailMessageIds({
+            userId: params.userId,
+            accessToken,
+            messageIds: page.messageIds,
+            suppressTelegramItemNotifications: true,
+            suppressCalendarFailureNotifications: true,
+            enableAutoBoardWrite: params.enableAutoBoardWrite,
+          });
+          console.log("[Gmail] Older mailbox backfill batch processed:", {
+            userId: params.userId,
+            batch,
+            scanned: result.scanned,
+            detected: result.detected,
+            calendarEvents: result.calendarEvents,
+          });
+
+          if (!page.nextPageToken) return;
+          pageToken = page.nextPageToken;
+        }
+      } catch (err) {
+        console.error("[Gmail] Older mailbox backfill failed:", {
+          userId: params.userId,
+          batch,
+          err,
+        });
+      }
+    }
+  );
 }
 
 export async function monitorGmailAndSync(
@@ -1739,6 +1835,13 @@ export async function monitorGmailAndSync(
     if (profileHistoryId) {
       await updateGoogleLastHistoryIdIfNewer(userId, profileHistoryId);
     }
+  }
+
+  if (fullMailboxScan) {
+    startOlderMailboxBackfill({
+      userId,
+      enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
+    });
   }
 
   return result;

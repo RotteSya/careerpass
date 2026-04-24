@@ -423,8 +423,9 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const prev = (await getJobApplications(ctx.user.id)).find(j => j.id === input.id)?.status ?? null;
-        const target = (await getJobApplications(ctx.user.id)).find(j => j.id === input.id);
+        const jobs = await getJobApplications(ctx.user.id);
+        const target = jobs.find(j => j.id === input.id);
+        const prev = target?.status ?? null;
         await updateJobApplicationStatus(input.id, ctx.user.id, input.status);
         await createJobStatusEvent({
           userId: ctx.user.id,

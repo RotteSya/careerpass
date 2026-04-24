@@ -1,9 +1,11 @@
 import {
   int,
+  index,
   mysqlEnum,
   mysqlTable,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
   boolean,
   json,
@@ -72,6 +74,10 @@ export const oauthTokens = mysqlTable("oauth_tokens", {
   scope: text("scope"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => {
+  return {
+    userProviderUnique: uniqueIndex("oauth_tokens_user_provider_unique").on(table.userId, table.provider),
+  };
 });
 
 export type OauthToken = typeof oauthTokens.$inferSelect;
@@ -87,6 +93,11 @@ export const oauthProviderAccounts = mysqlTable("oauth_provider_accounts", {
   watchExpiration: timestamp("watchExpiration"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => {
+  return {
+    userProviderUnique: uniqueIndex("oauth_provider_accounts_user_provider_unique").on(table.userId, table.provider),
+    providerEmailUnique: uniqueIndex("oauth_provider_accounts_provider_email_unique").on(table.provider, table.accountEmail),
+  };
 });
 
 export type OauthProviderAccount = typeof oauthProviderAccounts.$inferSelect;
@@ -164,6 +175,11 @@ export const jobApplications = mysqlTable("job_applications", {
   nextActionAt: timestamp("nextActionAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => {
+  return {
+    userUpdatedIdx: index("job_applications_user_updated_idx").on(table.userId, table.updatedAt),
+    userCompanyIdx: index("job_applications_user_company_idx").on(table.userId, table.companyNameJa),
+  };
 });
 
 export type JobApplication = typeof jobApplications.$inferSelect;
@@ -182,6 +198,11 @@ export const jobStatusEvents = mysqlTable("job_status_events", {
   mailSnippet: text("mailSnippet"),
   reason: text("reason"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => {
+  return {
+    userJobCreatedIdx: index("job_status_events_user_job_created_idx").on(table.userId, table.jobApplicationId, table.createdAt),
+    userMailMessageUnique: uniqueIndex("job_status_events_user_mail_message_unique").on(table.userId, table.mailMessageId),
+  };
 });
 
 export type JobStatusEvent = typeof jobStatusEvents.$inferSelect;
@@ -253,10 +274,32 @@ export const billingCompanyLedger = mysqlTable("billing_company_ledger", {
   firstSeenAt: timestamp("firstSeenAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => {
+  return {
+    userCompanyUnique: uniqueIndex("billing_company_ledger_user_company_unique").on(table.userId, table.companyKey),
+    userFirstSeenIdx: index("billing_company_ledger_user_first_seen_idx").on(table.userId, table.firstSeenAt),
+  };
 });
 
 export type BillingCompanyLedger = typeof billingCompanyLedger.$inferSelect;
 export type InsertBillingCompanyLedger = typeof billingCompanyLedger.$inferInsert;
+
+export const calendarEventSyncs = mysqlTable("calendar_event_syncs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
+  mailMessageId: varchar("mailMessageId", { length: 128 }).notNull(),
+  calendarEventId: varchar("calendarEventId", { length: 256 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => {
+  return {
+    userProviderMessageUnique: uniqueIndex("calendar_event_syncs_user_provider_message_unique").on(table.userId, table.provider, table.mailMessageId),
+  };
+});
+
+export type CalendarEventSync = typeof calendarEventSyncs.$inferSelect;
+export type InsertCalendarEventSync = typeof calendarEventSyncs.$inferInsert;
 
 export const billingNotifications = mysqlTable("billing_notifications", {
   id: int("id").autoincrement().primaryKey(),

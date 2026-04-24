@@ -19,6 +19,17 @@ function hasBypassCookie(req: { headers?: Record<string, any> }): boolean {
   return cookies[BYPASS_COOKIE_NAME] === "1";
 }
 
+function getSubmittedToken(req: any): string {
+  const header = req.headers?.["x-staff-bypass-token"];
+  if (typeof header === "string") return header.trim();
+  if (Array.isArray(header) && typeof header[0] === "string") return header[0].trim();
+  if (typeof req.body?.token === "string") return req.body.token.trim();
+  if (process.env.NODE_ENV !== "production" && typeof req.query?.token === "string") {
+    return req.query.token.trim();
+  }
+  return "";
+}
+
 export function handleBypassStatus(req: any, res: any) {
   res.setHeader("Cache-Control", "no-store");
   res.status(200).json({ bypassed: hasBypassCookie(req) });
@@ -31,7 +42,7 @@ export function handleBypassEnable(req: any, res: any) {
     return;
   }
 
-  const token = typeof req.query?.token === "string" ? req.query.token : "";
+  const token = getSubmittedToken(req);
   if (!token || token !== expected) {
     res.status(401).end();
     return;
@@ -66,6 +77,7 @@ internalBypassRouter.use(
   })
 );
 internalBypassRouter.get("/", handleBypassEnable);
+internalBypassRouter.post("/", handleBypassEnable);
 internalBypassRouter.get("/status", handleBypassStatus);
 internalBypassRouter.get("/logout", handleBypassLogout);
 internalBypassRouter.post("/logout", handleBypassLogout);

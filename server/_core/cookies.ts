@@ -43,6 +43,6 @@ export function getSessionCookieOptions(
     httpOnly: true,
     path: "/",
     sameSite: "none",
-    secure: isSecureRequest(req),
+    secure: process.env.NODE_ENV === "production" ? true : isSecureRequest(req),
   };
 }

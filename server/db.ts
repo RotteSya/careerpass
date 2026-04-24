@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, inArray, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -21,6 +21,8 @@ import {
   billingAccounts,
   billingCompanyLedger,
   billingNotifications,
+  calendarEventSyncs,
+  InsertCalendarEventSync,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
@@ -279,25 +281,23 @@ export async function trackCompanyForBilling(params: {
   if (!companyName) return;
   const companyKey = normalizeCompanyKeyForBilling(companyName);
 
-  const existing = await db
-    .select({ id: billingCompanyLedger.id })
-    .from(billingCompanyLedger)
-    .where(and(eq(billingCompanyLedger.userId, params.userId), eq(billingCompanyLedger.companyKey, companyKey)))
-    .limit(1);
-  if (existing[0]) return;
-
   const occurredAt = params.occurredAt ?? new Date();
   const status = (params.firstStatus ?? "").toLowerCase();
   const terminal = status === "offer" || status === "rejected" || status === "withdrawn";
   const countable = !(terminal && occurredAt < account.cycleStartedAt);
-  await db.insert(billingCompanyLedger).values({
-    userId: params.userId,
-    companyKey,
-    companyName,
-    firstStatus: params.firstStatus ?? null,
-    firstSeenAt: occurredAt,
-    countable,
-  });
+  await db
+    .insert(billingCompanyLedger)
+    .values({
+      userId: params.userId,
+      companyKey,
+      companyName,
+      firstStatus: params.firstStatus ?? null,
+      firstSeenAt: occurredAt,
+      countable,
+    })
+    .onDuplicateKeyUpdate({
+      set: { updatedAt: new Date() },
+    });
 }
 
 export async function getBillingNotificationState(userId: number) {
@@ -337,15 +337,54 @@ export async function markBillingNotificationSent(
     });
 }
 
+export async function getCalendarEventSync(params: {
+  userId: number;
+  provider: "google" | "outlook";
+  mailMessageId: string;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(calendarEventSyncs)
+    .where(
+      and(
+        eq(calendarEventSyncs.userId, params.userId),
+        eq(calendarEventSyncs.provider, params.provider),
+        eq(calendarEventSyncs.mailMessageId, params.mailMessageId)
+      )
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function upsertCalendarEventSync(sync: InsertCalendarEventSync) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .insert(calendarEventSyncs)
+    .values(sync)
+    .onDuplicateKeyUpdate({
+      set: {
+        calendarEventId: sync.calendarEventId,
+        updatedAt: new Date(),
+      },
+    });
+}
+
 // ─── OAuth Tokens ──────────────────────────────────────────────────────────
 export async function upsertOauthToken(token: InsertOauthToken) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  // Delete existing token for this user+provider, then insert fresh
-  await db
-    .delete(oauthTokens)
-    .where(and(eq(oauthTokens.userId, token.userId), eq(oauthTokens.provider, token.provider)));
-  await db.insert(oauthTokens).values(token);
+  await db.insert(oauthTokens).values(token).onDuplicateKeyUpdate({
+    set: {
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken ?? null,
+      expiresAt: token.expiresAt ?? null,
+      scope: token.scope ?? null,
+      updatedAt: new Date(),
+    },
+  });
 }
 
 export async function getOauthToken(userId: number, provider: "google" | "outlook") {
@@ -412,27 +451,20 @@ export async function upsertOauthProviderAccount(params: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const normalizedEmail = params.accountEmail.trim().toLowerCase();
-
-  const existing = await db
-    .select({
-      lastHistoryId: oauthProviderAccounts.lastHistoryId,
-      watchExpiration: oauthProviderAccounts.watchExpiration,
-    })
-    .from(oauthProviderAccounts)
-    .where(and(eq(oauthProviderAccounts.provider, params.provider), eq(oauthProviderAccounts.userId, params.userId)))
-    .limit(1);
-
   await db
-    .delete(oauthProviderAccounts)
-    .where(and(eq(oauthProviderAccounts.provider, params.provider), eq(oauthProviderAccounts.userId, params.userId)));
-
-  await db.insert(oauthProviderAccounts).values({
-    userId: params.userId,
-    provider: params.provider,
-    accountEmail: normalizedEmail,
-    lastHistoryId: existing[0]?.lastHistoryId ?? null,
-    watchExpiration: existing[0]?.watchExpiration ?? null,
-  });
+    .insert(oauthProviderAccounts)
+    .values({
+      userId: params.userId,
+      provider: params.provider,
+      accountEmail: normalizedEmail,
+    })
+    .onDuplicateKeyUpdate({
+      set: {
+        userId: params.userId,
+        accountEmail: normalizedEmail,
+        updatedAt: new Date(),
+      },
+    });
 }
 
 export async function getUserIdByOauthProviderAccount(
@@ -561,9 +593,18 @@ export async function createTelegramBinding(binding: InsertTelegramBinding) {
 export async function getJobApplications(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  
-  // Join with the latest jobStatusEvent to attach mail details for debugging/CSV
-  const jobs = await db
+
+  const latestEventIds = db
+    .select({
+      jobApplicationId: jobStatusEvents.jobApplicationId,
+      latestId: sql<number>`max(${jobStatusEvents.id})`.as("latestId"),
+    })
+    .from(jobStatusEvents)
+    .where(eq(jobStatusEvents.userId, userId))
+    .groupBy(jobStatusEvents.jobApplicationId)
+    .as("latest_event_ids");
+
+  const rows = await db
     .select({
       job: jobApplications,
       latestEvent: {
@@ -574,22 +615,17 @@ export async function getJobApplications(userId: number) {
     })
     .from(jobApplications)
     .leftJoin(
+      latestEventIds,
+      eq(jobApplications.id, latestEventIds.jobApplicationId)
+    )
+    .leftJoin(
       jobStatusEvents,
-      eq(jobApplications.id, jobStatusEvents.jobApplicationId)
+      eq(jobStatusEvents.id, latestEventIds.latestId)
     )
     .where(eq(jobApplications.userId, userId))
-    .orderBy(desc(jobApplications.updatedAt), desc(jobStatusEvents.id));
+    .orderBy(desc(jobApplications.updatedAt));
 
-  // Deduplicate by job id to keep only the latest event
-  const dedupedMap = new Map<number, typeof jobs[0]>();
-  for (const row of jobs) {
-    if (!dedupedMap.has(row.job.id)) {
-      dedupedMap.set(row.job.id, row);
-    }
-  }
-
-  // Flatten back to a single object per job, appending event info
-  return Array.from(dedupedMap.values()).map(row => ({
+  return rows.map(row => ({
     ...row.job,
     _latestMailSubject: row.latestEvent?.mailSubject ?? null,
     _latestMailFrom: row.latestEvent?.mailFrom ?? null,
@@ -648,7 +684,20 @@ export async function updateJobApplicationDetails(
 export async function createJobStatusEvent(event: InsertJobStatusEvent) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(jobStatusEvents).values(event);
+  await db
+    .insert(jobStatusEvents)
+    .values(event)
+    .onDuplicateKeyUpdate({
+      set: {
+        jobApplicationId: event.jobApplicationId ?? null,
+        prevStatus: event.prevStatus ?? null,
+        nextStatus: event.nextStatus ?? null,
+        mailFrom: event.mailFrom ?? null,
+        mailSubject: event.mailSubject ?? null,
+        mailSnippet: event.mailSnippet ?? null,
+        reason: event.reason ?? null,
+      },
+    });
 }
 
 export async function listJobStatusEvents(userId: number, jobApplicationId: number, limit = 20) {
@@ -660,6 +709,27 @@ export async function listJobStatusEvents(userId: number, jobApplicationId: numb
     .where(and(eq(jobStatusEvents.userId, userId), eq(jobStatusEvents.jobApplicationId, jobApplicationId)))
     .orderBy(desc(jobStatusEvents.createdAt))
     .limit(limit);
+}
+
+export async function listLatestJobStatusEventTimes(userId: number): Promise<Map<number, Date>> {
+  const db = await getDb();
+  if (!db) return new Map();
+  const rows = await db
+    .select({
+      jobApplicationId: jobStatusEvents.jobApplicationId,
+      latestCreatedAt: sql<Date>`max(${jobStatusEvents.createdAt})`.as("latestCreatedAt"),
+    })
+    .from(jobStatusEvents)
+    .where(eq(jobStatusEvents.userId, userId))
+    .groupBy(jobStatusEvents.jobApplicationId);
+
+  const result = new Map<number, Date>();
+  for (const row of rows) {
+    if (typeof row.jobApplicationId === "number" && row.latestCreatedAt) {
+      result.set(row.jobApplicationId, row.latestCreatedAt);
+    }
+  }
+  return result;
 }
 
 // ─── Messaging Bindings ────────────────────────────────────────────────────

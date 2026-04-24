@@ -79,6 +79,15 @@ describe("internal bypass", () => {
     expect(res.cookiesSet[0].value).toBe("1");
   });
 
+  it("enable accepts token from header", () => {
+    process.env.STAFF_BYPASS_TOKEN = "t1";
+    const req: any = { query: {}, headers: { "x-staff-bypass-token": "t1" }, method: "POST" };
+    const res = createRes();
+    handleBypassEnable(req, res);
+    expect(res.statusCode).toBe(302);
+    expect(res.cookiesSet[0].name).toBe(BYPASS_COOKIE_NAME);
+  });
+
   it("status returns bypassed=true with cookie", () => {
     const req: any = { headers: { cookie: `${BYPASS_COOKIE_NAME}=1` }, method: "GET" };
     const res = createRes();
@@ -96,4 +105,3 @@ describe("internal bypass", () => {
     expect(res.cookiesCleared[0].name).toBe(BYPASS_COOKIE_NAME);
   });
 });
-

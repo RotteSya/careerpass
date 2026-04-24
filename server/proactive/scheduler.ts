@@ -1,4 +1,4 @@
-import { getUserById, getJobApplications, getActiveMessagingBinding, listJobStatusEvents } from "../db";
+import { getUserById, getJobApplications, getActiveMessagingBinding, listLatestJobStatusEventTimes } from "../db";
 import { dispatchNotification } from "../_core/messaging";
 import { evaluateAllRules } from "./rules";
 import type { ProactiveNudge, UserJobContext, NudgeCategory } from "./types";
@@ -45,10 +45,9 @@ export async function runProactiveCheckForUser(userId: number): Promise<Proactiv
     now: new Date(),
   };
 
-  // Enrich with last status event times
+  const latestStatusEventTimes = await listLatestJobStatusEventTimes(userId);
   for (const app of context.applications) {
-    const events = await listJobStatusEvents(userId, app.id, 1);
-    app.lastStatusEventAt = events[0]?.createdAt ?? app.updatedAt;
+    app.lastStatusEventAt = latestStatusEventTimes.get(app.id) ?? app.updatedAt;
   }
 
   const nudges = evaluateAllRules(context).filter(

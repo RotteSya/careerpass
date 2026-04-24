@@ -40,6 +40,31 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>
+): Promise<PromiseSettledResult<R>[]> {
+  const limit = Math.max(1, Math.floor(concurrency));
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let cursor = 0;
+
+  const run = async () => {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= items.length) return;
+      try {
+        results[idx] = { status: "fulfilled", value: await worker(items[idx]) };
+      } catch (reason) {
+        results[idx] = { status: "rejected", reason };
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => run()));
+  return results;
+}
+
 async function startServer() {
   // Register messaging channel dispatchers
   registerDispatcher(new TelegramDispatcher());
@@ -76,7 +101,8 @@ async function startServer() {
   if (gmailTopic) {
     listUserIdsByOauthProvider("google")
       .then(async userIds => {
-        const results = await Promise.allSettled(userIds.map(userId => registerGmailPushWatch(userId)));
+        const concurrency = Number.parseInt(process.env.GMAIL_WATCH_RENEWAL_CONCURRENCY ?? "3", 10);
+        const results = await mapWithConcurrency(userIds, concurrency, userId => registerGmailPushWatch(userId));
         const okCount = results.filter(
           (r): r is PromiseFulfilledResult<boolean> => r.status === "fulfilled" && r.value === true
         ).length;

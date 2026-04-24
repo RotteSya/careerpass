@@ -31,7 +31,7 @@ export async function sendTelegramMessage(
     const errText = await res.text();
     console.error("[Telegram] sendMessage failed:", {
       status: res.status,
-      body: errText,
+      bodyPreview: errText.slice(0, 160),
       parseMode,
     });
 
@@ -48,7 +48,7 @@ export async function sendTelegramMessage(
       const fallbackErrText = await fallbackRes.text();
       console.error("[Telegram] sendMessage fallback failed:", {
         status: fallbackRes.status,
-        body: fallbackErrText,
+        bodyPreview: fallbackErrText.slice(0, 160),
       });
     }
 

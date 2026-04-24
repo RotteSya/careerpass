@@ -1,5 +1,6 @@
 import { getBillingFeatureAccess, getOauthToken } from "./db";
 import { monitorGmailAndSync, registerGmailPushWatch } from "./gmail";
+import { enqueueGmailJob } from "./gmailJobQueue";
 import type { MonitorResult } from "./gmail";
 
 const POST_SCAN_SUPPRESS_MS = 2 * 60 * 1000;
@@ -99,25 +100,32 @@ export function startBackgroundMailScan(
   // Don't start a duplicate scan
   if (backgroundScans.has(userId)) return;
 
-  const promise = (async (): Promise<MonitorResult | null> => {
-    try {
-      const access = await getBillingFeatureAccess(userId);
-      if (!access.autoMonitoringEnabled) return null;
+  const promise = enqueueGmailJob(
+    {
+      name: "background-mail-scan",
+      userId,
+      dedupeKey: `background-mail-scan:${userId}`,
+    },
+    async (): Promise<MonitorResult | null> => {
+      try {
+        const access = await getBillingFeatureAccess(userId);
+        if (!access.autoMonitoringEnabled) return null;
 
-      const token = await getOauthToken(userId, "google");
-      if (!token) return null;
+        const token = await getOauthToken(userId, "google");
+        if (!token) return null;
 
-      // Run without telegramChatId — we only want classification + board/calendar
-      // writes.  Telegram notifications will be sent separately after the greeting.
-      return await monitorGmailAndSync(userId, undefined, {
-        enableAutoBoardWrite: access.autoBoardWriteEnabled,
-        ...(options?.forceFullMailboxScan ? { fullMailboxScan: true } : {}),
-      });
-    } catch (err) {
-      console.error("[BackgroundScan] Failed for user", userId, err);
-      return null;
+        // Run without telegramChatId — we only want classification + board/calendar
+        // writes.  Telegram notifications will be sent separately after the greeting.
+        return await monitorGmailAndSync(userId, undefined, {
+          enableAutoBoardWrite: access.autoBoardWriteEnabled,
+          ...(options?.forceFullMailboxScan ? { fullMailboxScan: true } : {}),
+        });
+      } catch (err) {
+        console.error("[BackgroundScan] Failed for user", userId, err);
+        return null;
+      }
     }
-  })();
+  );
 
   backgroundScans.set(userId, { promise, startedAt: Date.now() });
   console.log(`[BackgroundScan] Started for user ${userId}`);

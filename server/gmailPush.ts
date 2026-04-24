@@ -121,7 +121,7 @@ gmailPushRouter.post("/push", async (req, res) => {
       const mappedUserId = await getUserIdByOauthProviderAccount("google", emailAddress);
       const user = mappedUserId ? { id: mappedUserId } : await getUserByEmail(emailAddress);
       if (!user?.id) {
-        console.warn("[GmailPush] No user bound to email:", emailAddress);
+        console.warn("[GmailPush] No user bound to push payload email.");
         return;
       }
 
@@ -140,7 +140,6 @@ gmailPushRouter.post("/push", async (req, res) => {
             });
         console.log("[GmailPush] Processed:", {
           userId: user.id,
-          emailAddress,
           historyId: endHistoryId ?? null,
           mode: endHistoryId ? "incremental" : "fallback-scan",
           suppressTelegramItemNotifications,

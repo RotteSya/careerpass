@@ -62,7 +62,7 @@ export function registerCalendarOAuthRoute(app: Express) {
     }
 
     if (!code || !state) {
-      console.error("[CalendarOAuth] Missing code or state. query:", req.query);
+      console.error("[CalendarOAuth] Missing code or state.");
       return res.redirect(`${appDomain}/dashboard?calendar=error&reason=missing_code`);
     }
 
@@ -106,7 +106,7 @@ export function registerCalendarOAuthRoute(app: Express) {
       console.log(`[CalendarOAuth] Google calendar linked for user ${stateData.userId}`);
       return res.redirect(`${appDomain}/dashboard?calendar=success`);
     } catch (e) {
-      console.error("[CalendarOAuth] Token exchange error:", e);
+      console.error("[CalendarOAuth] Token exchange error:", e instanceof Error ? e.message : String(e));
       const reason = encodeURIComponent((e as Error).message ?? "token_exchange_failed");
       return res.redirect(`${appDomain}/dashboard?calendar=error&reason=${reason}`);
     }

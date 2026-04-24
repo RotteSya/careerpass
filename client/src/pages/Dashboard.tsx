@@ -47,6 +47,13 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import confetti from "canvas-confetti";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "../../../server/routers";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type JobApplication = RouterOutputs["jobs"]["list"][number];
+type JobStatusEvent = RouterOutputs["jobs"]["listStatusEvents"][number];
+type RecentCalendarEvent = RouterOutputs["calendar"]["listRecentAutoEvents"]["events"][number];
 
 const navItems = [
   { icon: User, label: "个人中心", path: "/dashboard/profile" },
@@ -58,6 +65,7 @@ export default function Dashboard() {
   const [currentPath, navigate] = useLocation();
   const pathOnly = currentPath.split("?")[0] ?? currentPath;
   const isCalendarPage = pathOnly === "/dashboard/calendar";
+  const pageVisible = usePageVisible();
   const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
   const [companyQuery, setCompanyQuery] = useState("");
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
@@ -85,9 +93,15 @@ export default function Dashboard() {
     retry: false,
   });
 
-  const { data: telegramStatus, refetch: refetchTelegram } = trpc.telegram.getBindingStatus.useQuery(
+  const { data: telegramStatus } = trpc.telegram.getBindingStatus.useQuery(
     undefined,
-    { enabled: isAuthenticated }
+    {
+      enabled: isAuthenticated,
+      refetchInterval: (query) => {
+        const bound = query.state.data?.bound;
+        return isAuthenticated && pageVisible && !bound ? 5000 : false;
+      },
+    }
   );
 
   const { data: telegramDeepLink } = trpc.telegram.getDeepLink.useQuery(undefined, {
@@ -110,8 +124,8 @@ export default function Dashboard() {
       refetchJobs();
       refetchStatusEvents();
     },
-    onError: (err: any) => {
-      toast.error(`更新失败: ${err.message}`);
+    onError: (err: unknown) => {
+      toast.error(`更新失败: ${getErrorMessage(err)}`);
     },
   });
   const changePasswordMutation = trpc.auth.changePassword.useMutation({
@@ -122,8 +136,8 @@ export default function Dashboard() {
       setNewPassword("");
       setConfirmPassword("");
     },
-    onError: (err: any) => {
-      toast.error(err.message);
+    onError: (err: unknown) => {
+      toast.error(getErrorMessage(err));
     },
   });
   const deleteAccountMutation = trpc.auth.deleteAccount.useMutation({
@@ -132,13 +146,14 @@ export default function Dashboard() {
       await utils.auth.me.invalidate();
       navigate("/login");
     },
-    onError: (err: any) => {
-      toast.error(err.message);
+    onError: (err: unknown) => {
+      toast.error(getErrorMessage(err));
     },
   });
 
   const { data: jobs = [], isLoading: jobsLoading, refetch: refetchJobs } = trpc.jobs.list.useQuery(undefined, {
     enabled: isAuthenticated,
+    refetchInterval: isAuthenticated && pageVisible && !isCalendarPage ? 10000 : false,
   });
   const {
     data: statusEvents = [],
@@ -152,8 +167,8 @@ export default function Dashboard() {
       toast.success("提醒偏好已保存");
       refetchProfile();
     },
-    onError: (err: any) => {
-      toast.error(`保存失败: ${err.message}`);
+    onError: (err: unknown) => {
+      toast.error(`保存失败: ${getErrorMessage(err)}`);
     },
   });
 
@@ -185,15 +200,6 @@ export default function Dashboard() {
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
-  // Poll Telegram binding status every 5s after page load
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const interval = setInterval(() => {
-      refetchTelegram();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
-
   // One-time celebration when Telegram binding succeeds
   const prevBound = useRef(telegramStatus?.bound);
   useEffect(() => {
@@ -210,28 +216,20 @@ export default function Dashboard() {
     prevBound.current = telegramStatus?.bound;
   }, [telegramStatus?.bound]);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const interval = setInterval(() => {
-      refetchJobs();
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, refetchJobs]);
-
   const filteredJobs = useMemo(() => {
     const normalized = (s?: string | null) => (s ?? "").toLowerCase();
     const q = normalized(companyQuery);
     return jobs
-      .filter((job: any) => {
+      .filter((job: JobApplication) => {
         if (!q) return true;
-        const target = `${normalized(job.companyNameJa)} ${normalized((job as { companyNameEn?: string | null }).companyNameEn)}`;
+        const target = `${normalized(job.companyNameJa)} ${normalized(job.companyNameEn)}`;
         return target.includes(q);
       })
-      .sort((a: any, b: any) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
+      .sort((a: JobApplication, b: JobApplication) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
   }, [jobs, companyQuery]);
 
   const activeJobCount = useMemo(() => {
-    return jobs.filter((job: any) => !["offer", "rejected", "withdrawn"].includes(job.status)).length;
+    return jobs.filter((job: JobApplication) => !["offer", "rejected", "withdrawn"].includes(job.status)).length;
   }, [jobs]);
 
   const nudgeCategories = normalizeNudgeCategories(profile?.nudgeCategoriesEnabled);
@@ -303,43 +301,13 @@ export default function Dashboard() {
           ))}
         </nav>
         <div className="p-3 border-t border-border">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-secondary transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <Avatar className="w-8 h-8 border border-border">
-                  <AvatarFallback className="text-xs font-medium bg-primary/15 text-primary">
-                    {(user?.name?.trim()?.[0] ?? "U").toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{user?.name ?? "ユーザー"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
-                </div>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="top" className="w-72">
-              <DropdownMenuLabel className="pb-1">账号信息</DropdownMenuLabel>
-              <div className="px-2 pb-2 space-y-1 text-xs text-muted-foreground">
-                <p className="truncate">姓名：{profile?.name ?? user?.name ?? "-"}</p>
-                <p className="truncate">邮箱：{profile?.email ?? user?.email ?? "-"}</p>
-                <p className="truncate">学历：{educationLabel(profile?.education)}</p>
-                <p className="truncate">语言：{langLabel(profile?.preferredLanguage)}</p>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setPasswordDialogOpen(true)} className="cursor-pointer">
-                <KeyRound className="w-4 h-4" />
-                修改密码
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDeleteDialogOpen(true)} variant="destructive" className="cursor-pointer">
-                <Trash2 className="w-4 h-4" />
-                删除账号
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={logout} className="cursor-pointer">
-                <LogOut className="w-4 h-4" />
-                ログアウト
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AccountMenu
+            user={user}
+            profile={profile}
+            onChangePassword={() => setPasswordDialogOpen(true)}
+            onDeleteAccount={() => setDeleteDialogOpen(true)}
+            onLogout={logout}
+          />
         </div>
       </aside>
 
@@ -351,39 +319,14 @@ export default function Dashboard() {
             <BrainCircuit className="w-6 h-6 text-primary" />
             <span className="font-bold">就活パス</span>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <Avatar className="w-8 h-8 border border-border">
-                  <AvatarFallback className="text-xs font-medium bg-primary/15 text-primary">
-                    {(user?.name?.trim()?.[0] ?? "U").toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="w-72">
-              <DropdownMenuLabel className="pb-1">账号信息</DropdownMenuLabel>
-              <div className="px-2 pb-2 space-y-1 text-xs text-muted-foreground">
-                <p className="truncate">姓名：{profile?.name ?? user?.name ?? "-"}</p>
-                <p className="truncate">邮箱：{profile?.email ?? user?.email ?? "-"}</p>
-                <p className="truncate">学历：{educationLabel(profile?.education)}</p>
-                <p className="truncate">语言：{langLabel(profile?.preferredLanguage)}</p>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setPasswordDialogOpen(true)} className="cursor-pointer">
-                <KeyRound className="w-4 h-4" />
-                修改密码
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDeleteDialogOpen(true)} variant="destructive" className="cursor-pointer">
-                <Trash2 className="w-4 h-4" />
-                删除账号
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={logout} className="cursor-pointer">
-                <LogOut className="w-4 h-4" />
-                ログアウト
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AccountMenu
+            user={user}
+            profile={profile}
+            onChangePassword={() => setPasswordDialogOpen(true)}
+            onDeleteAccount={() => setDeleteDialogOpen(true)}
+            onLogout={logout}
+            compact
+          />
         </div>
 
         <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -506,7 +449,7 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {recentCalendarEvents!.events.slice(0, 10).map((e: any) => (
+                      {recentCalendarEvents!.events.slice(0, 10).map((e: RecentCalendarEvent) => (
                         <div
                           key={e.id}
                           className="rounded-lg border border-border bg-background/60 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
@@ -745,7 +688,7 @@ export default function Dashboard() {
                   暂无求职记录。绑定邮箱后，新的求职邮件会自动整理到这里。
                 </div>
               ) : (
-                filteredJobs.map((job: any) => {
+                filteredJobs.map((job: JobApplication) => {
                   const expanded = expandedJobId === job.id;
                   return (
                     <div key={job.id} className="bg-background/50">
@@ -797,7 +740,7 @@ export default function Dashboard() {
                               <p className="py-3 text-sm text-muted-foreground">还没有状态变更记录。</p>
                             ) : (
                               <div className="space-y-2">
-                                {statusEvents.map((event: any) => (
+                                {statusEvents.map((event: JobStatusEvent) => (
                                   <div key={event.id} className="flex items-start justify-between gap-3 text-sm">
                                     <div className="min-w-0">
                                       <p className="font-medium">
@@ -1000,9 +943,94 @@ function educationLabel(edu?: string | null) {
   return edu ? (map[edu] ?? edu) : "-";
 }
 
+function AccountMenu({
+  user,
+  profile,
+  onChangePassword,
+  onDeleteAccount,
+  onLogout,
+  compact = false,
+}: {
+  user: RouterOutputs["auth"]["me"];
+  profile?: RouterOutputs["user"]["getProfile"];
+  onChangePassword: () => void;
+  onDeleteAccount: () => void;
+  onLogout: () => void;
+  compact?: boolean;
+}) {
+  const avatar = (
+    <Avatar className="w-8 h-8 border border-border">
+      <AvatarFallback className="text-xs font-medium bg-primary/15 text-primary">
+        {(user?.name?.trim()?.[0] ?? "U").toUpperCase()}
+      </AvatarFallback>
+    </Avatar>
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        {compact ? (
+          <button className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            {avatar}
+          </button>
+        ) : (
+          <button className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-secondary transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            {avatar}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user?.name ?? "ユーザー"}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
+            </div>
+          </button>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={compact ? "end" : "start"} side={compact ? undefined : "top"} sideOffset={compact ? 8 : undefined} className="w-72">
+        <DropdownMenuLabel className="pb-1">账号信息</DropdownMenuLabel>
+        <div className="px-2 pb-2 space-y-1 text-xs text-muted-foreground">
+          <p className="truncate">姓名：{profile?.name ?? user?.name ?? "-"}</p>
+          <p className="truncate">邮箱：{profile?.email ?? user?.email ?? "-"}</p>
+          <p className="truncate">学历：{educationLabel(profile?.education)}</p>
+          <p className="truncate">语言：{langLabel(profile?.preferredLanguage)}</p>
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onChangePassword} className="cursor-pointer">
+          <KeyRound className="w-4 h-4" />
+          修改密码
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onDeleteAccount} variant="destructive" className="cursor-pointer">
+          <Trash2 className="w-4 h-4" />
+          删除账号
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
+          <LogOut className="w-4 h-4" />
+          ログアウト
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function langLabel(lang?: string | null) {
   const map: Record<string, string> = { ja: "日本語", zh: "中文", en: "English" };
   return lang ? (map[lang] ?? lang) : "-";
+}
+
+function getErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : "未知错误";
+}
+
+function usePageVisible() {
+  const [visible, setVisible] = useState(() => {
+    if (typeof document === "undefined") return true;
+    return document.visibilityState === "visible";
+  });
+
+  useEffect(() => {
+    const onVisibilityChange = () => setVisible(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
+
+  return visible;
 }
 
 const JOB_STATUS_OPTIONS = [
@@ -1062,7 +1090,8 @@ function formatDateTime(value?: string | Date | null): string {
   });
 }
 
-function statusLabel(status: string): string {
+function statusLabel(status?: string | null): string {
+  if (!status) return "-";
   const map: Record<string, string> = {
     researching: "调研中",
     applied: "エントリー済み",

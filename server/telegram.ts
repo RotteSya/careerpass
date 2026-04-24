@@ -429,7 +429,7 @@ telegramRouter.post("/webhook", async (req, res) => {
       }
       processedUpdateIds.set(updateId, now);
     }
-    console.log("[Telegram] Received update:", JSON.stringify(update).slice(0, 200));
+    console.log("[Telegram] Received update:", { updateId });
 
     const message = update?.message;
     if (!message) {
