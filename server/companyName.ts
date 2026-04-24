@@ -104,9 +104,9 @@ const COMPANY_VARIANT_GROUPS: VariantGroup[] = [
 const BLOCKED_COMPANY_TOKENS = new Set([
   "info", "noreply", "no-reply", "support", "recruit", "saiyo", "hr", "jobs",
   "syukatsu-kaigi", "syukatsukaigi", "就活会議", "openwork", "vorkers",
-  "onecareer", "one-career", "offerbox", "goodfind",
+  "onecareer", "one-career", "ワンキャリア", "offerbox", "goodfind",
   "mynavi", "マイナビ", "rikunabi", "リクナビ", "doda", "bizreach", "ビズリーチ",
-  "wantedly", "green",
+  "wantedly", "green", "キャリタス", "career-tasu", "unistyle", "itmedia", "アイティメディア",
 ]);
 
 const LEGAL_ENTITY_TOKENS =
@@ -137,7 +137,7 @@ export function normalizeCompanyDisplayName(name: string | null | undefined): st
   raw = raw.replace(/・.*(コース|職|採用|応募|選考)$/, "").trim();
   raw = raw.replace(/への社名(?:改称|変更).*$/, "").trim();
   raw = raw.replace(RECRUITING_SUFFIXES, "").trim();
-  raw = raw.replace(/[のよりからへ]$/, "").trim();
+  raw = raw.replace(/[のよりからへが]$/, "").trim();
   raw = raw.replace(/[\s　]+/g, " ");
   raw = raw.replace(/^(株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s+/, "$1");
 

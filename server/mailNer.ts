@@ -49,12 +49,12 @@ const NON_COMPANY_PATTERNS =
   /^(noreply|no-reply|support|info|notification|system|admin|mailer-daemon|postmaster|alert|newsletter|magazine|do-not-reply|donotreply|bounce|webmaster|mail|me|cs|job|job-s27|reply|zoom)$/i;
 
 const AD_TITLE_PATTERNS =
-  /^(外国人留学生必見|.{0,20}の知識を活かせます|.{0,20}向け|.{0,20}卒|1次|2次|3次|一次|二次|三次|四次|最終|面接|選考|説明会|セミナー|エントリー|案内|結果|通知|お知らせ|重要|緊急|締切|ご連絡|ご案内|就活|速報|オファー|スカウト|メッセージ|おすすめ|ピックアップ|特集|キャンペーン|ランキング|本人確認|会員登録|利用規約|退会フォーム|履歴書送付|資料提出|日程調整|書類選考|適性検査)$/i;
+  /^(外国人留学生必見|.{0,20}の知識を活かせます|.{0,20}向け|.{0,20}卒(?:の方限定)?|27卒.*|26卒.*|これから就活.*|先着\d+名|最大\d+.*|1次|2次|3次|一次|二次|三次|四次|最終|面接|選考|説明会|セミナー|エントリー|案内|結果|通知|お知らせ|重要|緊急|締切|ご連絡|ご案内|就活|速報|オファー|スカウト|メッセージ|おすすめ|ピックアップ|特集|キャンペーン|ランキング|本人確認|会員登録|利用規約|退会フォーム|履歴書送付|資料提出|日程調整|書類選考|適性検査)$/i;
 
 const HR_SUFFIXES = /(採用担当|採用チーム|人事部|人事課|リクルート|Recruiting|recruit|HR|人材|キャリア|新卒採用|中途採用|採用事務局|運営事務局|事務局|マイページ|team|Team|採用|新卒)$/i;
 
 const PLATFORM_NAME_HINTS =
-  /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind|rikunabi|リクナビ|マイナビ|mynavi|ビズリーチ|bizreach|doda|wantedly|green|キャリタス|iroots|マスナビ|あさがくナビ|グローバル人材紹介|人材紹介)/i;
+  /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|ワンキャリア|offerbox|goodfind|rikunabi|リクナビ|マイナビ|mynavi|ビズリーチ|bizreach|doda|wantedly|green|キャリタス|career-tasu|iroots|マスナビ|あさがくナビ|グローバル人材紹介|人材紹介|unistyle|itmedia|アイティメディア)/i;
 
 const NON_TARGET_ORG_HINTS =
   /(careercenter|career\s*center|キャリアセンター|キャリア支援|就職支援|大学キャリア|大学|短大|専門学校|学校法人|学生課|留学生センター)/i;
@@ -77,11 +77,14 @@ const ORG_DATE_LIKE =
   /(?:\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}|\d{1,2}月\d{1,2}日|\d{1,2}月|\d{1,2}日|\d{1,2}時|\d{1,2}:\d{2})/;
 const ORG_DEADLINE_HINT = /(〆切|締切|締め切り|期限|応募締切|申込期限)/;
 const ORG_TRAILING_PERSON_TOKEN = /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]{2,4}$/u;
+const ORG_TITLE_FRAGMENT_PATTERN =
+  /(面接対策|模擬面接|面接攻略|回答例|回答事例|頻出質問|深掘り質問|基礎知識|就活準備|企業研究|業界研究|開催|会場|ホール|web開催|セミナー情報|ギフトカード|共同開催|主催|受付完了|予約受付|抽選結果|保険お申込み|注文|チケット|英会話)/i;
 
 function isDateLikeOrgName(name: string): boolean {
   const s = name.replace(/[\s　]+/g, "");
   if (!s) return true;
   if (LEGAL_ENTITY_PREFIX.test(s)) return false;
+  if (ORG_TITLE_FRAGMENT_PATTERN.test(s)) return true;
   if (ORG_DEADLINE_HINT.test(s)) return true;
   if (/^\d/.test(s) && ORG_DATE_LIKE.test(s)) return true;
   if (ORG_DATE_LIKE.test(s) && /(開催|日時)/.test(s)) return true;
@@ -112,6 +115,7 @@ export function extractOrgCandidates(subject: string, from: string, body: string
     }
     if (
       c.length >= 2 &&
+      !/[【】「」\[\]<>]/.test(c) &&
       !isDateLikeOrgName(c) &&
       !NON_COMPANY_PATTERNS.test(c) &&
       !PLATFORM_NAME_HINTS.test(c) &&
@@ -173,12 +177,12 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   }
 
   // Strategy 4.6: "XXX / YYY" pattern in subject
-  const splitMatch = subject.split(/[\/／]/);
+  const splitMatch = subject.split(/(?:\s+\/\s+|／)/);
   if (splitMatch.length > 1) {
     const lastPart = splitMatch[splitMatch.length - 1].trim();
     if (lastPart.length >= 2 && lastPart.length <= 30 && !NON_COMPANY_PATTERNS.test(lastPart)) {
       // Avoid cases where the last part is a person's name or generic text
-      if (!/様$/.test(lastPart) && !PLATFORM_NAME_HINTS.test(lastPart)) {
+      if (!/様$/.test(lastPart) && !PLATFORM_NAME_HINTS.test(lastPart) && !isDateLikeOrgName(lastPart)) {
         const cleanSplit = lastPart.replace(/株式会社|（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
         // Slightly lower confidence as it could be just a department or generic text
         if (cleanSplit) candidates.push({ name: cleanSplit, source: "subject_split", confidence: 0.65 });
@@ -284,6 +288,8 @@ export function isValidExtractedCompany(name: string | null | undefined, recipie
   if (c.length > 40) return null;
   if (NON_TARGET_ORG_HINTS.test(c)) return null;
   if (/[!！?？。、]/.test(c)) return null;
+  if (/[【】「」\[\]<>]/.test(c)) return null;
+  if (/^[\\\/／＼＜<]/.test(c)) return null;
   if (/^fwd?:/i.test(c)) return null;
   if (/^[-_=+*]{3,}/.test(c)) return null;
   if (/^[一-龥]{1,3}[\s　]+[一-龥]{1,3}$/.test(c)) return null;

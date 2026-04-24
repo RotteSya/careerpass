@@ -255,6 +255,9 @@ export function runRecruitingNlpPipeline(
 
   // ③ Negative signal penalty
   const negPenalty = calculateNegativeSignalPenalty(text);
+  const actionableRelayText = `${input.from}\n${input.subject}\n${body}`;
+  const hasActionableRelay = PLATFORM_ACTIONABLE_RELAY_HINTS.test(actionableRelayText);
+  const hasPlatformMessageSubject = PLATFORM_MESSAGE_NOTIFICATION_HINTS.test(input.subject);
   const isPlatformSurveyPromo =
     (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(text)) &&
     PLATFORM_SURVEY_HINTS.test(text) &&
@@ -284,7 +287,7 @@ export function runRecruitingNlpPipeline(
   const isPlatformNewsletter =
     (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(text)) &&
     PLATFORM_NEWSLETTER_HINTS.test(text) &&
-    !PLATFORM_ACTIONABLE_RELAY_HINTS.test(`${input.from}\n${input.subject}\n${body}`) &&
+    !hasActionableRelay &&
     !(SUBJECT_BRACKET_GUIDE_PATTERN.test(input.subject) && SUBJECT_SELECTION_GUIDE_PATTERN.test(input.subject)) &&
     !STRONG_SELECTION_SUBJECT_HINT.test(input.subject);
   // If it's a platform promo, but the subject contains strong words like "面接攻略" or "就活講座",
@@ -292,13 +295,47 @@ export function runRecruitingNlpPipeline(
   const isPlatformSeminarPromo =
     (domainRep.tier === "recruiting_platform" || JOB_PLATFORM_HINTS.test(text) || /人材紹介/.test(text)) &&
     PLATFORM_SEMINAR_PROMO_SUBJECT_HINT.test(input.subject) &&
+    !hasActionableRelay &&
+    !hasPlatformMessageSubject &&
     !STRONG_SELECTION_SUBJECT_HINT.test(input.subject);
+  const isLearningPromoSubject =
+    PLATFORM_SEMINAR_PROMO_SUBJECT_HINT.test(input.subject) ||
+    PLATFORM_NEWSLETTER_HINTS.test(input.subject);
+  const isConcreteSelectionSchedule =
+    /(面接日程|面談日程|日程調整|予約完了|予約ありがとうございます|ご予約ありがとうございます|予約確定|参加URL|本日の参加URL|開催が近づいて|選考会|面接のご案内|面談のご案内|選考.{0,20}予約)/i.test(
+      `${input.subject}\n${body}`,
+    );
+  const isLearningOrEventPromo =
+    isLearningPromoSubject &&
+    !isConcreteSelectionSchedule &&
+    !hasPlatformMessageSubject &&
+    (
+      domainRep.tier === "recruiting_platform" ||
+      domainRep.tier === "noise_platform" ||
+      JOB_PLATFORM_HINTS.test(text) ||
+      negPenalty <= -0.2
+    );
+  const isMarketingSeminarPromo =
+    PLATFORM_SEMINAR_PROMO_SUBJECT_HINT.test(input.subject) &&
+    PLATFORM_NEWSLETTER_HINTS.test(text) &&
+    !hasActionableRelay &&
+    !STRONG_SELECTION_SUBJECT_HINT.test(input.subject);
+  const isNoisePlatformPromo =
+    domainRep.tier === "noise_platform" &&
+    !hasActionableRelay &&
+    !hasPlatformMessageSubject;
 
-  if (isPlatformNewsletter || isPlatformSeminarPromo) {
+  if (
+    isPlatformNewsletter ||
+    isPlatformSeminarPromo ||
+    isLearningOrEventPromo ||
+    isMarketingSeminarPromo ||
+    isNoisePlatformPromo
+  ) {
     return {
       isJobRelated: false,
       confidence: 0.96,
-      reason: "hard-negative:platform-newsletter",
+      reason: "hard-negative:platform-or-marketing-promo",
       eventType: "other",
       companyName: null,
       eventDate: input.fallbackDate,
@@ -322,7 +359,7 @@ export function runRecruitingNlpPipeline(
   // since the real action is on the platform's MyPage.
   const isPlatformMessageNotification = 
     domainRep.tier === "recruiting_platform" &&
-    PLATFORM_MESSAGE_NOTIFICATION_HINTS.test(input.subject);
+    hasPlatformMessageSubject;
     
   if (isPlatformMessageNotification) {
     // Try to extract company name from subject or body snippet if possible
@@ -567,7 +604,9 @@ export function runRecruitingNlpPipeline(
     const hasGoodCompany = !!mergedCompany;
     const hasGoodDate = !!mergedDate;
     
-    if (mergedIsJobRelated && hasGoodCompany) {
+    if (hasActionableRelay) {
+      skipLlm = false;
+    } else if (mergedIsJobRelated && hasGoodCompany) {
       if ((mergedEventType === "rejection" || mergedEventType === "offer" || mergedEventType === "entry") && mergedConfidence >= 0.90) {
         skipLlm = true; // These types don't strictly need date/time
       } else if (mergedEventType !== "other" && mergedConfidence >= 0.92 && hasGoodDate) {

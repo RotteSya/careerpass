@@ -69,7 +69,7 @@ export const HARD_OFFER_EN_PATTERN =
 // ─── Platform & process hints ────────────────────────────────────────────────
 
 export const JOB_PLATFORM_HINTS =
-  /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|offerbox|goodfind)/i;
+  /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|ワンキャリア|offerbox|goodfind|mynavi|マイナビ|リクナビ|rikunabi|キャリタス|career-tasu|doda|unistyle|iroots|マスナビ|massnavi|paiza|itmedia|アイティメディア)/i;
 
 export const PROCESS_HINTS =
   /(選考|面接|面談|説明会|webテスト|spi|適性検査|筆記試験|締切|提出期限|エントリー|応募|内定|不採用|お見送り|合否)/i;
@@ -84,7 +84,7 @@ export const PLATFORM_INCENTIVE_HINTS =
   /(抽選|当たります|プレゼント|ギフトカード|ギフトコード|amazon\s*ギフト|amazonギフト)/i;
 
 export const PLATFORM_NEWSLETTER_HINTS =
-  /(マイナビメール|ピックアップ|おすすめ企業|おすすめ求人|新着求人|求人をお届け|特集|キャンペーン|ランキング|就活講座|就活準備講座|就活対策|セミナー開催|合同説明会|合説|就活イベント|就活セミナー|本人確認|会員登録|サービスのご案内|利用規約|退会フォーム)/i;
+  /(マイナビメール|ピックアップ|おすすめ企業|おすすめ求人|新着求人|求人をお届け|特集|キャンペーン|ランキング|就活講座|就活準備講座|就活対策|面接対策|模擬面接|面接攻略|回答例|回答事例|頻出質問|深掘り質問|基礎知識|就活準備|就活を始める方|希望勤務地別|方向性を考える|企業選びの軸|自分に合った企業|インターンシップの体験談|業界研究|セミナー開催|おすすめのセミナー情報|ビジネスオンライン通信|メールサービス|合同説明会|合説|就活イベント|就活セミナー|フォーラム|本人確認|会員登録|サービスのご案内|利用規約|退会フォーム)/i;
 
 export const PLATFORM_MESSAGE_NOTIFICATION_HINTS =
   /(メッセージが届きました|新着メッセージ|企業から.{0,40}メッセージ|メッセージ受信)/i;
@@ -113,7 +113,7 @@ export const STRONG_SELECTION_SUBJECT_HINT =
 
 /** Pattern used by platform-seminar-promo gate to short-circuit the newsletter path. */
 export const PLATFORM_SEMINAR_PROMO_SUBJECT_HINT =
-  /セミナー|就活講座|攻略法|合同説明会|合説|就活イベント|本人確認|会員登録/;
+  /セミナー|就活講座|攻略法|面接対策|模擬面接|面接攻略|回答例|回答事例|頻出質問|深掘り質問|基礎知識|就活準備|就活を始める方|希望勤務地別|方向性を考える|企業選びの軸|自分に合った企業|企業研究|インターンシップの体験談|合同説明会|合説|就活イベント|フォーラム|ホール(?!ディングス)|会場|web開催|オンラインイベント|本人確認|会員登録/i;
 
 /** Subject-level bracketed "guide" markers used in newsletter gating. */
 export const SUBJECT_BRACKET_GUIDE_PATTERN = /【[^】]{2,40}】/;
@@ -170,6 +170,7 @@ export const NEGATIVE_SIGNALS: readonly NegativeSignal[] = [
   { pattern: /(キャンペーン|campaign|セール|sale|クーポン|coupon|割引)/i,            weight: -0.20 },
   { pattern: /(広告|PR|sponsored|advertisement|プロモーション)/i,                   weight: -0.20 },
   { pattern: /(口コミ|レビュー|review|評判|ランキング|ranking|年収|給与データ)/i,    weight: -0.15 },
+  { pattern: /(おすすめのセミナー情報|ビジネスオンライン通信|メールサービス|就活講座|面接対策|模擬面接|頻出質問|回答例|回答事例)/i, weight: -0.20 },
   { pattern: /(新着求人|おすすめ求人|求人情報|job alert|recommended jobs|あなたへのおすすめ)/i, weight: -0.10 },
   { pattern: /(アンケート|アンケートのお願い|ご回答のお願い)/i,                       weight: -0.20 },
   { pattern: /(自動配信|自動送信|自動返信|this is an automated message)/i,           weight: -0.15 },

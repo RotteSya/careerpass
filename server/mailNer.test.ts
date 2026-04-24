@@ -80,6 +80,36 @@ describe("extractBestCompanyName", () => {
     expect(r.name).toBeNull();
   });
 
+  it("does not treat half-stripped platform office names as companies", () => {
+    const r = extractBestCompanyName(
+      "デジタル×オペレーションで変革を。DX推進の核心に迫る会社説明会",
+      '"【ワンキャリア運営事務局】" <noreply@onecareer.jp>',
+      "ワンキャリアからのお知らせです。",
+      "noise_platform",
+    );
+    expect(r.name).toBeNull();
+  });
+
+  it("does not use date/venue subject fragments as company names", () => {
+    const r = extractBestCompanyName(
+      "出展企業が追加決定！コンテンツの予約も開始！＜10/12(日)京都産業会館ホール＞",
+      '"キャリタス就活フォーラム事務局" <support@career-tasu.jp>',
+      "",
+      "recruiting_platform",
+    );
+    expect(r.name).toBeNull();
+  });
+
+  it("does not use generic prep-course subject titles as company names", () => {
+    const r = extractBestCompanyName(
+      "【2027年卒の方限定】元面接官が解説する企業研究で見るべき5つのポイント【マイナビ新卒紹介】",
+      '"マイナビ新卒紹介" <s-sk-tokyo-career2-cp@mynavi.jp>',
+      "",
+      "recruiting_platform",
+    );
+    expect(r.name).toBeNull();
+  });
+
   it("does not return noreply as company", () => {
     const r = extractBestCompanyName(
       "お知らせ",

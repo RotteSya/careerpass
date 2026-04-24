@@ -19,6 +19,8 @@ export const NOISE_PLATFORM_DOMAINS = new Set<string>([
 export const RECRUITING_PLATFORM_DOMAINS = new Set<string>([
   "rikunabi.com", "mynavi.jp", "en-japan.com", "wantedly.com",
   "bizreach.jp", "doda.jp", "type.jp", "green-japan.com",
+  "career-tasu.jp", "doda-student.jp", "iroots.jp", "massnavi.com",
+  "gakujo.ne.jp", "talentbase.co.jp", "paiza.jp", "i-plug.co.jp",
 ]);
 
 /** Union of RECRUITING + NOISE + a few ancillary job-adjacent platforms. */

@@ -51,7 +51,7 @@ function inferStatus(params: {
   interviewRound?: string | null;
   subject: string;
   body: string;
-}): JobStatus {
+}): JobStatus | null {
   if (params.hardOutcome === "offer") return "offer";
   if (params.hardOutcome === "rejection") return "rejected";
   if (params.eventType === "test") return "written_test";
@@ -75,7 +75,7 @@ function inferStatus(params: {
     }
     return "applied";
   }
-  return "researching";
+  return null;
 }
 
 function csvEscape(v: string): string {
@@ -141,6 +141,7 @@ async function main() {
       subject: mailSubject,
       body: mailBody,
     });
+    if (!status) continue;
     const key = normalizeCompanyKey(companyName) ?? companyName.toLowerCase();
     const prev = jobs.get(key);
     const companyExtraction = decision._meta?.companyExtraction;
