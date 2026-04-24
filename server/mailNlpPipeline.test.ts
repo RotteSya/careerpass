@@ -662,6 +662,29 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.companyName).toBe("株式会社ミライト・ワン");
   });
 
+  it("prefers LLM company name when NER confidence is below 0.70", () => {
+    // Free-mail sender with only the "display clean" NER strategy available
+    // (confidence 0.55 < 0.70) — the LLM-supplied name should take over.
+    const d = runRecruitingNlpPipeline(
+      {
+        subject: "面接のご案内",
+        body: "面接のご案内です。",
+        from: "Taro Yamada <taro@gmail.com>",
+        domainSignal: 0.2,
+        fallbackDate: null,
+        fallbackTime: null,
+      },
+      {
+        isJobRelated: true,
+        confidence: 0.9,
+        reason: "llm",
+        eventType: "interview",
+        companyName: "株式会社テストカンパニー",
+      },
+    );
+    expect(d.companyName).toBe("株式会社テストカンパニー");
+  });
+
   it("marks _meta.inputBodyTruncated when body is too long", () => {
     const body = "x".repeat(MAX_MAIL_BODY_CHARS + 100) + "面接のご案内";
     const d = runRecruitingNlpPipeline({

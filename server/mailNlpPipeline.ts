@@ -462,12 +462,19 @@ export function runRecruitingNlpPipeline(
     ? !!llmDecision.isJobRelated || mergedEventType !== "other"
     : mergedEventType !== "other" || (domainRep.score >= 0.8 && !!input.fallbackDate && hasAnyProcessHints);
 
-  // ⑫ Company name: NER result > LLM > rule-extracted
+  // ⑫ Company name resolution:
+  //   1. High-confidence NER (≥ 0.70) wins outright.
+  //   2. Otherwise prefer the LLM-supplied name (normalized).
+  //   3. Fall back to the best low-confidence NER candidate.
   const llmCompany = normalizeCompanyName(llmDecision?.companyName ?? null);
-  const mergedCompany =
-    (nerCompany.confidence >= 0.70 ? nerCompany.name : null) ??
-    llmCompany ??
-    (nerCompany.name);
+  let mergedCompany: string | null = null;
+  if (nerCompany.name && nerCompany.confidence >= 0.70) {
+    mergedCompany = nerCompany.name;
+  } else if (llmCompany) {
+    mergedCompany = llmCompany;
+  } else if (nerCompany.name) {
+    mergedCompany = nerCompany.name;
+  }
 
   // ⑬ Date/time: LLM > NER > fallback
   const mergedDate = llmDecision?.eventDate ?? nerDateTime.date ?? input.fallbackDate;
