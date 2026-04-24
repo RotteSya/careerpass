@@ -5,29 +5,6 @@ import type { ProactiveNudge, UserJobContext, NudgeCategory } from "./types";
 import { collectTrialNudges, markTrialNudgeDelivered } from "../billing";
 import { isNotificationAllowed } from "./quietHours";
 
-let schedulerTimer: ReturnType<typeof setInterval> | null = null;
-const DEFAULT_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
-
-export function startProactiveScheduler(intervalMs = DEFAULT_INTERVAL_MS): void {
-  if (schedulerTimer) return;
-  console.log(`[Proactive] Scheduler started with interval ${intervalMs / 1000}s`);
-  schedulerTimer = setInterval(() => runProactiveCycle().catch(console.error), intervalMs);
-}
-
-export function stopProactiveScheduler(): void {
-  if (schedulerTimer) {
-    clearInterval(schedulerTimer);
-    schedulerTimer = null;
-    console.log("[Proactive] Scheduler stopped");
-  }
-}
-
-async function runProactiveCycle(): Promise<void> {
-  console.log("[Proactive] Running proactive cycle...");
-  // For now, proactive checks are triggered per-user via runProactiveCheckForUser.
-  // A future iteration will iterate over all active users here.
-}
-
 function isCategoryEnabled(
   category: NudgeCategory,
   prefs: Record<string, boolean> | null | undefined

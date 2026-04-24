@@ -20,7 +20,6 @@ import { createRateLimiter } from "./rateLimit";
 import { createRateLimitMiddleware } from "./rateLimitMiddleware";
 import { registerDispatcher } from "./messaging";
 import { TelegramDispatcher } from "./messaging";
-import { startProactiveScheduler } from "../proactive/scheduler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -44,11 +43,6 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   // Register messaging channel dispatchers
   registerDispatcher(new TelegramDispatcher());
-
-  // Start proactive notification scheduler
-  if (process.env.NODE_ENV === "production") {
-    startProactiveScheduler();
-  }
 
   const app = express();
   app.set("trust proxy", true);

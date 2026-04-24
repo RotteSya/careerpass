@@ -348,7 +348,7 @@ export async function upsertOauthToken(token: InsertOauthToken) {
   await db.insert(oauthTokens).values(token);
 }
 
-export async function getOauthToken(userId: number, provider: "google" | "outlook" | "notion") {
+export async function getOauthToken(userId: number, provider: "google" | "outlook") {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db
@@ -361,7 +361,7 @@ export async function getOauthToken(userId: number, provider: "google" | "outloo
 
 export async function patchOauthTokenScope(params: {
   userId: number;
-  provider: "google" | "outlook" | "notion";
+  provider: "google" | "outlook";
   patch: Record<string, unknown>;
 }) {
   const db = await getDb();
@@ -386,7 +386,7 @@ export async function patchOauthTokenScope(params: {
     .where(and(eq(oauthTokens.userId, params.userId), eq(oauthTokens.provider, params.provider)));
 }
 
-export async function deleteOauthToken(userId: number, provider: "google" | "outlook" | "notion") {
+export async function deleteOauthToken(userId: number, provider: "google" | "outlook") {
   const db = await getDb();
   if (!db) return;
   await db
@@ -394,7 +394,7 @@ export async function deleteOauthToken(userId: number, provider: "google" | "out
     .where(and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, provider)));
 }
 
-export async function listUserIdsByOauthProvider(provider: "google" | "outlook" | "notion"): Promise<number[]> {
+export async function listUserIdsByOauthProvider(provider: "google" | "outlook"): Promise<number[]> {
   const db = await getDb();
   if (!db) return [];
   const rows = await db
@@ -406,7 +406,7 @@ export async function listUserIdsByOauthProvider(provider: "google" | "outlook" 
 
 export async function upsertOauthProviderAccount(params: {
   userId: number;
-  provider: "google" | "outlook" | "notion";
+  provider: "google" | "outlook";
   accountEmail: string;
 }) {
   const db = await getDb();
@@ -436,7 +436,7 @@ export async function upsertOauthProviderAccount(params: {
 }
 
 export async function getUserIdByOauthProviderAccount(
-  provider: "google" | "outlook" | "notion",
+  provider: "google" | "outlook",
   accountEmail: string
 ): Promise<number | null> {
   const db = await getDb();
