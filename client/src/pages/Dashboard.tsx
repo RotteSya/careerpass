@@ -47,6 +47,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 import confetti from "canvas-confetti";
+import { useTranslation } from "react-i18next";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../server/routers";
 
@@ -61,6 +62,7 @@ const navItems = [
 ];
 
 export default function Dashboard() {
+  const { t, i18n } = useTranslation();
   const { user, isAuthenticated, loading, logout } = useAuth();
   const [currentPath, navigate] = useLocation();
   const pathOnly = currentPath.split("?")[0] ?? currentPath;
@@ -114,23 +116,23 @@ export default function Dashboard() {
 
   const disconnectCalendar = trpc.calendar.disconnect.useMutation({
     onSuccess: () => {
-      toast.success("連携を解除しました");
+      toast.success(i18n.t("dashboard.syncStatus"));
       refetchCalendar();
     },
   });
   const updateJobStatusMutation = trpc.jobs.updateStatus.useMutation({
     onSuccess: () => {
-      toast.success("进度已更新");
+      toast.success(i18n.t("dashboard.syncStatus")); // reusing generic success
       refetchJobs();
       refetchStatusEvents();
     },
     onError: (err: unknown) => {
-      toast.error(`更新失败: ${getErrorMessage(err)}`);
+      toast.error(`Error: ${getErrorMessage(err)}`);
     },
   });
   const changePasswordMutation = trpc.auth.changePassword.useMutation({
     onSuccess: () => {
-      toast.success("密码已修改");
+      toast.success(i18n.t("dashboard.syncStatus"));
       setPasswordDialogOpen(false);
       setCurrentPassword("");
       setNewPassword("");
@@ -142,7 +144,7 @@ export default function Dashboard() {
   });
   const deleteAccountMutation = trpc.auth.deleteAccount.useMutation({
     onSuccess: async () => {
-      toast.success("账号已删除");
+      toast.success(i18n.t("dashboard.syncStatus"));
       await utils.auth.me.invalidate();
       navigate("/login");
     },
@@ -164,13 +166,19 @@ export default function Dashboard() {
   );
   const updateProfileMutation = trpc.user.updateProfile.useMutation({
     onSuccess: () => {
-      toast.success("提醒偏好已保存");
+      toast.success(i18n.t("dashboard.syncStatus"));
       refetchProfile();
     },
     onError: (err: unknown) => {
-      toast.error(`保存失败: ${getErrorMessage(err)}`);
+      toast.error(`Error: ${getErrorMessage(err)}`);
     },
   });
+
+  useEffect(() => {
+    if (profile?.preferredLanguage) {
+      i18n.changeLanguage(profile.preferredLanguage);
+    }
+  }, [profile?.preferredLanguage, i18n]);
 
   useEffect(() => {
     if (!loading && isAuthenticated && pathOnly === "/dashboard") {
@@ -246,12 +254,12 @@ export default function Dashboard() {
   const copyText = async (text: string) => {
     const t = (text ?? "").trim();
     if (!t) {
-      toast.error("没有可复制的内容");
+      toast.error(i18n.t("dashboard.noCopyContent"));
       return;
     }
     try {
       await navigator.clipboard.writeText(t);
-      toast.success("已复制");
+      toast.success(i18n.t("dashboard.copied"));
     } catch {
       try {
         const el = document.createElement("textarea");
@@ -262,9 +270,9 @@ export default function Dashboard() {
         el.select();
         document.execCommand("copy");
         document.body.removeChild(el);
-        toast.success("已复制");
+        toast.success(i18n.t("dashboard.copied"));
       } catch {
-        toast.error("复制失败");
+        toast.error(i18n.t("dashboard.copyFailed"));
       }
     }
   };
@@ -296,7 +304,7 @@ export default function Dashboard() {
               }`}
             >
               <item.icon className="w-4 h-4 shrink-0" />
-              <span>{item.label}</span>
+              <span>{item.path === "/dashboard/profile" ? t("dashboard.profileCenter") : t("dashboard.calendarSync")}</span>
             </button>
           ))}
         </nav>
@@ -333,10 +341,10 @@ export default function Dashboard() {
           {/* Welcome */}
           <div>
             <h1 className="text-2xl font-bold">
-              おかえりなさい、{profile?.name ?? user?.name ?? "ユーザー"}さん
+              {t("dashboard.welcome", { name: profile?.name ?? user?.name ?? "User" })}
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              就活の準備を続けましょう。AIエージェントがサポートします。
+              {t("dashboard.welcomeSubtitle")}
             </p>
           </div>
 
@@ -346,10 +354,10 @@ export default function Dashboard() {
                 <div>
                   <h2 className="text-lg font-bold flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-primary" />
-                    カレンダー連携
+                    {t("dashboard.calendarSync")}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    面接・説明会のメールを自動検知してカレンダーに登録します
+                    {t("dashboard.calendarSyncDesc")}
                   </p>
                 </div>
               </div>
@@ -366,15 +374,15 @@ export default function Dashboard() {
                           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                         </svg>
                       </div>
-                      <span className="font-medium text-sm">Google Calendar</span>
+                      <span className="font-medium text-sm">{t("dashboard.googleCalendar")}</span>
                     </div>
                     {calendarStatus?.google ? (
                       <span className="flex items-center gap-1 text-xs text-green-400">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> 連携済
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {t("dashboard.syncStatus")}
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <XCircle className="w-3.5 h-3.5" /> 未連携
+                        <XCircle className="w-3.5 h-3.5" /> {t("dashboard.unsyncStatus")}
                       </span>
                     )}
                   </div>
@@ -386,7 +394,7 @@ export default function Dashboard() {
                       onClick={() => disconnectCalendar.mutate()}
                       disabled={disconnectCalendar.isPending}
                     >
-                      連携解除
+                      {t("dashboard.disconnect")}
                     </Button>
                   ) : (
                     <Button
@@ -396,7 +404,7 @@ export default function Dashboard() {
                       disabled={!googleAuthUrl}
                     >
                       <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                      Google と連携する
+                      {t("dashboard.connectGoogle")}
                     </Button>
                   )}
                 </div>
@@ -409,14 +417,14 @@ export default function Dashboard() {
                           <path d="M7 4C5.34 4 4 5.34 4 7v10c0 1.66 1.34 3 3 3h10c1.66 0 3-1.34 3-3V7c0-1.66-1.34-3-3-3H7zm0 2h10c.55 0 1 .45 1 1v1H6V7c0-.55.45-1 1-1zm-1 4h12v7c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-7z"/>
                         </svg>
                       </div>
-                      <span className="font-medium text-sm">Outlook Calendar</span>
+                      <span className="font-medium text-sm">{t("dashboard.outlookCalendar")}</span>
                     </div>
                     <span className="flex items-center gap-1 text-xs text-amber-400">
-                      準備中
+                      {t("dashboard.comingSoon")}
                     </span>
                   </div>
                   <Button size="sm" className="w-full" disabled>
-                    近日公開予定
+                    {t("dashboard.comingSoonBtn")}
                   </Button>
                 </div>
               </div>
@@ -425,9 +433,9 @@ export default function Dashboard() {
                 <div className="mt-6 rounded-xl border border-border bg-secondary/10 p-4">
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <div>
-                      <p className="text-sm font-semibold">最近自动写入的日程</p>
+                      <p className="text-sm font-semibold">{t("dashboard.recentEvents")}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        点击“一键复制备注”可直接复制优化后的日程备注内容用于分享（不包含邮件正文）
+                        {t("dashboard.recentEventsDesc")}
                       </p>
                     </div>
                     <Button
@@ -437,15 +445,15 @@ export default function Dashboard() {
                       onClick={() => refetchRecentCalendarEvents()}
                       disabled={recentCalendarEventsLoading}
                     >
-                      {recentCalendarEventsLoading ? "刷新中..." : "刷新"}
+                      {recentCalendarEventsLoading ? t("dashboard.refreshing") : t("dashboard.refresh")}
                     </Button>
                   </div>
 
                   {recentCalendarEventsLoading ? (
-                    <div className="py-6 text-center text-sm text-muted-foreground">读取中...</div>
+                    <div className="py-6 text-center text-sm text-muted-foreground">{t("dashboard.loading")}</div>
                   ) : (recentCalendarEvents?.events?.length ?? 0) === 0 ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">
-                      暂无可复制的自动日程。后续有新邮件触发写入后，这里会显示最近的事件。
+                      {t("dashboard.noRecentEvents")}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -462,23 +470,23 @@ export default function Dashboard() {
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <Button
-                              size="sm"
-                              variant="outline"
-                              className="bg-transparent"
-                              onClick={() => copyText(e.description)}
-                              disabled={!e.description}
-                            >
-                              一键复制备注
-                            </Button>
-                            {e.htmlLink ? (
-                              <a
-                                href={e.htmlLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center h-8 px-3 rounded-md border border-border bg-transparent text-xs font-medium hover:bg-secondary"
+                                size="sm"
+                                variant="outline"
+                                className="bg-transparent"
+                                onClick={() => copyText(e.description)}
+                                disabled={!e.description}
                               >
-                                打开
-                              </a>
+                                {t("dashboard.copyNote")}
+                              </Button>
+                              {e.htmlLink ? (
+                                <a
+                                  href={e.htmlLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center h-8 px-3 rounded-md border border-border bg-transparent text-xs font-medium hover:bg-secondary"
+                                >
+                                  {t("dashboard.open")}
+                                </a>
                             ) : null}
                           </div>
                         </div>
@@ -496,33 +504,33 @@ export default function Dashboard() {
             <div className="mb-5">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-primary" />
-                聊天机器人绑定
+                {t("dashboard.chatBotBind")}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                当前支持 Telegram。后续将陆续支持 LINE / WhatsApp / WeChat 等主流社交平台。
+                {t("dashboard.chatBotBindDesc")}
               </p>
             </div>
 
             <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="p-4 rounded-xl border border-border bg-secondary/20">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold">Telegram</p>
+                  <p className="text-sm font-semibold">{t("dashboard.telegram")}</p>
                   {telegramStatus?.bound ? (
                     <span className="flex items-center gap-1 text-xs text-green-400">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> 已绑定
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {t("dashboard.bound")}
                     </span>
                   ) : (
                     <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#2AABEE]/15 text-[#2AABEE] border border-[#2AABEE]/30">
-                      可用
+                      {t("dashboard.available")}
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground min-h-[32px]">
-                  当前主通道，支持扫码绑定和消息通知。
+                  {t("dashboard.telegramDesc")}
                 </p>
                 {telegramStatus?.bound ? (
                   <Button size="sm" className="w-full mt-3" variant="outline" disabled>
-                    已绑定
+                    {t("dashboard.bound")}
                   </Button>
                 ) : telegramDeepLink?.deepLink ? (
                   <a
@@ -532,11 +540,11 @@ export default function Dashboard() {
                     className="inline-flex items-center justify-center gap-1.5 w-full mt-3 h-8 rounded-md bg-[#2AABEE] hover:bg-[#229ED9] text-white text-xs font-medium transition-colors"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    去绑定
+                    {t("dashboard.goToBind")}
                   </a>
                 ) : (
                   <Button size="sm" className="w-full mt-3" disabled>
-                    加载中...
+                    {t("dashboard.loading")}
                   </Button>
                 )}
               </div>
@@ -545,14 +553,14 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold">LINE</p>
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                    准备中
+                    {t("dashboard.comingSoon")}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground min-h-[32px]">
-                  即将支持通过 LINE 接收提醒与对话。
+                  {t("dashboard.lineDesc")}
                 </p>
                 <Button size="sm" className="w-full mt-3" disabled>
-                  即将开放
+                  {t("dashboard.comingSoonBtn")}
                 </Button>
               </div>
 
@@ -560,14 +568,14 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold">WhatsApp</p>
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                    准备中
+                    {t("dashboard.comingSoon")}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground min-h-[32px]">
-                  即将支持通过 WhatsApp 接收提醒与对话。
+                  {t("dashboard.whatsappDesc")}
                 </p>
                 <Button size="sm" className="w-full mt-3" disabled>
-                  即将开放
+                  {t("dashboard.comingSoonBtn")}
                 </Button>
               </div>
 
@@ -575,14 +583,14 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold">WeChat</p>
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                    准备中
+                    {t("dashboard.comingSoon")}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground min-h-[32px]">
-                  即将支持通过 WeChat 接收提醒与对话。
+                  {t("dashboard.wechatDesc")}
                 </p>
                 <Button size="sm" className="w-full mt-3" disabled>
-                  即将开放
+                  {t("dashboard.comingSoonBtn")}
                 </Button>
               </div>
             </div>
@@ -590,7 +598,7 @@ export default function Dashboard() {
             {!telegramStatus?.bound && (
               <>
             <div className="mb-4">
-              <p className="text-xs text-muted-foreground">Telegram 绑定详情</p>
+              <p className="text-xs text-muted-foreground">{t("dashboard.telegramDetails")}</p>
             </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -616,25 +624,25 @@ export default function Dashboard() {
                 <div className="flex-1 space-y-4">
                   <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
                     <p className="text-sm font-medium text-primary mb-1">
-                      请先通过 Telegram 绑定就活パス专属顾问
+                      {t("dashboard.telegramInstructions").split("。")[0]}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      先完成 Telegram 接入，后续平台（LINE / WhatsApp / WeChat）上线后会在这里开放绑定入口。
+                      {t("dashboard.telegramInstructions").split("。")[1]}
                     </p>
                   </div>
 
                   <div className="space-y-2 text-sm text-muted-foreground">
                     <div className="flex items-start gap-2">
                       <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
-                      <span>QRコードをスキャン、またはボタンをタップ</span>
+                      <span>{t("dashboard.step1")}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
-                      <span>Telegram で「START」をタップ</span>
+                      <span>{t("dashboard.step2")}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
-                      <span>AIコーチが自動的に挨拶します</span>
+                      <span>{t("dashboard.step3")}</span>
                     </div>
                   </div>
 
@@ -648,7 +656,7 @@ export default function Dashboard() {
                       <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
                         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
                       </svg>
-                      Telegram で開く
+                      {t("dashboard.openInTelegram")}
                     </a>
                   )}
                 </div>
@@ -662,30 +670,30 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-lg font-bold flex items-center gap-2">
                   <BriefcaseBusiness className="w-5 h-5 text-primary" />
-                  求职进度列表
+                  {t("dashboard.jobList")}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  帮你留意每家公司的选考进度，点击公司可查看状态历史。
+                  {t("dashboard.jobListDesc")}
                 </p>
               </div>
               <div className="text-xs text-muted-foreground">
-                企業数: {jobs.length} / 進行中: {activeJobCount}
+                {t("dashboard.companyCount", { total: jobs.length, active: activeJobCount })}
               </div>
             </div>
 
             <Input
               value={companyQuery}
               onChange={(e) => setCompanyQuery(e.target.value)}
-              placeholder="搜索公司（中文/日文/英文）"
+              placeholder={t("dashboard.searchCompany")}
               className="w-full sm:max-w-md"
             />
 
             <div className="mt-4 divide-y divide-border rounded-xl border border-border overflow-hidden">
               {jobsLoading ? (
-                <div className="py-8 text-center text-sm text-muted-foreground">読み込み中...</div>
+                <div className="py-8 text-center text-sm text-muted-foreground">{t("dashboard.loading")}</div>
               ) : filteredJobs.length === 0 ? (
                 <div className="py-8 text-center text-sm text-muted-foreground">
-                  暂无求职记录。绑定邮箱后，新的求职邮件会自动整理到这里。
+                  {t("dashboard.noJobs")}
                 </div>
               ) : (
                 filteredJobs.map((job: JobApplication) => {
@@ -706,7 +714,7 @@ export default function Dashboard() {
                           </div>
                           <div className="flex items-center gap-3 shrink-0">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold status-${job.status}`}>
-                              {statusLabel(job.status)}
+                              {t(`status.${job.status}`)}
                             </span>
                             <span className="text-xs text-muted-foreground whitespace-nowrap">
                               {formatDateTime(job.updatedAt)}
@@ -719,7 +727,7 @@ export default function Dashboard() {
                         <div className="px-4 pb-4">
                           <div className="rounded-lg border border-border bg-card p-3">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                              <p className="text-sm font-medium">状态历史</p>
+                              <p className="text-sm font-medium">{t("dashboard.statusHistory")}</p>
                               <select
                                 value={job.status}
                                 onChange={(e) => {
@@ -730,22 +738,22 @@ export default function Dashboard() {
                               >
                                 {JOB_STATUS_OPTIONS.map((opt) => (
                                   <option key={opt.value} value={opt.value}>
-                                    {opt.label}
+                                    {t(`status.${opt.value}`)}
                                   </option>
                                 ))}
                               </select>
                             </div>
 
                             {statusEvents.length === 0 ? (
-                              <p className="py-3 text-sm text-muted-foreground">还没有状态变更记录。</p>
+                              <p className="py-3 text-sm text-muted-foreground">{t("dashboard.noStatusHistory")}</p>
                             ) : (
                               <div className="space-y-2">
                                 {statusEvents.map((event: JobStatusEvent) => (
                                   <div key={event.id} className="flex items-start justify-between gap-3 text-sm">
                                     <div className="min-w-0">
                                       <p className="font-medium">
-                                        {event.prevStatus ? `${statusLabel(event.prevStatus)} → ` : ""}
-                                        {statusLabel(event.nextStatus)}
+                                        {event.prevStatus ? `${t(`status.${event.prevStatus}`)} → ` : ""}
+                                        {t(`status.${event.nextStatus}`)}
                                       </p>
                                       {event.reason || event.mailSubject ? (
                                         <p className="text-xs text-muted-foreground truncate">
@@ -772,15 +780,15 @@ export default function Dashboard() {
 
           <div className="rounded-2xl border border-border bg-card p-6">
             <div className="mb-5">
-              <h2 className="text-lg font-bold">通知偏好</h2>
+              <h2 className="text-lg font-bold">{t("dashboard.notificationPrefs")}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                设置贴身求职秘书通过 Telegram 主动提醒你的时间和类别。
+                {t("dashboard.notificationPrefsDesc")}
               </p>
             </div>
 
             <div className="space-y-5">
               <div className="space-y-2">
-                <Label>安静时段</Label>
+                <Label>{t("dashboard.quietHours")}</Label>
                 <Select
                   value={notificationSchedule}
                   onValueChange={(value) => {
@@ -789,7 +797,7 @@ export default function Dashboard() {
                   disabled={updateProfileMutation.isPending}
                 >
                   <SelectTrigger className="w-full sm:max-w-xs">
-                    <SelectValue placeholder="选择提醒时间" />
+                    <SelectValue placeholder={t("dashboard.quietHoursPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {NOTIFICATION_SCHEDULE_OPTIONS.map((opt) => (
@@ -802,15 +810,15 @@ export default function Dashboard() {
               </div>
 
               <div className="space-y-3">
-                <Label>提醒类别</Label>
+                <Label>{t("dashboard.nudgeCategories")}</Label>
                 {NUDGE_CATEGORY_OPTIONS.map((category) => (
                   <div
                     key={category.value}
                     className="flex items-center justify-between gap-4 rounded-lg border border-border bg-background/50 px-4 py-3"
                   >
                     <div>
-                      <p className="text-sm font-medium">{category.label}</p>
-                      <p className="text-xs text-muted-foreground">{category.description}</p>
+                      <p className="text-sm font-medium">{t(`dashboard.nudgeCategory.${category.value}`)}</p>
+                      <p className="text-xs text-muted-foreground">{t(`dashboard.nudgeCategory.${category.value}_desc`)}</p>
                     </div>
                     <Switch
                       checked={nudgeCategories[category.value]}
@@ -838,45 +846,45 @@ export default function Dashboard() {
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>修改密码</DialogTitle>
-            <DialogDescription>请输入当前密码和新密码（至少8位）。</DialogDescription>
+            <DialogTitle>{t("dashboard.changePasswordTitle")}</DialogTitle>
+            <DialogDescription>{t("dashboard.changePasswordDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input
               type="password"
-              placeholder="当前密码"
+              placeholder={t("dashboard.currentPassword")}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
             />
             <Input
               type="password"
-              placeholder="新密码"
+              placeholder={t("dashboard.newPassword")}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
             <Input
               type="password"
-              placeholder="确认新密码"
+              placeholder={t("dashboard.confirmNewPassword")}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>
-              取消
+              {t("dashboard.cancel")}
             </Button>
             <Button
               onClick={() => {
                 if (!currentPassword || !newPassword || !confirmPassword) {
-                  toast.error("请填写完整");
+                  toast.error(t("dashboard.fillAllFields"));
                   return;
                 }
                 if (newPassword.length < 8) {
-                  toast.error("新密码至少8位");
+                  toast.error(t("dashboard.passwordMinLength"));
                   return;
                 }
                 if (newPassword !== confirmPassword) {
-                  toast.error("两次输入的新密码不一致");
+                  toast.error(t("dashboard.passwordMismatch"));
                   return;
                 }
                 changePasswordMutation.mutate({
@@ -886,7 +894,7 @@ export default function Dashboard() {
               }}
               disabled={changePasswordMutation.isPending}
             >
-              {changePasswordMutation.isPending ? "提交中..." : "确认修改"}
+              {changePasswordMutation.isPending ? t("dashboard.submitting") : t("dashboard.confirmChange")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -895,33 +903,33 @@ export default function Dashboard() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>删除账号</DialogTitle>
+            <DialogTitle>{t("dashboard.deleteAccountTitle")}</DialogTitle>
             <DialogDescription>
-              此操作不可恢复，将删除你的账号及相关数据。请输入密码确认。
+              {t("dashboard.deleteAccountDesc")}
             </DialogDescription>
           </DialogHeader>
           <Input
             type="password"
-            placeholder="请输入当前密码"
+            placeholder={t("dashboard.enterPassword")}
             value={deletePassword}
             onChange={(e) => setDeletePassword(e.target.value)}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              取消
+              {t("dashboard.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={() => {
                 if (!deletePassword) {
-                  toast.error("请输入密码");
+                  toast.error(t("dashboard.enterPassword"));
                   return;
                 }
                 deleteAccountMutation.mutate({ password: deletePassword });
               }}
               disabled={deleteAccountMutation.isPending}
             >
-              {deleteAccountMutation.isPending ? "删除中..." : "确认删除账号"}
+              {deleteAccountMutation.isPending ? t("dashboard.deleting") : t("dashboard.confirmDelete")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -958,6 +966,7 @@ function AccountMenu({
   onLogout: () => void;
   compact?: boolean;
 }) {
+  const { t } = useTranslation();
   const avatar = (
     <Avatar className="w-8 h-8 border border-border">
       <AvatarFallback className="text-xs font-medium bg-primary/15 text-primary">
@@ -984,25 +993,25 @@ function AccountMenu({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={compact ? "end" : "start"} side={compact ? undefined : "top"} sideOffset={compact ? 8 : undefined} className="w-72">
-        <DropdownMenuLabel className="pb-1">账号信息</DropdownMenuLabel>
+        <DropdownMenuLabel className="pb-1">{t("dashboard.accountInfo")}</DropdownMenuLabel>
         <div className="px-2 pb-2 space-y-1 text-xs text-muted-foreground">
-          <p className="truncate">姓名：{profile?.name ?? user?.name ?? "-"}</p>
-          <p className="truncate">邮箱：{profile?.email ?? user?.email ?? "-"}</p>
-          <p className="truncate">学历：{educationLabel(profile?.education)}</p>
-          <p className="truncate">语言：{langLabel(profile?.preferredLanguage)}</p>
+          <p className="truncate">{t("dashboard.name")}：{profile?.name ?? user?.name ?? "-"}</p>
+          <p className="truncate">{t("dashboard.email")}：{profile?.email ?? user?.email ?? "-"}</p>
+          <p className="truncate">{t("dashboard.education")}：{t(`education.${profile?.education || "other"}`)}</p>
+          <p className="truncate">{t("dashboard.language")}：{t(`language.${profile?.preferredLanguage || "en"}`)}</p>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onChangePassword} className="cursor-pointer">
           <KeyRound className="w-4 h-4" />
-          修改密码
+          {t("dashboard.changePassword")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onDeleteAccount} variant="destructive" className="cursor-pointer">
           <Trash2 className="w-4 h-4" />
-          删除账号
+          {t("dashboard.deleteAccount")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onLogout} className="cursor-pointer">
           <LogOut className="w-4 h-4" />
-          ログアウト
+          {t("dashboard.logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

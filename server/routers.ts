@@ -46,7 +46,7 @@ function buildGoogleOAuthUrl(userId: number, _origin: string): string {
     "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly"
   );
   const state = buildOauthSignedState(
-    { userId, provider: "google", exp: Date.now() + 10 * 60 * 1000 },
+    { userId, provider: "google", exp: Date.now() + 30 * 60 * 1000 },
     ENV.cookieSecret
   );
   return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
