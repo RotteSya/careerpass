@@ -698,4 +698,21 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d._meta?.inputBodyTruncated).toBe(true);
     expect(d._meta?.inputBodyUsedLength).toBe(MAX_MAIL_BODY_CHARS);
   });
+
+  it("still catches offer keyword that lives only in the tail of a long body", () => {
+    // 30k of filler followed by the 内定通知 sentence — head-only
+    // truncation would drop the decisive keyword.
+    const filler = "a".repeat(30_000);
+    const body = `${filler}\n本日は誠にありがとうございました。内定通知をお送りいたします。`;
+    const d = runRecruitingNlpPipeline({
+      subject: "ご連絡",
+      body,
+      from: "hr@example.co.jp",
+      domainSignal: 0.9,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d._meta?.inputBodyTruncated).toBe(true);
+    expect(d.eventType).toBe("offer");
+  });
 });
