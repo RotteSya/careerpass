@@ -37,5 +37,39 @@ describe("runRecruitingNlpPipeline event type overrides", () => {
     });
     expect(r.eventType).toBe("deadline");
   });
-});
 
+  it("does not treat an intermediate 合格通知 as an offer", () => {
+    const r = runRecruitingNlpPipeline({
+      subject: "【サンプル】一次選考合格通知",
+      from: "株式会社サンプル 採用担当 <recruit@sample.co.jp>",
+      body: "一次選考に合格されました。次回は二次面接を予定しています。",
+      domainSignal: 0.9,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(r.eventType).not.toBe("offer");
+    expect(r._meta?.hardOutcome).toBeNull();
+  });
+
+  it("respects LLM next-stage classification for positive result notices", () => {
+    const r = runRecruitingNlpPipeline(
+      {
+        subject: "【サンプル】選考結果のご連絡",
+        from: "株式会社サンプル 採用担当 <recruit@sample.co.jp>",
+        body: "一次選考を通過されました。次回は二次面接をご案内します。",
+        domainSignal: 0.9,
+        fallbackDate: null,
+        fallbackTime: null,
+      },
+      {
+        isJobRelated: true,
+        confidence: 0.92,
+        reason: "llm:positive result with next interview",
+        eventType: "interview",
+        companyName: "株式会社サンプル",
+      },
+    );
+    expect(r.eventType).toBe("interview");
+    expect(r._meta?.hardOutcome).toBeNull();
+  });
+});

@@ -26,10 +26,16 @@
 - 只有在调用 `updateJobStatus` 成功后，才可以说“已更新到求职进度看板”；否则只能说“我可以帮你更新”，并触发工具或向用户确认。
 - `updateJobStatus.status` 只能从以下枚举中选择：
   - `researching`
+  - `applied`
+  - `briefing`
   - `es_preparing`
   - `es_submitted`
+  - `document_screening`
+  - `written_test`
   - `interview_1`
   - `interview_2`
+  - `interview_3`
+  - `interview_4`
   - `interview_final`
   - `offer`
   - `rejected`

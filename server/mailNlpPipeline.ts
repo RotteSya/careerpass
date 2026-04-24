@@ -122,7 +122,7 @@ const EVENT_RULES: EventRule[] = [
     // Avoid bare "内定" because it often appears in process outlines
     // (e.g. "今後のスケジュール: ... 内定") and can cause false positives.
     pattern:
-      /(内々定|内定通知|内定のご連絡|内定のお知らせ|採用決定|採用通知|job offer|offer letter|合格通知|合格のお知らせ)/i,
+      /(内々定|内定通知|内定のご連絡|内定のお知らせ|採用内定|採用決定|採用通知|job offer|offer letter)/i,
   },
   // ── Core event types ──
   {
@@ -514,7 +514,7 @@ export function runRecruitingNlpPipeline(
   ) {
     hardOutcome = "rejection";
   } else if (
-    /(内定通知|内定のご連絡|内定のお知らせ|内定.{0,40}決定|採用内定|合格通知|合格のお知らせ|採用決定)/.test(lowerText) ||
+    /(内定通知|内定のご連絡|内定のお知らせ|内定.{0,40}決定|採用内定|採用決定)/.test(lowerText) ||
     /(offer\s*letter|job\s*offer|we are pleased to offer)/.test(lowerText)
   ) {
     hardOutcome = "offer";
@@ -528,12 +528,14 @@ export function runRecruitingNlpPipeline(
     mergedEventType = "rejection";
   } else if (isResultNotificationSubject) {
     // If the subject says "Result Notification" but we didn't explicitly catch a hardOutcome word,
-    // it's highly likely a rejection unless it says offer. We default to 'other' or let LLM decide
-    // if it found something, but we don't want it to be 'interview' or 'test'.
-    if (rule.eventType === "interview" || rule.eventType === "test") {
-       mergedEventType = "other";
+    // prefer an LLM-detected next stage. Without LLM, avoid promoting generic
+    // result notices to interview/test just because the body mentions later steps.
+    if (llmEventType !== "other") {
+      mergedEventType = llmEventType;
+    } else if (rule.eventType === "interview" || rule.eventType === "test") {
+      mergedEventType = "other";
     } else {
-       mergedEventType = rule.eventType;
+      mergedEventType = rule.eventType;
     }
   } else {
     mergedEventType = llmEventType !== "other" && llmEventType ? llmEventType : rule.eventType;

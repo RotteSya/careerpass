@@ -776,7 +776,7 @@ const typeLabels: Record<EmailEvent["eventType"], string> = {
   other: "【就活】",
 };
 
-type JobStatus =
+export type JobStatus =
   | "researching"
   | "applied"
   | "briefing"
@@ -814,12 +814,27 @@ function jobStatusRank(status: JobStatus): number {
   return ranks[status] ?? 0;
 }
 
-function jobStatusFromEmailEventType(eventType: EmailEvent["eventType"]): JobStatus | null {
-  if (eventType === "interview") return "interview_1";
-  if (eventType === "test") return "written_test";
-  if (eventType === "deadline") return "es_preparing";
-  if (eventType === "briefing") return "briefing";
-  if (eventType === "entry") return "applied";
+export function jobStatusFromEmailDecision(input: {
+  eventType: EmailEvent["eventType"];
+  hardOutcome?: "offer" | "rejection" | null;
+  interviewRound?: "1st" | "2nd" | "3rd" | "4th" | "final" | "unknown" | null;
+}): JobStatus | null {
+  if (input.hardOutcome === "offer") return "offer";
+  if (input.hardOutcome === "rejection") return "rejected";
+
+  if (input.eventType === "offer") return "offer";
+  if (input.eventType === "rejection") return "rejected";
+  if (input.eventType === "interview") {
+    if (input.interviewRound === "2nd") return "interview_2";
+    if (input.interviewRound === "3rd") return "interview_3";
+    if (input.interviewRound === "4th") return "interview_4";
+    if (input.interviewRound === "final") return "interview_final";
+    return "interview_1";
+  }
+  if (input.eventType === "test") return "written_test";
+  if (input.eventType === "deadline") return "es_preparing";
+  if (input.eventType === "briefing") return "briefing";
+  if (input.eventType === "entry") return "document_screening";
   return null;
 }
 
@@ -1491,16 +1506,11 @@ async function processGmailMessageIds(params: {
       detectedEvents.push(emailEvent);
       await reportToCareerpassAgent(userId, emailEvent, decision.reason);
 
-      const stageStatus =
-        rawEventType === "interview" || rawEventType === "test" || /面接|interview/.test(mailText.toLowerCase())
-          ? (decisionMeta as any).interviewRound === "1st" ? "interview_1" :
-            (decisionMeta as any).interviewRound === "2nd" ? "interview_2" :
-            (decisionMeta as any).interviewRound === "3rd" ? "interview_3" :
-            (decisionMeta as any).interviewRound === "4th" ? "interview_4" :
-            (decisionMeta as any).interviewRound === "final" ? "interview_final" :
-            null
-          : null;
-      const desiredStatus = hardOutcome ?? stageStatus ?? jobStatusFromEmailEventType(eventType);
+      const desiredStatus = jobStatusFromEmailDecision({
+        eventType,
+        hardOutcome,
+        interviewRound: (decisionMeta as any).interviewRound ?? null,
+      });
       const inferredStatus = companyName ? desiredStatus : null;
       if (decision.isJobRelated && (!companyName || !inferredStatus)) {
         console.info("[Gmail] board-write-skip", {
@@ -1512,7 +1522,7 @@ async function processGmailMessageIds(params: {
           eventType,
           rawEventType,
           hardOutcome: hardOutcome ?? null,
-          stageStatus: stageStatus ?? null,
+          interviewRound: (decisionMeta as any).interviewRound ?? null,
           reason: decision.reason,
         });
       }
