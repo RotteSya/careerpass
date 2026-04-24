@@ -256,13 +256,49 @@ describe("extractBestCompanyName", () => {
     }
   });
 
+  it("rejects common last names if no legal entity prefix exists", () => {
+    const r = extractBestCompanyName(
+      "【佐藤】ご案内",
+      "佐藤 <sato@free-mail.com>",
+      "佐藤です。よろしくお願いします。",
+      "free_mail"
+    );
+    expect(r.name).toBeNull();
+  });
+
   it("merges legal/non-legal variants into one canonical company", () => {
     const r = extractBestCompanyName(
       "【ミライト・ワン】説明会にご参加いただきありがとうございました",
       "ミライト・ワン <mirait@mail.axol.jp>",
       "末尾署名: 株式会社ミライト・ワン",
+      "ats"
     );
     expect(r.name).toBe("株式会社ミライト・ワン");
+  });
+
+  it("downgrades bracket/split/lead confidence for ATS domains to let display_clean win", () => {
+    // For pwc@saiyo.jp, "Cons" in bracket is a project code, not company.
+    const r = extractBestCompanyName(
+      "【Cons】説明会のお知らせ / 経営管理コンサルタント(GRC",
+      "PwC <pwc@saiyo.jp>",
+      "PwC Japanグループ 採用事務局です。",
+      "ats"
+    );
+    // Since bracket confidence is 0.55 and display_clean is 0.55 (PwC), 
+    // Wait, body_legal might pick up "PwC Japanグループ" or display_clean picks up "PwC".
+    // The key is it shouldn't extract "Cons" as the final winner over "PwC" or "PwC Japanグループ".
+    expect(r.name).not.toBe("Cons");
+    expect(r.name).not.toBe("経営管理コンサルタント(GRC");
+  });
+
+  it("keeps high confidence for legal entities even in brackets under ATS domains", () => {
+    const r = extractBestCompanyName(
+      "【株式会社リンクレア】面接のご案内",
+      "採用担当 <recruit@saiyo.jp>",
+      "面接日程のご案内です。",
+      "ats"
+    );
+    expect(r.name).toBe("株式会社リンクレア");
   });
 
   it("does not scan beyond hard body limit", () => {
@@ -474,7 +510,7 @@ describe("getDomainReputation", () => {
   it("keeps real recruiting platform/ATS domains intact", () => {
     // Regression guard: the non_recruiting additions must not swallow ATS
     // relays or interview-scheduling tools.
-    expect(getDomainReputation("info-job@miws.mynavi.jp").tier).toBe("recruiting_platform");
+    expect(getDomainReputation("info-job@miws.mynavi.jp").tier).toBe("ats");
     expect(getDomainReputation("noreply@receptionist.jp").tier).not.toBe("non_recruiting");
     expect(getDomainReputation("noreply_web@arorua.net").tier).not.toBe("non_recruiting");
     expect(getDomainReputation("<xxx@mail.axol.jp>").tier).not.toBe("non_recruiting");

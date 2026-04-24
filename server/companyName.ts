@@ -137,6 +137,7 @@ export function normalizeCompanyDisplayName(name: string | null | undefined): st
   raw = raw.replace(/・.*(コース|職|採用|応募|選考)$/, "").trim();
   raw = raw.replace(/への社名(?:改称|変更).*$/, "").trim();
   raw = raw.replace(RECRUITING_SUFFIXES, "").trim();
+  raw = raw.replace(/[|・／\/\-–—\s　]+$/u, "").trim(); // remove trailing punctuation left after suffix removal
   raw = raw.replace(/[のよりからへが]$/, "").trim();
   raw = raw.replace(/[\s　]+/g, " ");
   raw = raw.replace(/^(株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s+/, "$1");

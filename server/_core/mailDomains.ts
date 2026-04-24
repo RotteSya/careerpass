@@ -41,13 +41,14 @@ export const NON_RECRUITING_DOMAINS = new Set<string>([
   "expy.jp",
   "mail-unyu.hankyu.co.jp",
   "hotpepper.jp",
-  // Delivery / post / govt / utilities
+  // Delivery / post / govt / utilities / real estate
   "sagawa-exp.co.jp",
   "delivery.post.japanpost.jp", "post.japanpost.jp",
   "mail.net.kojinbango-card.go.jp", "kojinbango-card.go.jp",
   "tokyo.suidoapp.jp", "suidoapp.jp",
   "ens-immi.moj.go.jp",
   "e4.kepco.co.jp", "a3.kepco.co.jp",
+  "heureux-c.com",
   // Publishing / newsletters unrelated to recruiting
   "theletter.jp",
   "news.statista.com",
@@ -66,10 +67,20 @@ export const RECRUITING_PLATFORM_DOMAINS = new Set<string>([
   "gakujo.ne.jp", "talentbase.co.jp", "paiza.jp", "i-plug.co.jp",
 ]);
 
+/**
+ * Shared ATS relay domains that send emails on behalf of various companies.
+ */
+export const ATS_DOMAINS = new Set<string>([
+  "saiyo.jp", "mail.axol.jp", "s.axol.jp", "snar.jp", "hito-link.jp",
+  "e2r.jp", "mypage-info.com", "miws.mynavi.jp", "recruit-mg.com",
+  "n-ats.hrmos.co", "disc.co.jp", "m.kobot.cloud", "rpms.jp",
+]);
+
 /** Union of RECRUITING + NOISE + a few ancillary job-adjacent platforms. */
 export const PLATFORM_DOMAINS = new Set<string>([
   ...RECRUITING_PLATFORM_DOMAINS,
   ...NOISE_PLATFORM_DOMAINS,
+  ...ATS_DOMAINS,
   "careerselect.jp", "paiza.jp", "atcoder.jp", "career-tasu.jp",
   "doda-student.jp", "iroots.jp", "massnavi.com", "gakujo.ne.jp",
   "talentbase.co.jp", "linkedin.com",

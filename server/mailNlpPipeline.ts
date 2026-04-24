@@ -26,6 +26,7 @@ import {
   type CoOccurrenceRule,
   EVENT_RULES,
   CO_OCCURRENCE_RULES,
+  LIFESTYLE_NON_RECRUITING_HINTS,
   JOB_PLATFORM_HINTS,
   PROCESS_HINTS,
   ACTIONABLE_PROCESS_HINTS,
@@ -329,6 +330,69 @@ export function runRecruitingNlpPipeline(
     };
   }
 
+  // ②.5 Generic meeting invitation noise gate (Zoom/Teams without recruiting context)
+  const senderAddrMatch = input.from.match(/<([^>]+)>/) || [null, input.from.trim()];
+  const senderAddr = senderAddrMatch[1]?.toLowerCase();
+  if (senderAddr === "no-reply@zoom.us" || senderAddr === "no-reply@teams.microsoft.com") {
+    const hasLegalEntity = /(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)/.test(text);
+    const hasAtsLink = /(?:axol\.jp|saiyo\.jp|snar\.jp|hrmos\.co|e2r\.jp|mypage-info\.com|miws\.mynavi\.jp|recruit-mg\.com|disc\.co\.jp|m\.kobot\.cloud|rpms\.jp)/i.test(text);
+    if (!hasLegalEntity && !hasAtsLink) {
+      return {
+        isJobRelated: false,
+        confidence: 0.95,
+        reason: "hard-negative:generic-meeting-invite",
+        eventType: "other",
+        companyName: null,
+        eventDate: input.fallbackDate,
+        eventTime: input.fallbackTime,
+        location: null,
+        todoItems: [],
+        shouldSkipLlm: true,
+        _meta: {
+          ...inputMeta,
+          domainReputation: domainRep,
+          interviewRound: null,
+          negPenalty: 0,
+          ruleSignals: [],
+          companyExtraction: emptyCompanyExtraction(),
+        },
+      };
+    }
+  }
+
+  // ②.8 Lifestyle noise gate (rent, banking, credit card, delivery, ecommerce)
+  const isLifestyleNoise =
+    LIFESTYLE_NON_RECRUITING_HINTS.test(text) &&
+    domainRep.tier !== "recruiting_platform" &&
+    domainRep.tier !== "ats" &&
+    !STRONG_SELECTION_SUBJECT_HINT.test(input.subject) &&
+    !SUBJECT_INTERVIEW_HINT.test(input.subject) &&
+    !SUBJECT_TEST_HINT.test(input.subject) &&
+    !ACTIONABLE_PROCESS_HINTS.test(text);
+
+  if (isLifestyleNoise) {
+    return {
+      isJobRelated: false,
+      confidence: 0.95,
+      reason: "hard-negative:lifestyle-noise",
+      eventType: "other",
+      companyName: null,
+      eventDate: input.fallbackDate,
+      eventTime: input.fallbackTime,
+      location: null,
+      todoItems: [],
+      shouldSkipLlm: true,
+      _meta: {
+        ...inputMeta,
+        domainReputation: domainRep,
+        interviewRound: null,
+        negPenalty: 0,
+        ruleSignals: [],
+        companyExtraction: emptyCompanyExtraction(),
+      },
+    };
+  }
+
   // ③ Negative signal penalty
   const negPenalty = calculateNegativeSignalPenalty(text);
   const actionableRelayText = `${input.from}\n${input.subject}\n${body}`;
@@ -378,7 +442,7 @@ export function runRecruitingNlpPipeline(
     PLATFORM_SEMINAR_PROMO_SUBJECT_HINT.test(input.subject) ||
     PLATFORM_NEWSLETTER_HINTS.test(input.subject);
   const isConcreteSelectionSchedule =
-    /(面接日程|面談日程|日程調整|予約完了|予約ありがとうございます|ご予約ありがとうございます|予約確定|参加URL|本日の参加URL|開催が近づいて|選考会|面接のご案内|面談のご案内|選考.{0,20}予約)/i.test(
+    /(面接日程|面談日程|日程調整|予約完了|予約ありがとうございます|ご予約ありがとうございます|予約確定|参加URL|本日の参加URL|開催が近づいて|選考会|面接のご案内|面談のご案内|選考.{0,20}予約|書類選考のご案内|書類選考結果|カジュアル面談)/i.test(
       `${input.subject}\n${body}`,
     );
   const isLearningOrEventPromo =

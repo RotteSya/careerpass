@@ -23,6 +23,7 @@ import {
   NOISE_PLATFORM_DOMAINS,
   NON_RECRUITING_DOMAINS,
   RECRUITING_PLATFORM_DOMAINS,
+  ATS_DOMAINS,
   PLATFORM_DOMAINS,
   isDomainMatch,
   extractDomain,
@@ -73,13 +74,30 @@ const LEGAL_ATOKABU_RE = new RegExp(
   `([^\\s【】\\[\\]<>「」/／\\n"'(（:：)）]+)\\s*(?:${LEGAL_ENTITY_PREFIX.source})(?=$|[\\s【】\\[\\]<>「」/／\\n"')）:：])`,
   "g",
 );
+const FALLBACK_MATCH_RE = /(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s*([^\s【】\\[\\]<>「」\n]{2,20})/g;
+const SUBJECT_BRACKET_RE = /(?:【|「|\[)([^】」\]]{2,30})(?:】|」|\])/g;
+const SUBJECT_LEAD_RE = /^(?:【[^】]*】\s*)?([^\s【】\[\]「」]{2,24})\s*(?:の|より|から)?\s*(?:採用|選考|面接|説明会|エントリー|内定|Webテスト)/;
+const BRACKET_EXCLUDE_RE = /(面接|説明会|選考|結果|内定|不採用|エントリー|日程|案内|お知らせ|通知|重要|緊急|締切|ご連絡|ご案内)/;
+const LEAD_EXCLUDE_RE = /^(一次|二次|三次|四次|最終|書類|適性)$/;
+const LEAD_EXCLUDE_RE_2 = /(web合同|合同企業|合同説明会)/i;
+const HR_SENDER_RE = /^(.{2,30}?)\s*(?:採用|人事|HR|recruit|Recruit|キャリア|新卒|リクルート)/i;
+const PLATFORM_MSG_RE = /(?:メッセージが届きました|新着メッセージ).*?\((.+)\)/i;
+const DISPLAY_CLEAN_TRIM_RE = /^["'“”]+|["'“”]+$/g;
+const CLEAN_CORP_SUFFIX_RE = /（株）|\(株\)/g;
 
 const ORG_DATE_LIKE =
   /(?:\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}[\/\-]\d{1,2}|\d{1,2}月\d{1,2}日|\d{1,2}月|\d{1,2}日|\d{1,2}時|\d{1,2}:\d{2})/;
 const ORG_DEADLINE_HINT = /(〆切|締切|締め切り|期限|応募締切|申込期限)/;
 const ORG_TRAILING_PERSON_TOKEN = /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]{2,4}$/u;
-const ORG_TITLE_FRAGMENT_PATTERN =
-  /(面接対策|模擬面接|面接攻略|回答例|回答事例|頻出質問|深掘り質問|基礎知識|就活準備|企業研究|業界研究|開催|会場|ホール|web開催|セミナー情報|ギフトカード|共同開催|主催|受付完了|予約受付|抽選結果|保険お申込み|注文|チケット|英会話)/i;
+
+const ORG_TITLE_FRAGMENT_WORDS = [
+  "面接対策", "模擬面接", "面接攻略", "回答例", "回答事例", "頻出質問",
+  "深掘り質問", "基礎知識", "就活準備", "企業研究", "業界研究", "開催",
+  "会場", "ホール", "web開催", "セミナー情報", "ギフトカード", "共同開催",
+  "主催", "受付完了", "予約受付", "抽選結果", "保険お申込み", "注文",
+  "チケット", "英会話"
+];
+const ORG_TITLE_FRAGMENT_PATTERN = new RegExp(`(${ORG_TITLE_FRAGMENT_WORDS.join("|")})`, "i");
 
 function isDateLikeOrgName(name: string): boolean {
   const s = name.replace(/[\s　]+/g, "");
@@ -98,7 +116,7 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   const displayName = from.split("<")[0]?.trim() ?? "";
 
   const addCandidate = (raw: string, source: string, conf: number) => {
-    let c = raw.replace(/（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
+    let c = raw.replace(CLEAN_CORP_SUFFIX_RE, "株式会社").replace(HR_SUFFIXES, "").trim();
     c = c.replace(/御中|様$/, "").replace(/\)$/, "").trim();
 
     // Dynamically filter out extracted recipient names
@@ -147,8 +165,11 @@ export function extractOrgCandidates(subject: string, from: string, body: string
     }
   };
 
+  const isFromPlatform = fromDomainTier === "recruiting_platform" || fromDomainTier === "noise_platform";
+  const isAts = fromDomainTier === "ats";
+
   // Strategy 1: Explicit match in sender name
-  if (fromDomainTier !== "recruiting_platform" && fromDomainTier !== "noise_platform") {
+  if (!isFromPlatform) {
     extractLegal(displayName, "sender_explicit", 0.95);
   }
 
@@ -160,17 +181,17 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   extractLegal(combinedFromSubject, "legal_from", 0.93);
 
   // Strategy 4: Display name with HR suffix → strip suffix to get company
-  const fromHr = displayName.match(/^(.{2,30}?)\s*(?:採用|人事|HR|recruit|Recruit|キャリア|新卒|リクルート)/i);
+  const fromHr = displayName.match(HR_SENDER_RE);
   if (fromHr?.[1]) {
     candidates.push({ name: fromHr[1], source: "display_hr", confidence: 0.85 });
   }
 
   // Strategy 4.5: "XXXからメッセージが届きました" pattern in platform subject
   if (fromDomainTier === "recruiting_platform") {
-    const msgMatch = subject.match(/(?:メッセージが届きました|新着メッセージ).*?\((.+)\)/i);
+    const msgMatch = subject.match(PLATFORM_MSG_RE);
     if (msgMatch?.[1] && msgMatch[1].length <= 50) {
       // Split by " など" or "】" if they clutter the name
-      let cleanMsg = msgMatch[1].replace(/株式会社|（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
+      let cleanMsg = msgMatch[1].replace(CLEAN_CORP_SUFFIX_RE, "株式会社").replace(HR_SUFFIXES, "").trim();
       cleanMsg = cleanMsg.split(/[\s　]+など/)[0].trim();
       cleanMsg = cleanMsg.replace(/【[^】]+】/g, "").trim();
       if (cleanMsg) candidates.push({ name: cleanMsg, source: "platform_subject", confidence: 0.85 });
@@ -184,37 +205,46 @@ export function extractOrgCandidates(subject: string, from: string, body: string
     if (lastPart.length >= 2 && lastPart.length <= 30 && !NON_COMPANY_PATTERNS.test(lastPart)) {
       // Avoid cases where the last part is a person's name or generic text
       if (!/様$/.test(lastPart) && !PLATFORM_NAME_HINTS.test(lastPart) && !isDateLikeOrgName(lastPart)) {
-        const cleanSplit = lastPart.replace(/株式会社|（株）|\(株\)/g, "株式会社").replace(HR_SUFFIXES, "").trim();
+        const cleanSplit = lastPart.replace(CLEAN_CORP_SUFFIX_RE, "株式会社").replace(HR_SUFFIXES, "").trim();
         // Slightly lower confidence as it could be just a department or generic text
-        if (cleanSplit) candidates.push({ name: cleanSplit, source: "subject_split", confidence: 0.65 });
+        if (cleanSplit) {
+          let conf = 0.65;
+          if (isAts) conf = 0.50;
+          if (LEGAL_ENTITY_PREFIX.test(cleanSplit)) conf = 0.85;
+          candidates.push({ name: cleanSplit, source: "subject_split", confidence: conf });
+        }
       }
     }
   }
 
   // Strategy 5: Bracket patterns in subject 【Company】
-  for (const m of Array.from(subject.matchAll(/(?:【|「|\[)([^】」\]]{2,30})(?:】|」|\])/g))) {
-    if (m[1] && !/(面接|説明会|選考|結果|内定|不採用|エントリー|日程|案内|お知らせ|通知|重要|緊急|締切|ご連絡|ご案内)/.test(m[1])) {
-      candidates.push({ name: m[1], source: "bracket_subject", confidence: 0.80 });
+  for (const m of Array.from(subject.matchAll(SUBJECT_BRACKET_RE))) {
+    if (m[1] && !BRACKET_EXCLUDE_RE.test(m[1])) {
+      let conf = 0.80;
+      if (isAts) conf = 0.50;
+      if (LEGAL_ENTITY_PREFIX.test(m[1])) conf = 0.85;
+      candidates.push({ name: m[1], source: "bracket_subject", confidence: conf });
     }
   }
 
   // Strategy 6: Subject lead pattern — "CompanyName 面接のご案内"
-    const subjectLead = subject.match(
-      /^(?:【[^】]*】\s*)?([^\s【】\[\]「」]{2,24})\s*(?:の|より|から)?\s*(?:採用|選考|面接|説明会|エントリー|内定|Webテスト)/
-    );
+    const subjectLead = subject.match(SUBJECT_LEAD_RE);
     if (subjectLead?.[1]) {
       const leadClean = subjectLead[1].trim();
       if (
         !AD_TITLE_PATTERNS.test(leadClean) &&
-        !/^(一次|二次|三次|四次|最終|書類|適性)$/.test(leadClean) &&
-        !/(web合同|合同企業|合同説明会)/i.test(leadClean)
+        !LEAD_EXCLUDE_RE.test(leadClean) &&
+        !LEAD_EXCLUDE_RE_2.test(leadClean)
       ) {
-        candidates.push({ name: leadClean, source: "subject_lead", confidence: 0.75 });
+        let conf = 0.75;
+        if (isAts) conf = 0.50;
+        if (LEGAL_ENTITY_PREFIX.test(leadClean)) conf = 0.85;
+        candidates.push({ name: leadClean, source: "subject_lead", confidence: conf });
       }
     }
 
   // Strategy 6.5: Fallback pattern matching in body
-  const fallbackMatches = Array.from(body.matchAll(/(?:株式会社|合同会社|有限会社|一般社団法人|一般財団法人)\s*([^\s【】\\[\\]<>「」\n]{2,20})/g));
+  const fallbackMatches = Array.from(body.matchAll(FALLBACK_MATCH_RE));
   for (const m of fallbackMatches) {
     const clean = m[1].replace(HR_SUFFIXES, "").replace(/御中|様$/, "").trim();
     if (clean.length >= 2 && !NON_COMPANY_PATTERNS.test(clean) && !PLATFORM_NAME_HINTS.test(clean) && !/^(新卒|中途)$/.test(clean)) {
@@ -224,8 +254,6 @@ export function extractOrgCandidates(subject: string, from: string, body: string
 
   // Strategies 7-9 are suppressed when the sender is a recruiting/noise platform,
   // because body text and domain SLD would reference promoted companies, not the sender.
-  const isFromPlatform =
-    fromDomainTier === "recruiting_platform" || fromDomainTier === "noise_platform";
 
   // Strategy 7: Legal entity in body (prefix, lower confidence)
   if (!isFromPlatform) {
@@ -240,7 +268,7 @@ export function extractOrgCandidates(subject: string, from: string, body: string
     if (fromDomainTier === "free_mail" && !LEGAL_ENTITY_PREFIX.test(displayName)) {
       // skip
     } else {
-      let cleaned = displayName.replace(/^["'“”]+|["'“”]+$/g, "").trim()
+      let cleaned = displayName.replace(DISPLAY_CLEAN_TRIM_RE, "").trim()
         .replace(HR_SUFFIXES, "")
         .replace(/\)$/, "") // fix trailing parenthesis often caught from platform subject templates
         .replace(/\s*\([^)]*$/, "") // fix unclosed parenthesis e.g. "ROUTE INN GROUP ( ROUTE INN HOTELS"
@@ -253,12 +281,19 @@ export function extractOrgCandidates(subject: string, from: string, body: string
   }
 
   // Strategy 9: Email domain SLD (lowest confidence) — also suppressed for platforms
-  if (!isFromPlatform) {
+  if (!isFromPlatform && fromDomainTier !== "free_mail") {
     const fullDomain = extractDomain(from);
     if (fullDomain) {
       if (!isDomainMatch(fullDomain, FREE_MAIL_DOMAINS) && !isDomainMatch(fullDomain, PLATFORM_DOMAINS)) {
         const sld = fullDomain.split(".")[0];
-        if (sld && sld.length >= 2 && !NON_COMPANY_PATTERNS.test(sld)) {
+        if (
+          sld &&
+          sld.length >= 3 &&
+          !sld.includes("@") &&
+          !sld.endsWith("-") &&
+          !NON_COMPANY_PATTERNS.test(sld) &&
+          isValidExtractedCompany(sld, recipientNames)
+        ) {
           candidates.push({ name: sld, source: "domain_sld", confidence: 0.40 });
         }
       }
@@ -288,15 +323,22 @@ function normalizeOrgName(raw: string): string | null {
   return c;
 }
 
+const COMMON_LAST_NAMES = new Set([
+  "佐藤", "鈴木", "高橋", "田中", "伊藤", "渡辺", "山本", "中村", "小林", "加藤",
+  "吉田", "山田", "佐々木", "山口", "松本", "井上", "木村", "林", "斎藤", "清水",
+  "山崎", "森", "池田", "橋本", "阿部", "石川", "山下", "中島", "石井", "小川"
+]);
+
 export function isValidExtractedCompany(name: string | null | undefined, recipientNames: string[] = []): string | null {
   if (!name) return null;
   let c = name.replace(/^(【|「|\[|\(|"|')(.+?)(】|」|\]|\)|"|')$/, "$2").trim();
   c = c.replace(/\)$/, "").replace(/）$/, "").trim(); // fix trailing parenthesis
+  c = c.replace(/[|・／\/\-–—\s　]+$/u, "").trim(); // fix trailing punctuation often left after HR_SUFFIXES
   
   // Reject obvious sentences or long descriptive texts
   if (c.length > 40) return null;
   if (NON_TARGET_ORG_HINTS.test(c)) return null;
-  if (/[!！?？。、]/.test(c)) return null;
+  if (/[!！?？。、@]/.test(c)) return null;
   if (/[【】「」\[\]<>]/.test(c)) return null;
   if (/^[\\\/／＼＜<]/.test(c)) return null;
   if (/^fwd?:/i.test(c)) return null;
@@ -307,6 +349,11 @@ export function isValidExtractedCompany(name: string | null | undefined, recipie
   
   // Dynamically reject if it's likely the recipient's name
   if (recipientNames.length > 0 && recipientNames.some(n => c === n || (c.includes(n) && c.length - n.length <= 4))) {
+    return null;
+  }
+
+  // Reject if it's a common last name and has no legal entity prefix
+  if (COMMON_LAST_NAMES.has(c) && !LEGAL_ENTITY_PREFIX.test(c)) {
     return null;
   }
 
@@ -366,7 +413,7 @@ export function extractBestCompanyName(
     }
   }
 
-  if (best.name && (body.includes(`${best.name}様`) || body.includes(`${best.name} 様`))) {
+  if (best.name && !LEGAL_ENTITY_PREFIX.test(best.name) && (body.includes(`${best.name}様`) || body.includes(`${best.name} 様`) || body.includes(`${best.name}さん`))) {
     return { name: null, confidence: 0, source: null, sources: [] };
   }
   return best;
@@ -659,6 +706,7 @@ export function getDomainReputation(from: string): DomainReputation {
   if (isDomainMatch(domain, NON_RECRUITING_DOMAINS)) return { tier: "non_recruiting", score: 0.01, domain };
   if (isDomainMatch(domain, FREE_MAIL_DOMAINS)) return { tier: "free_mail", score: 0.15, domain };
   if (isDomainMatch(domain, NOISE_PLATFORM_DOMAINS)) return { tier: "noise_platform", score: 0.05, domain };
+  if (isDomainMatch(domain, ATS_DOMAINS)) return { tier: "ats", score: 0.85, domain };
   if (isDomainMatch(domain, RECRUITING_PLATFORM_DOMAINS)) return { tier: "recruiting_platform", score: 0.70, domain };
 
   // *.co.jp is almost always a real Japanese company

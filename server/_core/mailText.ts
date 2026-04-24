@@ -1,5 +1,5 @@
-export const MAX_MAIL_BODY_CHARS = 20_000;
-export const MAX_MAIL_TEXT_CHARS = 22_000;
+export const MAX_MAIL_BODY_CHARS = 3000;
+export const MAX_MAIL_TEXT_CHARS = 3500;
 
 export function limitText(text: string, maxChars: number): { text: string; truncated: boolean; originalLength: number } {
   const originalLength = text.length;
@@ -40,7 +40,7 @@ export function limitMailBodyHeadTail(
 }
 
 export function limitMailBody(body: string): { text: string; truncated: boolean; originalLength: number } {
-  return limitMailBodyHeadTail(body ?? "", MAX_MAIL_BODY_CHARS);
+  return limitMailBodyHeadTail(body ?? "", MAX_MAIL_BODY_CHARS, 0.33); // e.g. Keep first 2000, last 1000
 }
 
 export function buildLimitedMailText(input: {

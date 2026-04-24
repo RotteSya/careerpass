@@ -66,6 +66,7 @@ export type InvokeParams = {
   output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
   response_format?: ResponseFormat;
+  timeoutMs?: number;
 };
 
 export type ToolCall = {
@@ -277,6 +278,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     output_schema,
     responseFormat,
     response_format,
+    timeoutMs,
   } = params;
 
   const payload: Record<string, unknown> = {
@@ -319,6 +321,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       authorization: `Bearer ${ENV.forgeApiKey}`,
     },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(timeoutMs ?? 60_000),
   });
 
   if (!response.ok) {
