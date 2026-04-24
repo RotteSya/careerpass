@@ -285,6 +285,49 @@ describe("runRecruitingNlpPipeline", () => {
     expect(d.location).toContain("オンライン面接");
   });
 
+  it("filters out generic Zoom/Teams meeting invitations without recruiting context", () => {
+    const zoom = runRecruitingNlpPipeline({
+      subject: "宴パビリオンインターンシップ",
+      body: "こんにちは。\nZoom ミーティングに参加するよう招待されています。\n\nミーティングに参加する:\nhttps://zoom.us/j/1234567890",
+      from: '"Zoom" <no-reply@zoom.us>',
+      domainSignal: 0.1,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(zoom.isJobRelated).toBe(false);
+    expect(zoom.shouldSkipLlm).toBe(true);
+    expect(zoom.reason).toBe("hard-negative:generic-meeting-invite");
+  });
+
+  it("filters out lifestyle noise emails like rent applications", () => {
+    const rent = runRecruitingNlpPipeline({
+      subject: "RE: 203号室の申し込み書類の送付について",
+      body: "審査結果をお知らせします。物件の賃貸契約について...",
+      from: "kanri@unknown-realestate-domain.com",
+      domainSignal: 0.1,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(rent.isJobRelated).toBe(false);
+    expect(rent.shouldSkipLlm).toBe(true);
+    expect(rent.reason).toBe("hard-negative:lifestyle-noise");
+  });
+
+  it("retains Zoom meeting invitations if there is strong recruiting/legal context", () => {
+    const zoom = runRecruitingNlpPipeline({
+      subject: "株式会社リンクレア 面接用URL",
+      body: "こんにちは。\nZoom ミーティングに参加するよう招待されています。\n\n株式会社リンクレアの一次面接用URLです。\nhttps://zoom.us/j/1234567890",
+      from: '"Zoom" <no-reply@zoom.us>',
+      domainSignal: 0.1,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(zoom.isJobRelated).toBe(true);
+    // Even if it doesn't classify perfectly as job-related due to other factors,
+    // the generic-meeting-invite gate should at least NOT trigger.
+    expect(zoom.reason).not.toBe("hard-negative:generic-meeting-invite");
+  });
+
   // ─── New tests: Interview round detection ────────────────────────────────
 
   it("detects interview round from text", () => {
@@ -716,5 +759,44 @@ describe("runRecruitingNlpPipeline", () => {
     });
     expect(d._meta?.inputBodyTruncated).toBe(true);
     expect(d.eventType).toBe("offer");
+  });
+
+  it("classifies casual interviews correctly", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "カジュアル面談のご案内",
+      body: "まずはカジュアルにお話ししませんか？",
+      from: "hr@startup.co.jp",
+      domainSignal: 0.9,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.eventType).toBe("casual_interview");
+    expect(d.isJobRelated).toBe(true);
+  });
+
+  it("classifies document screening correctly", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "書類選考のご案内",
+      body: "エントリーありがとうございます。書類選考を開始いたします。",
+      from: "recruit@bigcorp.co.jp",
+      domainSignal: 0.9,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.eventType).toBe("document_screening");
+    expect(d.isJobRelated).toBe(true);
+  });
+
+  it("classifies deadline reminders correctly", () => {
+    const d = runRecruitingNlpPipeline({
+      subject: "【明日締切】エントリーシート提出のお願い",
+      body: "エントリーシートの提出期限が明日となっております。",
+      from: "hr@company.co.jp",
+      domainSignal: 0.9,
+      fallbackDate: null,
+      fallbackTime: null,
+    });
+    expect(d.eventType).toBe("deadline");
+    expect(d.isJobRelated).toBe(true);
   });
 });

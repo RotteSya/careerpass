@@ -19,6 +19,8 @@ export type MailEventType =
   | "entry"
   | "offer"
   | "rejection"
+  | "document_screening"
+  | "casual_interview"
   | "other";
 
 export interface EventRule {
@@ -66,25 +68,50 @@ export const HARD_OFFER_JP_PATTERN =
 export const HARD_OFFER_EN_PATTERN =
   /(offer\s*letter|job\s*offer|we are pleased to offer)/i;
 
+export const LIFESTYLE_NON_RECRUITING_WORDS = [
+  "口座", "入金", "カード", "物件", "号室", "賃貸", "お支払い", "審査結果",
+  "ご注文", "発送", "配達", "暗証番号", "決済", "ポイント", "お買い上げ", "請求金額"
+];
+export const LIFESTYLE_NON_RECRUITING_HINTS = new RegExp(`(${LIFESTYLE_NON_RECRUITING_WORDS.join("|")})`, "i");
+
 // ─── Platform & process hints ────────────────────────────────────────────────
 
-export const JOB_PLATFORM_HINTS =
-  /(syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career|ワンキャリア|offerbox|goodfind|mynavi|マイナビ|リクナビ|rikunabi|キャリタス|career-tasu|doda|unistyle|iroots|マスナビ|massnavi|paiza|itmedia|アイティメディア)/i;
+export const JOB_PLATFORM_WORDS = [
+  "syukatsu-kaigi", "syukatsukaigi", "就活会議", "openwork", "vorkers",
+  "onecareer", "one-career", "ワンキャリア", "offerbox", "goodfind",
+  "mynavi", "マイナビ", "リクナビ", "rikunabi", "キャリタス", "career-tasu",
+  "doda", "unistyle", "iroots", "マスナビ", "massnavi", "paiza", "itmedia", "アイティメディア"
+];
+export const JOB_PLATFORM_HINTS = new RegExp(`(${JOB_PLATFORM_WORDS.join("|")})`, "i");
 
-export const PROCESS_HINTS =
-  /(選考|面接|面談|説明会|webテスト|spi|適性検査|筆記試験|締切|提出期限|エントリー|応募|内定|不採用|お見送り|合否)/i;
+export const PROCESS_WORDS = [
+  "選考", "面接", "面談", "説明会", "webテスト", "spi", "適性検査", "筆記試験",
+  "締切", "提出期限", "エントリー", "応募", "内定", "不採用", "お見送り", "合否"
+];
+export const PROCESS_HINTS = new RegExp(`(${PROCESS_WORDS.join("|")})`, "i");
 
-export const ACTIONABLE_PROCESS_HINTS =
-  /(提出の御礼|提出ありがとう|ご応募ありがとうございます|ご応募ありがとうございました|今後のスケジュール|次のステップ|選考フロー|エントリーシート提出|es提出|カジュアル面談|適正検査|適性検査|面接\(個別\)|面接（個別）|内定)/i;
+export const ACTIONABLE_PROCESS_WORDS = [
+  "提出の御礼", "提出ありがとう", "ご応募ありがとうございます", "ご応募ありがとうございました",
+  "今後のスケジュール", "次のステップ", "選考フロー", "エントリーシート提出", "es提出",
+  "カジュアル面談", "適正検査", "適性検査", "面接\\(個別\\)", "面接（個別）", "内定"
+];
+export const ACTIONABLE_PROCESS_HINTS = new RegExp(`(${ACTIONABLE_PROCESS_WORDS.join("|")})`, "i");
 
-export const PLATFORM_SURVEY_HINTS =
-  /(アンケート|調査|ご協力のお願い|業界イメージ|意識調査|満足度調査|questant\.jp)/i;
+export const PLATFORM_SURVEY_HINTS = /(アンケート|調査|ご協力のお願い|業界イメージ|意識調査|満足度調査|questant\.jp)/i;
 
-export const PLATFORM_INCENTIVE_HINTS =
-  /(抽選|当たります|プレゼント|ギフトカード|ギフトコード|amazon\s*ギフト|amazonギフト)/i;
+export const PLATFORM_INCENTIVE_HINTS = /(抽選|当たります|プレゼント|ギフトカード|ギフトコード|amazon\s*ギフト|amazonギフト)/i;
 
-export const PLATFORM_NEWSLETTER_HINTS =
-  /(マイナビメール|ピックアップ|おすすめ企業|おすすめ求人|新着求人|求人をお届け|特集|キャンペーン|ランキング|就活講座|就活準備講座|就活対策|面接対策|模擬面接|面接攻略|回答例|回答事例|頻出質問|深掘り質問|基礎知識|就活準備|就活を始める方|希望勤務地別|方向性を考える|企業選びの軸|自分に合った企業|インターンシップの体験談|業界研究|セミナー開催|おすすめのセミナー情報|ビジネスオンライン通信|メールサービス|合同説明会|合説|就活イベント|就活セミナー|フォーラム|本人確認|会員登録|サービスのご案内|利用規約|退会フォーム)/i;
+export const PLATFORM_NEWSLETTER_WORDS = [
+  "マイナビメール", "ピックアップ", "おすすめ企業", "おすすめ求人", "新着求人", "求人をお届け",
+  "特集", "キャンペーン", "ランキング", "就活講座", "就活準備講座", "就活対策", "面接対策",
+  "模擬面接", "面接攻略", "回答例", "回答事例", "頻出質問", "深掘り質問", "基礎知識",
+  "就活準備", "就活を始める方", "希望勤務地別", "方向性を考える", "企業選びの軸",
+  "自分に合った企業", "インターンシップの体験談", "業界研究", "セミナー開催",
+  "おすすめのセミナー情報", "ビジネスオンライン通信", "メールサービス", "合同説明会",
+  "合説", "就活イベント", "就活セミナー", "フォーラム", "本人確認", "会員登録",
+  "サービスのご案内", "利用規約", "退会フォーム"
+];
+export const PLATFORM_NEWSLETTER_HINTS = new RegExp(`(${PLATFORM_NEWSLETTER_WORDS.join("|")})`, "i");
 
 export const PLATFORM_MESSAGE_NOTIFICATION_HINTS =
   /(メッセージが届きました|新着メッセージ|企業から.{0,40}メッセージ|メッセージ受信)/i;
@@ -109,7 +136,7 @@ export const SUBJECT_INTERVIEW_HINT =
 
 /** Strong interview/test/briefing signal on subject (used to defeat newsletter/seminar hard-negatives). */
 export const STRONG_SELECTION_SUBJECT_HINT =
-  /一次面接|二次面接|三次面接|四次面接|最終面接|最終選考|書類選考|適性検査|合否/;
+  /カジュアル面談|一次面接|二次面接|三次面接|四次面接|最終面接|最終選考|書類選考|適性検査|合否/;
 
 /** Pattern used by platform-seminar-promo gate to short-circuit the newsletter path. */
 export const PLATFORM_SEMINAR_PROMO_SUBJECT_HINT =
@@ -129,7 +156,15 @@ export const EVENT_RULES: readonly EventRule[] = [
   // Core event types.
   {
     eventType: "interview", confidence: 0.92, reason: "rule:interview", specificity: 8,
-    pattern: /(カジュアル面談|書類選考通過|書類選考合格|グループ面接|一次面接|二次面接|三次面接|最終面接|個別面接|面接のご案内|面接日程|interview|面接|面談)/i,
+    pattern: /(書類選考通過|書類選考合格|グループ面接|一次面接|二次面接|三次面接|最終面接|個別面接|面接のご案内|面接日程|interview|面接|面談)/i,
+  },
+  {
+    eventType: "casual_interview", confidence: 0.93, reason: "rule:casual_interview", specificity: 9,
+    pattern: /(カジュアル面談|casual interview)/i,
+  },
+  {
+    eventType: "document_screening", confidence: 0.91, reason: "rule:document_screening", specificity: 8,
+    pattern: /(書類選考のご案内|書類選考結果|エントリーシート選考|es選考|書類選考開始)/i,
   },
   {
     eventType: "test", confidence: 0.90, reason: "rule:test", specificity: 7,
@@ -145,7 +180,7 @@ export const EVENT_RULES: readonly EventRule[] = [
   },
   {
     eventType: "entry", confidence: 0.82, reason: "rule:entry", specificity: 5,
-    pattern: /(エントリーシートご提出の御礼|エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます|マイページ登録|プレエントリー|書類選考のご案内)/i,
+    pattern: /(エントリーシートご提出の御礼|エントリー完了|応募完了|受付完了|応募受付|エントリー受付|application received|entry completed|ご応募ありがとうございます|マイページ登録|プレエントリー)/i,
   },
 ] as const;
 
@@ -154,6 +189,8 @@ export const EVENT_RULES: readonly EventRule[] = [
 export const CO_OCCURRENCE_RULES: readonly CoOccurrenceRule[] = [
   { primary: /面接|面談|interview/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{1,2}):(\d{2})|(\d{4})[\/年]/, boost: 0.05, appliesTo: "interview" },
   { primary: /面接|面談|interview/i, secondary: /zoom|teams|google\s*meet|webex|skype|オンライン|web/i,    boost: 0.05, appliesTo: "interview" },
+  { primary: /カジュアル面談/i, secondary: /(\d{1,2})月(\d{1,2})日|(\d{1,2}):(\d{2})|(\d{4})[\/年]/, boost: 0.05, appliesTo: "casual_interview" },
+  { primary: /カジュアル面談/i, secondary: /zoom|teams|google\s*meet|webex|skype|オンライン|web/i,    boost: 0.05, appliesTo: "casual_interview" },
   { primary: /説明会|セミナー/i,     secondary: /(\d{1,2})月(\d{1,2})日|(\d{1,2}):(\d{2})/,                boost: 0.04, appliesTo: "briefing" },
   { primary: /説明会|セミナー/i,     secondary: /視聴|参加|URL/i,                                           boost: 0.03, appliesTo: "briefing" },
   { primary: /テスト|spi|適性検査|assessment/i, secondary: /https?:\/\/|URL|リンク|ログイン/i,            boost: 0.04, appliesTo: "test" },
