@@ -15,7 +15,7 @@ import {
 } from "./db";
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
-import { appendUserFacingSoulContract, loadAgentAgents, loadAgentSoul } from "./_core/soul";
+import { appendUserFacingSoulContract, composeSystemSections, loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import { z } from "zod";
 
 // ── Harness Pattern: Per-call concurrency classification ─────────────────────
@@ -52,11 +52,16 @@ async function saveMemoryWithCap(memory: Parameters<typeof saveAgentMemory>[0]) 
 }
 
 async function buildSystemPrompt(params: { agentId: string; base: string; extraSystemInstruction?: string }) {
-  const soul = await loadAgentSoul(params.agentId);
-  const agents = await loadAgentAgents(params.agentId);
-  const withSoul = soul.content ? `${params.base}\n\n[SOUL]\n${soul.content}` : params.base;
-  const withSoulAndAgents = agents.content ? `${withSoul}\n\n[AGENTS]\n${agents.content}` : withSoul;
-  const withUserFacingContract = appendUserFacingSoulContract(params.agentId, withSoulAndAgents);
+  const [soul, agents] = await Promise.all([
+    loadAgentSoul(params.agentId),
+    loadAgentAgents(params.agentId),
+  ]);
+  const composed = composeSystemSections({
+    soul: soul.content || undefined,
+    base: params.base,
+    agents: agents.content || undefined,
+  });
+  const withUserFacingContract = appendUserFacingSoulContract(params.agentId, composed);
   return params.extraSystemInstruction
     ? `${withUserFacingContract}\n\n[运行时附加指令]\n${params.extraSystemInstruction}`
     : withUserFacingContract;
@@ -277,13 +282,13 @@ function isOnboardingStartMessage(message: string): boolean {
   return /^\/start(?:@\w+)?(?:\s|$)/.test(message.trim());
 }
 
+const NEGATION_PATTERN = /(不要|不用|别加|不需要|算了|先不要|あとで|やめて|しないで|不要です|don't|do not|\bno\b|nope|\bnah\b|not now|later|maybe later)/i;
+const AFFIRMATION_PATTERN = /(yes|yep|yeah|\bok\b|okay|sure|please|go ahead|add it|create it|let's|お願いします|はい|追加して|作成して|登録して|登録お願い|了解|分かりました|どうぞ|ええ|可以|好的|加上|创建|追加|登録|没问题|当然|对啊|是的|嗯)/i;
+
 function hasRecentCreateConfirmation(message: string, history: any[], companyName: string): boolean {
-  const latest = message.trim().toLowerCase();
-  if (/(不要|不用|别|不需要|やめて|しないで|不要です|don't|do not|no\b|not now)/i.test(latest)) {
-    return false;
-  }
-  const affirmative = /^(yes|yep|ok|okay|sure|please|go ahead|add it|create it|お願いします|はい|追加して|作成して|登録して|可以|好|好的|加上|创建|追加|登録)/i.test(latest);
-  if (!affirmative) return false;
+  const latest = message.trim();
+  if (NEGATION_PATTERN.test(latest)) return false;
+  if (!AFFIRMATION_PATTERN.test(latest)) return false;
 
   const target = normalizeCompanyNameForMatch(companyName);
   const recentAssistantMessages = history
@@ -307,8 +312,11 @@ function calculateAge(birthDate: string | null | undefined, now = new Date()): n
   return age;
 }
 
-async function buildJobBoardContext(userId: number, lang: "ja" | "zh" | "en"): Promise<string> {
-  const applications = await getJobApplications(userId);
+function buildJobBoardContext(
+  applications: Awaited<ReturnType<typeof getJobApplications>>,
+  latestStatusEventTimes: Map<number, Date>,
+  lang: "ja" | "zh" | "en"
+): string {
   if (applications.length === 0) {
     return lang === "en"
       ? "[Current Job Board]\nNo tracked applications yet."
@@ -317,7 +325,6 @@ async function buildJobBoardContext(userId: number, lang: "ja" | "zh" | "en"): P
       : "【現在の就活ボード】\n追跡中の企業はまだありません。";
   }
 
-  const latestStatusEventTimes = await listLatestJobStatusEventTimes(userId);
   const now = Date.now();
   const terminalStatuses = new Set(["offer", "rejected", "withdrawn"]);
   const prioritizedApplications = applications
@@ -442,7 +449,12 @@ export async function handleAgentChat(
   const age = calculateAge(user?.birthDate);
   const eduJa = user?.education ? (educationMapJa[user.education] ?? user.education) : "未記入";
   const eduZh = user?.education ? (educationMapZh[user.education] ?? user.education) : "未填写";
-  const jobBoardContext = await buildJobBoardContext(userId, lang as "ja" | "zh" | "en");
+
+  const [applications, latestStatusEventTimes] = await Promise.all([
+    getJobApplications(userId),
+    listLatestJobStatusEventTimes(userId),
+  ]);
+  const jobBoardContext = buildJobBoardContext(applications, latestStatusEventTimes, lang as "ja" | "zh" | "en");
 
   const profileContextZh = `
 【用户已知信息 — 禁止重复询问以下任何内容】

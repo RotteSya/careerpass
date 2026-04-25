@@ -39,6 +39,10 @@ vi.mock("../billing", () => ({
   markTrialNudgeDelivered: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("./humanize", () => ({
+  humanizeNudgeBody: vi.fn().mockImplementation(async (nudge: { body: string }) => nudge.body),
+}));
+
 import { runProactiveCheckForUser } from "./scheduler";
 import { dispatchNotification } from "../_core/messaging";
 

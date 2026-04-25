@@ -4,6 +4,7 @@ import { evaluateAllRules } from "./rules";
 import type { ProactiveNudge, UserJobContext, NudgeCategory } from "./types";
 import { collectTrialNudges, markTrialNudgeDelivered } from "../billing";
 import { isNotificationAllowed } from "./quietHours";
+import { humanizeNudgeBody } from "./humanize";
 
 const NUDGE_COOLDOWN_MS = 23 * 60 * 60 * 1000;
 const deliveredNudges = new Map<string, number>();
@@ -94,14 +95,22 @@ export async function runProactiveCheckForUser(userId: number): Promise<Proactiv
     console.error("[Proactive] Failed to send trial nudges:", err);
   }
 
+  // Humanize all nudge bodies in parallel before dispatching, so the message
+  // sounds like a colleague rather than a CRM alert.
+  const humanizedBodies = await Promise.all(
+    nudges.map((n) => humanizeNudgeBody(n, lang))
+  );
+
   // Dispatch proactive nudges
-  for (const nudge of nudges) {
+  for (let i = 0; i < nudges.length; i++) {
+    const nudge = nudges[i];
+    const body = humanizedBodies[i] ?? nudge.body;
     try {
       const prefix = nudge.companyName ? `【${nudge.companyName}】` : "";
       await dispatchNotification({
         userId,
         title: nudge.title,
-        body: `${prefix}${nudge.body}`,
+        body: `${prefix}${body}`,
       });
       markNudgeDelivered(nudge, context.now);
     } catch (err) {

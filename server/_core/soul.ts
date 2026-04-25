@@ -50,6 +50,18 @@ async function loadDocByCandidates(cacheKey: string, candidates: string[]): Prom
   return { content: "", sourcePath: null };
 }
 
+export function composeSystemSections(sections: {
+  soul?: string;
+  base: string;
+  agents?: string;
+}): string {
+  const parts: string[] = [];
+  if (sections.soul) parts.push(`[SOUL]\n${sections.soul}`);
+  parts.push(sections.base);
+  if (sections.agents) parts.push(`[AGENTS]\n${sections.agents}`);
+  return parts.join("\n\n");
+}
+
 export async function loadAgentSoul(agentId: string): Promise<LoadedDoc> {
   const dir = (process.env.CAREERPASS_AGENT_DOCS_DIR ?? "").trim();
   const baseDir = dir || path.join(process.cwd(), "agents");
