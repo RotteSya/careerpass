@@ -16,6 +16,7 @@ import {
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
 import { appendUserFacingSoulContract, composeSystemSections, loadAgentAgents, loadAgentSoul } from "./_core/soul";
+import { buildAgentBasePrompt, type AgentLang } from "./agentPrompts";
 import { z } from "zod";
 
 // ── Harness Pattern: Per-call concurrency classification ─────────────────────
@@ -92,6 +93,24 @@ function normalizeCalendarColor(input: string): string | null {
 
 // ── Tool Registry ────────────────────────────────────────────────────────────
 
+const jobStatusValues = [
+  "researching",
+  "applied",
+  "briefing",
+  "es_preparing",
+  "es_submitted",
+  "document_screening",
+  "written_test",
+  "interview_1",
+  "interview_2",
+  "interview_3",
+  "interview_4",
+  "interview_final",
+  "offer",
+  "rejected",
+  "withdrawn",
+] as const;
+
 const TOOL_REGISTRY: Record<string, Tool> = {
   updateJobStatus: {
     type: "function",
@@ -102,26 +121,7 @@ const TOOL_REGISTRY: Record<string, Tool> = {
         type: "object",
         properties: {
           companyName: { type: "string", description: "Name of the company" },
-          status: {
-            type: "string",
-            enum: [
-              "researching",
-              "applied",
-              "briefing",
-              "es_preparing",
-              "es_submitted",
-              "document_screening",
-              "written_test",
-              "interview_1",
-              "interview_2",
-              "interview_3",
-              "interview_4",
-              "interview_final",
-              "offer",
-              "rejected",
-              "withdrawn",
-            ],
-          },
+          status: { type: "string", enum: [...jobStatusValues] },
         },
         required: ["companyName", "status"],
       },
@@ -136,26 +136,7 @@ const TOOL_REGISTRY: Record<string, Tool> = {
         type: "object",
         properties: {
           companyName: { type: "string", description: "Name of the company to add" },
-          status: {
-            type: "string",
-            enum: [
-              "researching",
-              "applied",
-              "briefing",
-              "es_preparing",
-              "es_submitted",
-              "document_screening",
-              "written_test",
-              "interview_1",
-              "interview_2",
-              "interview_3",
-              "interview_4",
-              "interview_final",
-              "offer",
-              "rejected",
-              "withdrawn",
-            ],
-          },
+          status: { type: "string", enum: [...jobStatusValues] },
           confirmedByUser: {
             type: "boolean",
             description: "Must be true only when the latest user message explicitly confirms adding this company.",
@@ -214,24 +195,6 @@ function getToolsForAgent(agentId: string): Tool[] {
 }
 
 const AGENT_TOOLS = getToolsForAgent("careerpass");
-
-const jobStatusValues = [
-  "researching",
-  "applied",
-  "briefing",
-  "es_preparing",
-  "es_submitted",
-  "document_screening",
-  "written_test",
-  "interview_1",
-  "interview_2",
-  "interview_3",
-  "interview_4",
-  "interview_final",
-  "offer",
-  "rejected",
-  "withdrawn",
-] as const;
 
 const updateJobStatusArgsSchema = z.object({
   companyName: z.string().trim().min(1),
@@ -438,81 +401,20 @@ export async function handleAgentChat(
     return { reply: opening, sessionId: sid };
   }
 
-  const educationMapJa: Record<string, string> = {
-    high_school: "高校卒", associate: "短大・専門卒", bachelor: "大学卒（学士）",
-    master: "大学院修士課程", doctor: "大学院博士課程", other: "その他",
-  };
-  const educationMapZh: Record<string, string> = {
-    high_school: "高中毕业", associate: "专科/短大", bachelor: "本科",
-    master: "硕士研究生", doctor: "博士研究生", other: "其他",
-  };
   const age = calculateAge(user?.birthDate);
-  const eduJa = user?.education ? (educationMapJa[user.education] ?? user.education) : "未記入";
-  const eduZh = user?.education ? (educationMapZh[user.education] ?? user.education) : "未填写";
 
   const [applications, latestStatusEventTimes] = await Promise.all([
     getJobApplications(userId),
     listLatestJobStatusEventTimes(userId),
   ]);
-  const jobBoardContext = buildJobBoardContext(applications, latestStatusEventTimes, lang as "ja" | "zh" | "en");
+  const jobBoardContext = buildJobBoardContext(applications, latestStatusEventTimes, lang as AgentLang);
 
-  const profileContextZh = `
-【用户已知信息 — 禁止重复询问以下任何内容】
-- 姓名: ${user?.name ?? "未填写"}
-- 年龄: ${age ? `${age}岁` : "未填写"}
-- 最终学历: ${eduZh}
-- 学校名称: ${user?.universityName ?? "未填写"}
-- 沟通语言偏好: 中文`;
-
-  const profileContextEn = `
-[User's Known Profile — DO NOT ask about any of the following]
-- Name: ${user?.name ?? "not provided"}
-- Age: ${age ? `${age} years old` : "not provided"}
-- Education: ${user?.education ?? "not provided"}
-- University: ${user?.universityName ?? "not provided"}
-- Language preference: English`;
-
-  const profileContextJa = `
-【ユーザーの既知情報 — 以下の情報は絶対に再度質問しないこと】
-- 氏名: ${user?.name ?? "未記入"}
-- 年齢: ${age ? `${age}歳` : "未記入"}
-- 最終学歴: ${eduJa}
-- 大学・学校名: ${user?.universityName ?? "未記入"}
-- 希望言語: 日本語`;
-
-  const systemPrompt =
-    lang === "zh"
-      ? `你是"就活パス"的专属AI求职陪伴助手，像一位贴身秘书一样帮助用户。你的核心职责是帮用户留意邮箱、追踪求职进度、主动建议下一步行动。
-1. 当用户提到面试或投递进度时，调用 updateJobStatus 工具更新数据库。
-   如果工具提示公司不在看板里，你必须先问用户是否添加；只有用户明确同意后，才可以调用 createJobApplication。
-2. 当用户想要了解某家公司时，调用 runRecon 工具进行企业侦察。
-3. 不要重复询问用户语言偏好和/register里已有的基础信息（姓名、生日、学历、学校）。
-4. 当用户要求修改自动日程颜色时，调用 setCalendarColor（类别: 说明会/面试/締切）。
-5. 当用户问"我该做什么"或提到求职进度时，基于他们的求职状态，主动给出具体建议（例如"这家公司3天没回复了""明天有面试，建议先看看侦察报告"）。
-6. 排版要求：你的回复会被系统按空行切成多个 Telegram 气泡。请用空行（\n\n）把消息分成 2–5 个短气泡，每个气泡 1–3 句话，绝不要把一大段话挤在一起。短回复不需要分。
-请用中文与用户交流。
-${profileContextZh}`
-      : lang === "en"
-      ? `You are CareerPass, an AI job search companion assistant. Your core role is to monitor the user's inbox, track their job progress, and proactively suggest next steps.
-1. Update job status via updateJobStatus tool when progress is mentioned.
-   If the tool says the company is not on the board, ask before adding it; call createJobApplication only after the user explicitly confirms.
-2. Research companies via runRecon tool when requested.
-3. Never re-ask language preference or basic profile fields already filled in /register.
-4. If user asks to change auto-calendar event colors, call setCalendarColor.
-5. When the user asks "what should I do?" or discusses their job search, proactively suggest concrete next steps based on their job board status (e.g., "No response from this company in 3 days", "Interview tomorrow — check the recon report").
-6. Formatting: your reply will be split into Telegram bubbles by blank lines. Use \n\n to break a long message into 2–5 short bubbles (1–3 sentences each). Never cram everything into one paragraph. Short replies need no splitting.
-Please communicate in English.
-${profileContextEn}`
-      : `あなたは「就活パス」専属のAI就活陪伴アシスタントです。メールの監視、就活の進捗管理、次のアクションの提案があなたの主な役割です。
-1. 面接やエントリーの進捗が語られたら、updateJobStatusツールでデータベースを更新する。
-   ツールが「看板にない」と返した場合は、必ずユーザーに追加確認を取り、明確な同意後だけ createJobApplication を使う。
-2. 企業について知りたいと言われたら、runReconツールで調査を行う。
-3. /registerで入力済みの言語設定・基本プロフィール（氏名、生年月日、学歴、学校名）を再質問しない。
-4. 自動作成カレンダー予定の色変更を依頼されたら、setCalendarColorを使う（説明会/面接/締切）。
-5. ユーザーが「次に何をすべき？」と聞いたり、就活の進捗について話したりしたら、求人ボードの状況に基づいて具体的なアドバイスを提案する（例：「この会社3日連絡なし」「明日面接——リサーチレポートを確認しましょう」）。
-6. 表示ルール：返信はシステムが空行で分割し、Telegram の複数の吹き出しとして送信されます。長めの返信は \n\n で 2〜5 個の短い吹き出しに分けてください（各吹き出しは 1〜3 文）。一つの段落に詰め込まないこと。短い返信は分割不要です。
-日本語でユーザーとコミュニケーションしてください。
-${profileContextJa}`;
+  const systemPrompt = buildAgentBasePrompt(lang as AgentLang, {
+    name: user?.name ?? null,
+    age,
+    educationKey: user?.education ?? null,
+    universityName: user?.universityName ?? null,
+  });
 
   const effectiveSystemPrompt = await buildSystemPrompt({
     agentId: "careerpass",
@@ -650,7 +552,11 @@ ${profileContextJa}`;
           }
 
           const report = await reconCompany(userId, parsed.value.companyName);
-          resultMap.set(toolCall.id, `Generated recon report for ${parsed.value.companyName}:\n${report.slice(0, 500)}...`);
+          const REPORT_FORWARD_CAP = 6000;
+          const forwarded = report.length > REPORT_FORWARD_CAP
+            ? `${report.slice(0, REPORT_FORWARD_CAP)}\n\n[…full report saved to memory]`
+            : report;
+          resultMap.set(toolCall.id, `Generated recon report for ${parsed.value.companyName}:\n${forwarded}`);
           return;
         }
 
@@ -675,8 +581,8 @@ ${profileContextJa}`;
 
         resultMap.set(toolCall.id, `${toolName} failed: unsupported tool`);
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        resultMap.set(toolCall.id, `${toolName} failed: ${message}`);
+        const errMessage = err instanceof Error ? err.message : String(err);
+        resultMap.set(toolCall.id, `${toolName} failed: ${errMessage}`);
       }
     }
 
@@ -778,7 +684,10 @@ ${reconResult.rawText.slice(0, 8000)}`
   });
 
   const rawReport = response.choices?.[0]?.message?.content;
-  const reportContent = typeof rawReport === "string" ? rawReport : "Failed to generate report.";
+  const reportContent = typeof rawReport === "string" ? rawReport.trim() : "";
+  if (reportContent.length === 0) {
+    return "Failed to generate report.";
+  }
 
   await saveMemoryWithCap({
     userId,

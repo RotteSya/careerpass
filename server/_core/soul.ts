@@ -28,7 +28,7 @@ async function readIfExists(p: string): Promise<string | null> {
 }
 
 function getCacheMs() {
-  return process.env.NODE_ENV === "development" ? 0 : 60_000;
+  return process.env.NODE_ENV === "development" ? 0 : 600_000;
 }
 
 async function loadDocByCandidates(cacheKey: string, candidates: string[]): Promise<LoadedDoc> {
