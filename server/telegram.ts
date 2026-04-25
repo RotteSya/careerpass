@@ -257,9 +257,9 @@ function buildNoUpcomingScheduleText(lang: "ja" | "zh" | "en"): string {
 }
 
 function buildCheckmailStartedText(lang: "ja" | "zh" | "en"): string {
-  if (lang === "zh") return "正在检查您的邮箱并同步关键事件，请稍候...";
-  if (lang === "en") return "Checking your inbox and syncing key events now. Please wait a moment...";
-  return "メールを確認し、重要イベントを同期しています。少々お待ちください。";
+  if (lang === "zh") return "我现在过一遍邮箱，看到说明会、面试、截止这类硬信息就立刻同步。稍等我一下。";
+  if (lang === "en") return "I’m going through your inbox now. If there’s a briefing, interview, or deadline hiding in there, I’ll pull it out.";
+  return "今からメールを見ます。説明会・面接・締切があれば、見つけ次第すぐ整理します。少し待ってください。";
 }
 
 function buildBillingBlockedText(lang: "ja" | "zh" | "en"): string {
@@ -312,9 +312,9 @@ function buildScanSummaryText(
 }
 
 function buildCheckmailFailedText(lang: "ja" | "zh" | "en"): string {
-  if (lang === "zh") return "⚠️ 邮箱检查失败，请稍后重试。";
-  if (lang === "en") return "⚠️ Inbox check failed. Please try again shortly.";
-  return "⚠️ メール確認に失敗しました。しばらくしてから再試行してください。";
+  if (lang === "zh") return "⚠️ 这次邮箱没查成，可能是授权或网络出了问题。稍后再试一次，我继续盯着。";
+  if (lang === "en") return "⚠️ I couldn’t finish this inbox check. It may be auth or network trouble; try again shortly and I’ll take another pass.";
+  return "⚠️ 今回はメール確認が完了しませんでした。認証かネットワークの問題かもしれません。少し後でもう一度試してください。";
 }
 
 function parseConversationMemoryTurns(rawContent: string, metadata: unknown): Array<{ role: "user" | "assistant"; content: string }> {

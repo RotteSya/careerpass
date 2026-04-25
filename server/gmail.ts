@@ -30,7 +30,7 @@ import {
 } from "./db";
 
 import { invokeLLM } from "./_core/llm";
-import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
+import { appendUserFacingSoulContract, loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import { createCompanyBatchDeduper, sortMailItemsByTsAsc } from "./gmail_dedup";
 import { sendTelegramMessage } from "./telegramMessaging";
 import { dispatchNotification } from "./_core/messaging";
@@ -1248,17 +1248,17 @@ function fallbackMailNotification(input: ComposeNotificationInput): string {
       : `打开原邮件确认${typeLabels[eventType]}的具体安排`);
   const extra = todoItems.slice(1);
   const lines: string[] = [];
-  lines.push(`下一步：${primaryAction}`);
+  lines.push(`先做这件事：${primaryAction}`);
   lines.push(
-    `${companyName ?? "这家公司"}发来一封${typeLabels[eventType]}邮件${
+    `${companyName ?? "这家公司"}有一封新的${typeLabels[eventType]}邮件${
       date ? `（${date}${time ? ` ${time}` : ""} JST）` : ""
-    }。`
+    }，我先替你拎出来了。`
   );
   lines.push(`[查看原邮件](${mailLink})`);
   if (extra.length) {
-    lines.push(`其他要做的：${extra.join("；")}`);
+    lines.push(`顺手再处理：${extra.join("；")}`);
   }
-  if (progressLabel) lines.push(`看板已更新到「${progressLabel}」。`);
+  if (progressLabel) lines.push(`看板我也记好了：${progressLabel}。`);
   if (boardScreenshotLink) lines.push(`[查看最新看板截图](${boardScreenshotLink})`);
   if (outcomeUncertain) lines.push("这封邮件可能涉及结果，语义不够确定，我没有自动标记，方便时去看板确认。");
   return lines.join("\n");
@@ -1295,10 +1295,11 @@ async function composeMailNotification(input: ComposeNotificationInput): Promise
       `- 只输出最终消息正文，不要加引号、不要解释。` +
       (soul.content ? `\n\n[SOUL]\n${soul.content}` : "") +
       (agents.content ? `\n\n[AGENTS]\n${agents.content}` : "");
+    const effectiveSystemPrompt = appendUserFacingSoulContract("careerpass", systemPrompt);
 
     const response = await invokeLLM({
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: effectiveSystemPrompt },
         {
           role: "user",
           content:

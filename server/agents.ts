@@ -13,7 +13,7 @@ import {
 } from "./db";
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
-import { loadAgentAgents, loadAgentSoul } from "./_core/soul";
+import { appendUserFacingSoulContract, loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import { z } from "zod";
 
 // ── Harness Pattern: Per-call concurrency classification ─────────────────────
@@ -54,9 +54,10 @@ async function buildSystemPrompt(params: { agentId: string; base: string; extraS
   const agents = await loadAgentAgents(params.agentId);
   const withSoul = soul.content ? `${params.base}\n\n[SOUL]\n${soul.content}` : params.base;
   const withSoulAndAgents = agents.content ? `${withSoul}\n\n[AGENTS]\n${agents.content}` : withSoul;
+  const withUserFacingContract = appendUserFacingSoulContract(params.agentId, withSoulAndAgents);
   return params.extraSystemInstruction
-    ? `${withSoulAndAgents}\n\n[运行时附加指令]\n${params.extraSystemInstruction}`
-    : withSoulAndAgents;
+    ? `${withUserFacingContract}\n\n[运行时附加指令]\n${params.extraSystemInstruction}`
+    : withUserFacingContract;
 }
 
 function normalizeCalendarColor(input: string): string | null {
@@ -236,39 +237,39 @@ export function buildFixedOpening(
 
   if (lang === "zh") {
     return (
-      `您好 ${name}，我是您的贴身求职秘书。我帮您留意邮箱，记着每家公司走到哪一步，提醒您接下来该干什么。\n` +
-      `我能帮您做这些事：\n` +
-      `- 帮您留意邮箱，说明会 / 笔试 / 面试 / 截止日期一个不漏，第一时间告诉您\n` +
-      `- 记着每家公司的进度，让您随时掌握全局\n` +
-      `- 帮您做企业调研，面试前帮您整理好重点\n` +
-      `- 提醒您接下来该做什么——比如"这家公司3天没回复了""明天有面试，记得准备"\n` +
-      `- 把面试 / 截止自动写进您的 Google 日历\n` +
-      `咱们开始吧——先告诉我，我应该怎么称呼您？`
+      `${name}，我到岗了。老板说不把你送进 offer 就别想下班，所以接下来我会认真盯住你的求职进度。\n` +
+      `我主要替你做这些事：\n` +
+      `- 帮你留意邮箱，说明会 / 笔试 / 面试 / 截止日期一个不漏，第一时间告诉你\n` +
+      `- 记着每家公司的进度，让你随时掌握全局\n` +
+      `- 帮你做企业调研，面试前把重点整理好\n` +
+      `- 提醒你接下来该做什么，比如「这家公司 3 天没回复了」「明天有面试，该准备了」\n` +
+      `- 把面试 / 截止自动写进你的 Google 日历\n` +
+      `对了——为了让我能下班，先问一句：我应该怎么称呼你比较顺口？`
     );
   }
 
   if (lang === "en") {
     return (
-      `Hi ${name}, I'm your personal job search assistant. I keep an eye on your inbox, track every company's progress, and remind you what to do next.\n` +
-      `Here's what I do for you:\n` +
+      `Hi ${name}, I’m on duty now. My boss says I don’t get to clock out until I help you reach an offer, so I’ll keep this practical and close to the ground.\n` +
+      `Here’s what I’ll handle:\n` +
       `- Watch your inbox and surface every briefing / test / interview / deadline the moment it lands\n` +
       `- Keep track of each company's progress so you always know where things stand\n` +
       `- Research companies before your interviews\n` +
-      `- Remind you what's next — like "No response from this company in 3 days" or "Interview tomorrow, time to prep"\n` +
+      `- Tell you what to do next, like “No response for 3 days” or “Interview tomorrow, time to prep”\n` +
       `- Auto-write interviews and deadlines into your Google Calendar\n` +
-      `Let's get started — what should I call you?`
+      `First thing: what should I call you?`
     );
   }
 
   return (
-    `${name}さん、はじめまして。私は就活パスの専属就活アシスタントです。あなたのメールを見守り、各社の進捗を管理し、次に何をすべきかをお知らせするのが私の仕事です。\n` +
-    `私ができること：\n` +
+    `${name}さん、勤務開始です。内定まで伴走しないと上司が帰してくれないので、ここからはかなり実務的に支えます。\n` +
+    `私が見るところ：\n` +
     `- メールを見守って、説明会・Webテスト・面接・締切を検知したらすぐ通知\n` +
     `- 各社の進捗を常に把握し、最新の状態をお伝え\n` +
     `- 面接前に企業調査をして、要点を整理してお届け\n` +
-    `- 次にやるべきことをリマインド——「この会社3日連絡なし」「明日面接、準備は？」など\n` +
+    `- 「この会社3日連絡なし」「明日面接、準備が必要」みたいに次の一手を整理\n` +
     `- 面接や締切を Google カレンダーへ自動登録\n` +
-    `さて、まず最初に——あなたのことは何とお呼びすればよいですか？`
+    `まず最初に、あなたのことは何とお呼びすればよいですか？`
   );
 }
 

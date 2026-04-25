@@ -229,7 +229,7 @@ describe("handleAgentChat", () => {
   it("returns a reply from LLM", async () => {
     // First turn (history=[]) returns fixed opening greeting, not LLM
     const firstResult = await handleAgentChat(1, "こんにちは", "test-session", []);
-    expect(firstResult.reply).toContain("就活パス");
+    expect(firstResult.reply).toContain("勤務開始");
     expect(firstResult.sessionId).toBeDefined();
     // Subsequent turns (history non-empty) use LLM
     const result = await handleAgentChat(1, "こんにちは", "test-session", [
@@ -237,6 +237,18 @@ describe("handleAgentChat", () => {
     ]);
     expect(result.reply).toBe("テスト回答です。");
     expect(result.sessionId).toBeDefined();
+  });
+
+  it("passes SOUL-first user-facing guidance to the LLM", async () => {
+    await handleAgentChat(1, "次に何をすればいい？", "test-session", [
+      { role: "assistant", content: "ウェルカム" },
+    ]);
+
+    const call = mockLLM.mock.calls[0]?.[0];
+    const systemMessage = call?.messages?.[0]?.content;
+    expect(systemMessage).toContain("[SOUL]");
+    expect(systemMessage).toContain("[面向用户表达优先级]");
+    expect(systemMessage).toContain("每条回复都要像一个真实同事");
   });
 
   it("saves conversation to memory", async () => {
