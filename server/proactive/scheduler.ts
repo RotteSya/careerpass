@@ -5,12 +5,41 @@ import type { ProactiveNudge, UserJobContext, NudgeCategory } from "./types";
 import { collectTrialNudges, markTrialNudgeDelivered } from "../billing";
 import { isNotificationAllowed } from "./quietHours";
 
+const NUDGE_COOLDOWN_MS = 23 * 60 * 60 * 1000;
+const deliveredNudges = new Map<string, number>();
+
 function isCategoryEnabled(
   category: NudgeCategory,
   prefs: Record<string, boolean> | null | undefined
 ): boolean {
   if (!prefs) return true; // No prefs = all enabled
   return prefs[category] !== false;
+}
+
+function nudgeDeliveryKey(nudge: ProactiveNudge): string {
+  const target = nudge.jobApplicationId ?? "global";
+  const relevantDate = nudge.expiresAt?.toISOString().slice(0, 10) ?? nudge.scheduledAt.toISOString().slice(0, 10);
+  return [
+    nudge.userId,
+    nudge.category,
+    target,
+    nudge.title,
+    nudge.companyName ?? "",
+    relevantDate,
+  ].join(":");
+}
+
+function shouldDeliverNudge(nudge: ProactiveNudge, now: Date): boolean {
+  const key = nudgeDeliveryKey(nudge);
+  const lastDeliveredAt = deliveredNudges.get(key);
+  if (lastDeliveredAt && now.getTime() - lastDeliveredAt < NUDGE_COOLDOWN_MS) {
+    return false;
+  }
+  return true;
+}
+
+function markNudgeDelivered(nudge: ProactiveNudge, now: Date): void {
+  deliveredNudges.set(nudgeDeliveryKey(nudge), now.getTime());
 }
 
 export async function runProactiveCheckForUser(userId: number): Promise<ProactiveNudge[]> {
@@ -50,9 +79,9 @@ export async function runProactiveCheckForUser(userId: number): Promise<Proactiv
     app.lastStatusEventAt = latestStatusEventTimes.get(app.id) ?? app.updatedAt;
   }
 
-  const nudges = evaluateAllRules(context).filter(
-    (n) => isCategoryEnabled(n.category, nudgePrefs)
-  );
+  const nudges = evaluateAllRules(context)
+    .filter((n) => isCategoryEnabled(n.category, nudgePrefs))
+    .filter((n) => shouldDeliverNudge(n, context.now));
 
   // Also check billing trial nudges
   try {
@@ -74,6 +103,7 @@ export async function runProactiveCheckForUser(userId: number): Promise<Proactiv
         title: nudge.title,
         body: `${prefix}${nudge.body}`,
       });
+      markNudgeDelivered(nudge, context.now);
     } catch (err) {
       console.error(`[Proactive] Failed to dispatch nudge for user ${userId}:`, err);
     }

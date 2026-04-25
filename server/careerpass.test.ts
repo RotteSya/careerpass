@@ -35,12 +35,14 @@ vi.mock("./db", () => ({
   getJobApplications: vi.fn().mockResolvedValue([]),
   createJobApplication: vi.fn().mockResolvedValue(undefined),
   updateJobApplicationStatus: vi.fn().mockResolvedValue(undefined),
+  createJobStatusEvent: vi.fn().mockResolvedValue(undefined),
   saveAgentMemory: vi.fn().mockResolvedValue(undefined),
   getAgentMemory: vi.fn().mockResolvedValue([]),
   createTelegramBinding: vi.fn().mockResolvedValue(undefined),
   getOrCreateAgentSession: vi.fn().mockResolvedValue({ id: 1, chatId: "12345" }),
   countAgentMemory: vi.fn().mockResolvedValue(0),
   deleteOldestAgentMemory: vi.fn().mockResolvedValue(undefined),
+  listLatestJobStatusEventTimes: vi.fn().mockResolvedValue(new Map()),
 }));
 
 vi.mock("./_core/llm", () => ({
@@ -221,17 +223,33 @@ describe("jobs", () => {
 // ─── Telegram Agent Chat ──────────────────────────────────────────────────────
 
 describe("handleAgentChat", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    const db = await import("./db");
     mockLLM.mockReset();
     mockLLM.mockResolvedValue(llmReply("テスト回答です。"));
+    vi.mocked(db.getJobApplications).mockClear();
+    vi.mocked(db.getJobApplications).mockResolvedValue([]);
+    vi.mocked(db.createJobApplication).mockClear();
+    vi.mocked(db.updateJobApplicationStatus).mockClear();
+    vi.mocked(db.createJobStatusEvent).mockClear();
+    vi.mocked(db.listLatestJobStatusEventTimes).mockClear();
+    vi.mocked(db.listLatestJobStatusEventTimes).mockResolvedValue(new Map());
+  });
+
+  it("returns the fixed opening only for /start onboarding", async () => {
+    const result = await handleAgentChat(1, "/start user_1", "test-session", []);
+    expect(result.reply).toContain("勤務開始");
+    expect(result.sessionId).toBeDefined();
+    expect(mockLLM).not.toHaveBeenCalled();
+  });
+
+  it("uses LLM for a normal first message even when history is empty", async () => {
+    const result = await handleAgentChat(1, "ソニーを調べて", "test-session", []);
+    expect(result.reply).toBe("テスト回答です。");
+    expect(mockLLM).toHaveBeenCalledOnce();
   });
 
   it("returns a reply from LLM", async () => {
-    // First turn (history=[]) returns fixed opening greeting, not LLM
-    const firstResult = await handleAgentChat(1, "こんにちは", "test-session", []);
-    expect(firstResult.reply).toContain("勤務開始");
-    expect(firstResult.sessionId).toBeDefined();
-    // Subsequent turns (history non-empty) use LLM
     const result = await handleAgentChat(1, "こんにちは", "test-session", [
       { role: "assistant", content: "ウェルカム" },
     ]);
@@ -249,6 +267,74 @@ describe("handleAgentChat", () => {
     expect(systemMessage).toContain("[SOUL]");
     expect(systemMessage).toContain("[面向用户表达优先级]");
     expect(systemMessage).toContain("每条回复都要像一个真实同事");
+  });
+
+  it("passes current job board context to the LLM", async () => {
+    const db = await import("./db");
+    vi.mocked(db.getJobApplications).mockResolvedValueOnce([
+      {
+        id: 10,
+        userId: 1,
+        companyNameJa: "株式会社テスト",
+        companyNameEn: "Test Inc",
+        position: null,
+        contactInfo: null,
+        priority: "medium",
+        status: "interview_1",
+        reconReportPath: null,
+        esFilePath: null,
+        notes: null,
+        nextActionAt: new Date("2026-04-30T01:00:00.000Z"),
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-20T00:00:00.000Z"),
+        _latestMailSubject: "一次面接のご案内",
+        _latestMailFrom: "recruit@example.com",
+        _latestReason: "interview notice",
+      },
+    ]);
+    vi.mocked(db.listLatestJobStatusEventTimes).mockResolvedValueOnce(
+      new Map([[10, new Date("2026-04-21T00:00:00.000Z")]])
+    );
+
+    await handleAgentChat(1, "次に何をすればいい？", "test-session", [
+      { role: "assistant", content: "ウェルカム" },
+    ]);
+
+    const systemMessage = mockLLM.mock.calls[0]?.[0]?.messages?.[0]?.content;
+    expect(systemMessage).toContain("現在の就活ボード");
+    expect(systemMessage).toContain("株式会社テスト / Test Inc");
+    expect(systemMessage).toContain("status=interview_1");
+    expect(systemMessage).toContain("一次面接のご案内");
+  });
+
+  it("does not create a new job application from an unmatched status update tool call", async () => {
+    const db = await import("./db");
+    vi.mocked(db.getJobApplications).mockResolvedValue([]);
+    mockLLM
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            content: "",
+            tool_calls: [{
+              id: "call_1",
+              type: "function",
+              function: {
+                name: "updateJobStatus",
+                arguments: JSON.stringify({ companyName: "未知株式会社", status: "applied" }),
+              },
+            }],
+          },
+        }],
+      })
+      .mockResolvedValueOnce(llmReply("その会社はまだ看板にないので、追加して更新していいですか？"));
+
+    const result = await handleAgentChat(1, "未知株式会社に応募した", "test-session", [
+      { role: "assistant", content: "ウェルカム" },
+    ]);
+
+    expect(db.createJobApplication).not.toHaveBeenCalled();
+    expect(db.updateJobApplicationStatus).not.toHaveBeenCalled();
+    expect(result.reply).toContain("追加して更新していいですか");
   });
 
   it("saves conversation to memory", async () => {

@@ -1,0 +1,58 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { mockDispatchNotification } = vi.hoisted(() => ({
+  mockDispatchNotification: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("../db", () => ({
+  getUserById: vi.fn().mockResolvedValue({
+    id: 1,
+    preferredLanguage: "zh",
+    notificationSchedule: null,
+    nudgeCategoriesEnabled: null,
+  }),
+  getActiveMessagingBinding: vi.fn().mockResolvedValue({
+    provider: "telegram",
+    externalId: "123",
+  }),
+  getJobApplications: vi.fn().mockResolvedValue([
+    {
+      id: 101,
+      companyNameJa: "株式会社テスト",
+      companyNameEn: null,
+      status: "document_screening",
+      updatedAt: new Date("2026-03-25T00:00:00.000Z"),
+      nextActionAt: null,
+    },
+  ]),
+  listLatestJobStatusEventTimes: vi.fn().mockResolvedValue(
+    new Map([[101, new Date("2026-03-25T00:00:00.000Z")]])
+  ),
+}));
+
+vi.mock("../_core/messaging", () => ({
+  dispatchNotification: mockDispatchNotification,
+}));
+
+vi.mock("../billing", () => ({
+  collectTrialNudges: vi.fn().mockResolvedValue([]),
+  markTrialNudgeDelivered: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { runProactiveCheckForUser } from "./scheduler";
+import { dispatchNotification } from "../_core/messaging";
+
+describe("runProactiveCheckForUser", () => {
+  beforeEach(() => {
+    vi.mocked(dispatchNotification).mockClear();
+  });
+
+  it("does not dispatch the same proactive nudge twice within the cooldown window", async () => {
+    const first = await runProactiveCheckForUser(1);
+    const second = await runProactiveCheckForUser(1);
+
+    expect(first.length).toBeGreaterThan(0);
+    expect(second).toHaveLength(0);
+    expect(dispatchNotification).toHaveBeenCalledTimes(first.length);
+  });
+});

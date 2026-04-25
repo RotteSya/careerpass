@@ -5,11 +5,12 @@ import {
   saveAgentMemory,
   updateAgentSession,
   updateJobApplicationStatus,
-  createJobApplication,
   getJobApplications,
   updateUserCalendarColorPrefs,
   countAgentMemory,
   deleteOldestAgentMemory,
+  createJobStatusEvent,
+  listLatestJobStatusEventTimes,
 } from "./db";
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
@@ -227,6 +228,47 @@ function normalizeCompanyNameForMatch(name: string): string {
     .replace(/株式会社|（株）|\(株\)|㈱/g, "");
 }
 
+function isOnboardingStartMessage(message: string): boolean {
+  return message.trim().startsWith("/start");
+}
+
+function calculateAge(birthDate: string | null | undefined, now = new Date()): number | null {
+  if (!birthDate) return null;
+  const [year, month, day] = birthDate.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  let age = now.getFullYear() - year;
+  const birthdayThisYear = new Date(now.getFullYear(), month - 1, day);
+  if (now < birthdayThisYear) age -= 1;
+  return age;
+}
+
+async function buildJobBoardContext(userId: number, lang: "ja" | "zh" | "en"): Promise<string> {
+  const applications = await getJobApplications(userId);
+  if (applications.length === 0) {
+    return lang === "en"
+      ? "[Current Job Board]\nNo tracked applications yet."
+      : lang === "zh"
+      ? "【当前求职看板】\n目前没有已追踪的公司。"
+      : "【現在の就活ボード】\n追跡中の企業はまだありません。";
+  }
+
+  const latestStatusEventTimes = await listLatestJobStatusEventTimes(userId);
+  const lines = applications.slice(0, 20).map((app) => {
+    const lastStatusEventAt = latestStatusEventTimes.get(app.id) ?? app.updatedAt;
+    const nextAction = app.nextActionAt ? app.nextActionAt.toISOString() : "none";
+    const latestMail = app._latestMailSubject ? `; latestMail=${app._latestMailSubject}` : "";
+    return `- ${app.companyNameJa}${app.companyNameEn ? ` / ${app.companyNameEn}` : ""}: status=${app.status}; lastStatusEventAt=${lastStatusEventAt.toISOString()}; nextActionAt=${nextAction}${latestMail}`;
+  });
+
+  const header =
+    lang === "en"
+      ? "[Current Job Board — use this for proactive next-step advice]"
+      : lang === "zh"
+      ? "【当前求职看板 — 主动建议下一步时必须参考】"
+      : "【現在の就活ボード — 次の一手を提案するときは必ず参照】";
+  return `${header}\n${lines.join("\n")}`;
+}
+
 export function buildFixedOpening(
   user: Awaited<ReturnType<typeof getUserById>>,
   _sessionId: string
@@ -285,7 +327,7 @@ export async function handleAgentChat(
 
   const sid = sessionId ?? crypto.randomUUID();
 
-  if (history.length === 0) {
+  if (history.length === 0 && isOnboardingStartMessage(message)) {
     const opening = buildFixedOpening(user, sid);
     await saveMemoryWithCap({
       userId,
@@ -311,10 +353,10 @@ export async function handleAgentChat(
     high_school: "高中毕业", associate: "专科/短大", bachelor: "本科",
     master: "硕士研究生", doctor: "博士研究生", other: "其他",
   };
-  const birthYear = user?.birthDate ? parseInt(user.birthDate.split("-")[0]) : null;
-  const age = birthYear ? new Date().getFullYear() - birthYear : null;
+  const age = calculateAge(user?.birthDate);
   const eduJa = user?.education ? (educationMapJa[user.education] ?? user.education) : "未記入";
   const eduZh = user?.education ? (educationMapZh[user.education] ?? user.education) : "未填写";
+  const jobBoardContext = await buildJobBoardContext(userId, lang as "ja" | "zh" | "en");
 
   const profileContextZh = `
 【用户已知信息 — 禁止重复询问以下任何内容】
@@ -373,7 +415,7 @@ ${profileContextJa}`;
 
   const effectiveSystemPrompt = await buildSystemPrompt({
     agentId: "careerpass",
-    base: systemPrompt,
+    base: `${systemPrompt}\n\n${jobBoardContext}`,
     extraSystemInstruction,
   });
 
@@ -410,13 +452,29 @@ ${profileContextJa}`;
             const names = [a.companyNameJa, a.companyNameEn].filter((name): name is string => !!name);
             return names.some((name) => normalizeCompanyNameForMatch(name) === targetCompany);
           });
-          const appId = app?.id ?? (await createJobApplication({ userId, companyNameJa: args.companyName })).id;
+          if (!app) {
+            resultMap.set(
+              toolCall.id,
+              `updateJobStatus needs confirmation: no existing application exactly matched "${args.companyName}". Ask the user before creating a new tracked company or changing the board.`
+            );
+            return;
+          }
+
+          const appId = app.id;
           if (!appId) {
             resultMap.set(toolCall.id, `updateJobStatus failed: could not create or find ${args.companyName}`);
             return;
           }
 
           await updateJobApplicationStatus(appId, userId, args.status);
+          await createJobStatusEvent({
+            userId,
+            jobApplicationId: appId,
+            source: "agent",
+            prevStatus: app.status,
+            nextStatus: args.status,
+            reason: `Updated from agent chat for ${args.companyName}`,
+          });
           resultMap.set(toolCall.id, `Updated ${args.companyName} status to ${args.status}`);
           return;
         }
