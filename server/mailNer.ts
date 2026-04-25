@@ -672,6 +672,7 @@ export type DomainTier =
   | "corporate_jp"    // *.co.jp — very likely a real company
   | "corporate"       // *.com / other TLD with non-free domain
   | "recruiting_platform" // rikunabi, mynavi, etc.
+  | "ats"             // applicant tracking systems (greenhouse, lever, workday, etc.)
   | "noise_platform"  // openwork, 就活会議 — review / info sites
   | "non_recruiting"  // e-commerce / ticketing / delivery / utility / student — structurally never recruiting
   | "free_mail"

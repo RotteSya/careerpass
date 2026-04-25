@@ -48,7 +48,6 @@ import {
   HARD_REJECTION_EN_PATTERN,
   HARD_OFFER_JP_PATTERN,
   HARD_OFFER_EN_PATTERN,
-  LIFESTYLE_NON_RECRUITING_HINTS,
 } from "./_core/mailKeywords";
 
 interface MailDecisionLike {
