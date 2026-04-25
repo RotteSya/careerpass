@@ -5,6 +5,7 @@ import {
   saveAgentMemory,
   updateAgentSession,
   updateJobApplicationStatus,
+  createJobApplication,
   getJobApplications,
   updateUserCalendarColorPrefs,
   countAgentMemory,
@@ -121,6 +122,44 @@ const TOOL_REGISTRY: Record<string, Tool> = {
       },
     },
   },
+  createJobApplication: {
+    type: "function",
+    function: {
+      name: "createJobApplication",
+      description: "Create a tracked job application only after the user explicitly confirms adding a company to the job board.",
+      parameters: {
+        type: "object",
+        properties: {
+          companyName: { type: "string", description: "Name of the company to add" },
+          status: {
+            type: "string",
+            enum: [
+              "researching",
+              "applied",
+              "briefing",
+              "es_preparing",
+              "es_submitted",
+              "document_screening",
+              "written_test",
+              "interview_1",
+              "interview_2",
+              "interview_3",
+              "interview_4",
+              "interview_final",
+              "offer",
+              "rejected",
+              "withdrawn",
+            ],
+          },
+          confirmedByUser: {
+            type: "boolean",
+            description: "Must be true only when the latest user message explicitly confirms adding this company.",
+          },
+        },
+        required: ["companyName", "status", "confirmedByUser"],
+      },
+    },
+  },
   runRecon: {
     type: "function",
     function: {
@@ -160,7 +199,7 @@ const TOOL_REGISTRY: Record<string, Tool> = {
 };
 
 const AGENT_TOOL_SETS: Record<string, string[]> = {
-  careerpass: ["updateJobStatus", "runRecon", "setCalendarColor"],
+  careerpass: ["updateJobStatus", "createJobApplication", "runRecon", "setCalendarColor"],
   careerpassrecon: [],
 };
 
@@ -192,6 +231,12 @@ const jobStatusValues = [
 const updateJobStatusArgsSchema = z.object({
   companyName: z.string().trim().min(1),
   status: z.enum(jobStatusValues),
+});
+
+const createJobApplicationArgsSchema = z.object({
+  companyName: z.string().trim().min(1),
+  status: z.enum(jobStatusValues),
+  confirmedByUser: z.boolean(),
 });
 
 const runReconArgsSchema = z.object({
@@ -230,6 +275,23 @@ function normalizeCompanyNameForMatch(name: string): string {
 
 function isOnboardingStartMessage(message: string): boolean {
   return /^\/start(?:@\w+)?(?:\s|$)/.test(message.trim());
+}
+
+function hasRecentCreateConfirmation(message: string, history: any[], companyName: string): boolean {
+  const latest = message.trim().toLowerCase();
+  const affirmative = /^(yes|yep|ok|okay|sure|please|go ahead|add it|create it|お願いします|はい|追加して|作成して|登録して|可以|好|好的|加上|创建|追加|登録)/i.test(latest);
+  if (!affirmative) return false;
+
+  const target = normalizeCompanyNameForMatch(companyName);
+  const recentAssistantMessages = history
+    .filter((m) => m?.role === "assistant" && typeof m.content === "string")
+    .slice(-3);
+  return recentAssistantMessages.some((m) => {
+    const content = m.content as string;
+    const normalizedContent = normalizeCompanyNameForMatch(content);
+    const asksToAdd = /追加|作成|登録|加|创建|新增|看板|tracked company|add|create|job board/i.test(content);
+    return asksToAdd && normalizedContent.includes(target);
+  });
 }
 
 function calculateAge(birthDate: string | null | undefined, now = new Date()): number | null {
@@ -386,6 +448,7 @@ export async function handleAgentChat(
     lang === "zh"
       ? `你是"就活パス"的专属AI求职陪伴助手，像一位贴身秘书一样帮助用户。你的核心职责是帮用户留意邮箱、追踪求职进度、主动建议下一步行动。
 1. 当用户提到面试或投递进度时，调用 updateJobStatus 工具更新数据库。
+   如果工具提示公司不在看板里，你必须先问用户是否添加；只有用户明确同意后，才可以调用 createJobApplication。
 2. 当用户想要了解某家公司时，调用 runRecon 工具进行企业侦察。
 3. 不要重复询问用户语言偏好和/register里已有的基础信息（姓名、生日、学历、学校）。
 4. 当用户要求修改自动日程颜色时，调用 setCalendarColor（类别: 说明会/面试/締切）。
@@ -396,6 +459,7 @@ ${profileContextZh}`
       : lang === "en"
       ? `You are CareerPass, an AI job search companion assistant. Your core role is to monitor the user's inbox, track their job progress, and proactively suggest next steps.
 1. Update job status via updateJobStatus tool when progress is mentioned.
+   If the tool says the company is not on the board, ask before adding it; call createJobApplication only after the user explicitly confirms.
 2. Research companies via runRecon tool when requested.
 3. Never re-ask language preference or basic profile fields already filled in /register.
 4. If user asks to change auto-calendar event colors, call setCalendarColor.
@@ -405,6 +469,7 @@ Please communicate in English.
 ${profileContextEn}`
       : `あなたは「就活パス」専属のAI就活陪伴アシスタントです。メールの監視、就活の進捗管理、次のアクションの提案があなたの主な役割です。
 1. 面接やエントリーの進捗が語られたら、updateJobStatusツールでデータベースを更新する。
+   ツールが「看板にない」と返した場合は、必ずユーザーに追加確認を取り、明確な同意後だけ createJobApplication を使う。
 2. 企業について知りたいと言われたら、runReconツールで調査を行う。
 3. /registerで入力済みの言語設定・基本プロフィール（氏名、生年月日、学歴、学校名）を再質問しない。
 4. 自動作成カレンダー予定の色変更を依頼されたら、setCalendarColorを使う（説明会/面接/締切）。
@@ -491,6 +556,53 @@ ${profileContextJa}`;
             reason: `Updated from agent chat for ${args.companyName}`,
           });
           resultMap.set(toolCall.id, `Updated ${args.companyName} status to ${args.status}`);
+          return;
+        }
+
+        if (toolName === "createJobApplication") {
+          const parsed = parseToolArguments(toolCall.function.arguments, createJobApplicationArgsSchema);
+          if (!parsed.ok) {
+            resultMap.set(toolCall.id, `createJobApplication failed: ${parsed.error}`);
+            return;
+          }
+
+          const args = parsed.value;
+          if (!args.confirmedByUser || !hasRecentCreateConfirmation(message, history, args.companyName)) {
+            resultMap.set(
+              toolCall.id,
+              `createJobApplication needs confirmation: ask the user to confirm adding "${args.companyName}" to the job board before creating it.`
+            );
+            return;
+          }
+
+          const targetCompany = normalizeCompanyNameForMatch(args.companyName);
+          const apps = await getJobApplications(userId);
+          const existing = apps.find((a) => {
+            const names = [a.companyNameJa, a.companyNameEn].filter((name): name is string => !!name);
+            return names.some((name) => normalizeCompanyNameForMatch(name) === targetCompany);
+          });
+          if (existing) {
+            resultMap.set(
+              toolCall.id,
+              `createJobApplication skipped: "${args.companyName}" is already tracked. Use updateJobStatus for status changes.`
+            );
+            return;
+          }
+
+          const created = await createJobApplication({
+            userId,
+            companyNameJa: args.companyName,
+            status: args.status,
+          });
+          await createJobStatusEvent({
+            userId,
+            jobApplicationId: created.id,
+            source: "agent",
+            prevStatus: null,
+            nextStatus: args.status,
+            reason: `Created from confirmed agent chat for ${args.companyName}`,
+          });
+          resultMap.set(toolCall.id, `Created ${args.companyName} on the job board with status ${args.status}`);
           return;
         }
 

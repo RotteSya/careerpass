@@ -33,7 +33,7 @@ vi.mock("./db", () => ({
   deleteOauthToken: vi.fn().mockResolvedValue(undefined),
   getTelegramBinding: vi.fn().mockResolvedValue(null),
   getJobApplications: vi.fn().mockResolvedValue([]),
-  createJobApplication: vi.fn().mockResolvedValue(undefined),
+  createJobApplication: vi.fn().mockResolvedValue({ id: 99 }),
   updateJobApplicationStatus: vi.fn().mockResolvedValue(undefined),
   createJobStatusEvent: vi.fn().mockResolvedValue(undefined),
   saveAgentMemory: vi.fn().mockResolvedValue(undefined),
@@ -230,6 +230,7 @@ describe("handleAgentChat", () => {
     vi.mocked(db.getJobApplications).mockClear();
     vi.mocked(db.getJobApplications).mockResolvedValue([]);
     vi.mocked(db.createJobApplication).mockClear();
+    vi.mocked(db.createJobApplication).mockResolvedValue({ id: 99 });
     vi.mocked(db.updateJobApplicationStatus).mockClear();
     vi.mocked(db.createJobStatusEvent).mockClear();
     vi.mocked(db.listLatestJobStatusEventTimes).mockClear();
@@ -460,6 +461,90 @@ describe("handleAgentChat", () => {
     expect(db.updateJobApplicationStatus).not.toHaveBeenCalled();
     expect(db.createJobStatusEvent).not.toHaveBeenCalled();
     expect(result.reply).toContain("どちら");
+  });
+
+  it("does not create a job application when create tool lacks recent user confirmation", async () => {
+    const db = await import("./db");
+    vi.mocked(db.getJobApplications).mockResolvedValue([]);
+    mockLLM
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            content: "",
+            tool_calls: [{
+              id: "call_1",
+              type: "function",
+              function: {
+                name: "createJobApplication",
+                arguments: JSON.stringify({
+                  companyName: "未知株式会社",
+                  status: "applied",
+                  confirmedByUser: true,
+                }),
+              },
+            }],
+          },
+        }],
+      })
+      .mockResolvedValueOnce(llmReply("この会社を看板に追加してよいか、先に確認します。"));
+
+    const result = await handleAgentChat(1, "未知株式会社に応募した", "test-session", [
+      { role: "assistant", content: "ウェルカム" },
+    ]);
+
+    expect(db.createJobApplication).not.toHaveBeenCalled();
+    expect(db.createJobStatusEvent).not.toHaveBeenCalled();
+    expect(result.reply).toContain("確認");
+  });
+
+  it("creates a job application after a recent explicit confirmation", async () => {
+    const db = await import("./db");
+    vi.mocked(db.getJobApplications).mockResolvedValue([]);
+    vi.mocked(db.createJobApplication).mockResolvedValue({ id: 22 });
+    mockLLM
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            content: "",
+            tool_calls: [{
+              id: "call_1",
+              type: "function",
+              function: {
+                name: "createJobApplication",
+                arguments: JSON.stringify({
+                  companyName: "未知株式会社",
+                  status: "applied",
+                  confirmedByUser: true,
+                }),
+              },
+            }],
+          },
+        }],
+      })
+      .mockResolvedValueOnce(llmReply("未知株式会社を応募済みとして看板に追加しました。"));
+
+    const result = await handleAgentChat(1, "はい、追加してください", "test-session", [
+      {
+        role: "assistant",
+        content: "未知株式会社はまだ看板にないので、追加して更新していいですか？",
+      },
+    ]);
+
+    expect(db.createJobApplication).toHaveBeenCalledWith({
+      userId: 1,
+      companyNameJa: "未知株式会社",
+      status: "applied",
+    });
+    expect(db.createJobStatusEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 1,
+        jobApplicationId: 22,
+        source: "agent",
+        prevStatus: null,
+        nextStatus: "applied",
+      })
+    );
+    expect(result.reply).toContain("追加しました");
   });
 
   it("saves conversation to memory", async () => {
