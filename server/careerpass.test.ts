@@ -314,6 +314,57 @@ describe("handleAgentChat", () => {
     expect(systemMessage).toContain("一次面接のご案内");
   });
 
+  it("prioritizes upcoming actions in job board context even when they are older than the first 20 rows", async () => {
+    const db = await import("./db");
+    const apps = Array.from({ length: 20 }, (_, idx) => ({
+      id: idx + 1,
+      userId: 1,
+      companyNameJa: `通常株式会社${idx + 1}`,
+      companyNameEn: null,
+      position: null,
+      contactInfo: null,
+      priority: "medium",
+      status: "document_screening",
+      reconReportPath: null,
+      esFilePath: null,
+      notes: null,
+      nextActionAt: null,
+      createdAt: new Date(`2026-04-${String(20 - idx).padStart(2, "0")}T00:00:00.000Z`),
+      updatedAt: new Date(`2026-04-${String(20 - idx).padStart(2, "0")}T00:00:00.000Z`),
+      _latestMailSubject: null,
+      _latestMailFrom: null,
+      _latestReason: null,
+    }));
+    apps.push({
+      id: 99,
+      userId: 1,
+      companyNameJa: "締切株式会社",
+      companyNameEn: null,
+      position: null,
+      contactInfo: null,
+      priority: "medium",
+      status: "es_preparing",
+      reconReportPath: null,
+      esFilePath: null,
+      notes: null,
+      nextActionAt: new Date("2026-04-26T09:00:00.000Z"),
+      createdAt: new Date("2026-03-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-01T00:00:00.000Z"),
+      _latestMailSubject: "ES締切のお知らせ",
+      _latestMailFrom: null,
+      _latestReason: null,
+    });
+    vi.mocked(db.getJobApplications).mockResolvedValueOnce(apps);
+
+    await handleAgentChat(1, "次に何をすればいい？", "test-session", [
+      { role: "assistant", content: "ウェルカム" },
+    ]);
+
+    const systemMessage = mockLLM.mock.calls[0]?.[0]?.messages?.[0]?.content;
+    expect(systemMessage).toContain("締切株式会社");
+    expect(systemMessage).toContain("ES締切のお知らせ");
+  });
+
   it("does not create a new job application from an unmatched status update tool call", async () => {
     const db = await import("./db");
     vi.mocked(db.getJobApplications).mockResolvedValue([]);
@@ -495,6 +546,43 @@ describe("handleAgentChat", () => {
     expect(db.createJobApplication).not.toHaveBeenCalled();
     expect(db.createJobStatusEvent).not.toHaveBeenCalled();
     expect(result.reply).toContain("確認");
+  });
+
+  it("does not create a job application when the latest user message is a negative confirmation", async () => {
+    const db = await import("./db");
+    vi.mocked(db.getJobApplications).mockResolvedValue([]);
+    mockLLM
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            content: "",
+            tool_calls: [{
+              id: "call_1",
+              type: "function",
+              function: {
+                name: "createJobApplication",
+                arguments: JSON.stringify({
+                  companyName: "未知株式会社",
+                  status: "applied",
+                  confirmedByUser: true,
+                }),
+              },
+            }],
+          },
+        }],
+      })
+      .mockResolvedValueOnce(llmReply("追加はしません。必要なら会社名を確認してから進めます。"));
+
+    const result = await handleAgentChat(1, "好的，但不要添加", "test-session", [
+      {
+        role: "assistant",
+        content: "未知株式会社はまだ看板にないので、追加して更新していいですか？",
+      },
+    ]);
+
+    expect(db.createJobApplication).not.toHaveBeenCalled();
+    expect(db.createJobStatusEvent).not.toHaveBeenCalled();
+    expect(result.reply).toContain("追加はしません");
   });
 
   it("creates a job application after a recent explicit confirmation", async () => {

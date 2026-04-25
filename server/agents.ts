@@ -279,6 +279,9 @@ function isOnboardingStartMessage(message: string): boolean {
 
 function hasRecentCreateConfirmation(message: string, history: any[], companyName: string): boolean {
   const latest = message.trim().toLowerCase();
+  if (/(不要|不用|别|不需要|やめて|しないで|不要です|don't|do not|no\b|not now)/i.test(latest)) {
+    return false;
+  }
   const affirmative = /^(yes|yep|ok|okay|sure|please|go ahead|add it|create it|お願いします|はい|追加して|作成して|登録して|可以|好|好的|加上|创建|追加|登録)/i.test(latest);
   if (!affirmative) return false;
 
@@ -315,8 +318,29 @@ async function buildJobBoardContext(userId: number, lang: "ja" | "zh" | "en"): P
   }
 
   const latestStatusEventTimes = await listLatestJobStatusEventTimes(userId);
-  const lines = applications.slice(0, 20).map((app) => {
-    const lastStatusEventAt = latestStatusEventTimes.get(app.id) ?? app.updatedAt;
+  const now = Date.now();
+  const terminalStatuses = new Set(["offer", "rejected", "withdrawn"]);
+  const prioritizedApplications = applications
+    .map((app) => ({
+      app,
+      lastStatusEventAt: latestStatusEventTimes.get(app.id) ?? app.updatedAt,
+    }))
+    .sort((a, b) => {
+      const aNext = a.app.nextActionAt?.getTime();
+      const bNext = b.app.nextActionAt?.getTime();
+      const aUpcoming = typeof aNext === "number" && aNext >= now;
+      const bUpcoming = typeof bNext === "number" && bNext >= now;
+      if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+      if (aUpcoming && bUpcoming && aNext !== bNext) return aNext - bNext;
+
+      const aTerminal = terminalStatuses.has(a.app.status);
+      const bTerminal = terminalStatuses.has(b.app.status);
+      if (aTerminal !== bTerminal) return aTerminal ? 1 : -1;
+
+      return b.lastStatusEventAt.getTime() - a.lastStatusEventAt.getTime();
+    });
+
+  const lines = prioritizedApplications.slice(0, 20).map(({ app, lastStatusEventAt }) => {
     const nextAction = app.nextActionAt ? app.nextActionAt.toISOString() : "none";
     const latestMail = app._latestMailSubject ? `; latestMail=${app._latestMailSubject}` : "";
     return `- ${app.companyNameJa}${app.companyNameEn ? ` / ${app.companyNameEn}` : ""}: status=${app.status}; lastStatusEventAt=${lastStatusEventAt.toISOString()}; nextActionAt=${nextAction}${latestMail}`;
