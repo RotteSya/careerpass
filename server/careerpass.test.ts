@@ -249,6 +249,12 @@ describe("handleAgentChat", () => {
     expect(mockLLM).toHaveBeenCalledOnce();
   });
 
+  it("does not treat a non-start command prefix as onboarding", async () => {
+    const result = await handleAgentChat(1, "/startup企業を調べて", "test-session", []);
+    expect(result.reply).toBe("テスト回答です。");
+    expect(mockLLM).toHaveBeenCalledOnce();
+  });
+
   it("returns a reply from LLM", async () => {
     const result = await handleAgentChat(1, "こんにちは", "test-session", [
       { role: "assistant", content: "ウェルカム" },
@@ -335,6 +341,125 @@ describe("handleAgentChat", () => {
     expect(db.createJobApplication).not.toHaveBeenCalled();
     expect(db.updateJobApplicationStatus).not.toHaveBeenCalled();
     expect(result.reply).toContain("追加して更新していいですか");
+  });
+
+  it("does not write a status event when the tracked application is already at that status", async () => {
+    const db = await import("./db");
+    vi.mocked(db.getJobApplications).mockResolvedValue([
+      {
+        id: 11,
+        userId: 1,
+        companyNameJa: "株式会社テスト",
+        companyNameEn: "Test Inc",
+        position: null,
+        contactInfo: null,
+        priority: "medium",
+        status: "applied",
+        reconReportPath: null,
+        esFilePath: null,
+        notes: null,
+        nextActionAt: null,
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-20T00:00:00.000Z"),
+        _latestMailSubject: null,
+        _latestMailFrom: null,
+        _latestReason: null,
+      },
+    ]);
+    mockLLM
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            content: "",
+            tool_calls: [{
+              id: "call_1",
+              type: "function",
+              function: {
+                name: "updateJobStatus",
+                arguments: JSON.stringify({ companyName: "株式会社テスト", status: "applied" }),
+              },
+            }],
+          },
+        }],
+      })
+      .mockResolvedValueOnce(llmReply("すでに応募済みとして記録されています。"));
+
+    const result = await handleAgentChat(1, "テストに応募済み", "test-session", [
+      { role: "assistant", content: "ウェルカム" },
+    ]);
+
+    expect(db.updateJobApplicationStatus).not.toHaveBeenCalled();
+    expect(db.createJobStatusEvent).not.toHaveBeenCalled();
+    expect(result.reply).toContain("すでに応募済み");
+  });
+
+  it("asks for confirmation instead of updating when an exact company match is ambiguous", async () => {
+    const db = await import("./db");
+    vi.mocked(db.getJobApplications).mockResolvedValue([
+      {
+        id: 11,
+        userId: 1,
+        companyNameJa: "株式会社テスト",
+        companyNameEn: "Test Inc",
+        position: "Engineer",
+        contactInfo: null,
+        priority: "medium",
+        status: "researching",
+        reconReportPath: null,
+        esFilePath: null,
+        notes: null,
+        nextActionAt: null,
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-20T00:00:00.000Z"),
+        _latestMailSubject: null,
+        _latestMailFrom: null,
+        _latestReason: null,
+      },
+      {
+        id: 12,
+        userId: 1,
+        companyNameJa: "株式会社テスト",
+        companyNameEn: "Test Inc",
+        position: "Business",
+        contactInfo: null,
+        priority: "medium",
+        status: "researching",
+        reconReportPath: null,
+        esFilePath: null,
+        notes: null,
+        nextActionAt: null,
+        createdAt: new Date("2026-04-02T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-21T00:00:00.000Z"),
+        _latestMailSubject: null,
+        _latestMailFrom: null,
+        _latestReason: null,
+      },
+    ]);
+    mockLLM
+      .mockResolvedValueOnce({
+        choices: [{
+          message: {
+            content: "",
+            tool_calls: [{
+              id: "call_1",
+              type: "function",
+              function: {
+                name: "updateJobStatus",
+                arguments: JSON.stringify({ companyName: "株式会社テスト", status: "applied" }),
+              },
+            }],
+          },
+        }],
+      })
+      .mockResolvedValueOnce(llmReply("同じ会社名の記録が複数あります。どちらを更新しますか？"));
+
+    const result = await handleAgentChat(1, "テストに応募した", "test-session", [
+      { role: "assistant", content: "ウェルカム" },
+    ]);
+
+    expect(db.updateJobApplicationStatus).not.toHaveBeenCalled();
+    expect(db.createJobStatusEvent).not.toHaveBeenCalled();
+    expect(result.reply).toContain("どちら");
   });
 
   it("saves conversation to memory", async () => {

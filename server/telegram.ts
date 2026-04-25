@@ -447,7 +447,7 @@ telegramRouter.post("/webhook", async (req, res) => {
     let userId = binding?.userId;
 
     // Handle /start command with deep link payload
-    if (text.startsWith("/start")) {
+    if (/^\/start(?:@\w+)?(?:\s|$)/.test(text.trim())) {
       const parts = text.split(" ");
       const payload = parts[1]; // e.g. "user_12345"
 

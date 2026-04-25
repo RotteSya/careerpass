@@ -229,7 +229,7 @@ function normalizeCompanyNameForMatch(name: string): string {
 }
 
 function isOnboardingStartMessage(message: string): boolean {
-  return message.trim().startsWith("/start");
+  return /^\/start(?:@\w+)?(?:\s|$)/.test(message.trim());
 }
 
 function calculateAge(birthDate: string | null | undefined, now = new Date()): number | null {
@@ -448,10 +448,18 @@ ${profileContextJa}`;
           const args = parsed.value;
           const targetCompany = normalizeCompanyNameForMatch(args.companyName);
           const apps = await getJobApplications(userId);
-          const app = apps.find((a) => {
+          const matches = apps.filter((a) => {
             const names = [a.companyNameJa, a.companyNameEn].filter((name): name is string => !!name);
             return names.some((name) => normalizeCompanyNameForMatch(name) === targetCompany);
           });
+          if (matches.length > 1) {
+            resultMap.set(
+              toolCall.id,
+              `updateJobStatus needs confirmation: "${args.companyName}" matched ${matches.length} tracked applications exactly. Ask the user which entry to update before changing the board.`
+            );
+            return;
+          }
+          const app = matches[0];
           if (!app) {
             resultMap.set(
               toolCall.id,
@@ -463,6 +471,13 @@ ${profileContextJa}`;
           const appId = app.id;
           if (!appId) {
             resultMap.set(toolCall.id, `updateJobStatus failed: could not create or find ${args.companyName}`);
+            return;
+          }
+          if (app.status === args.status) {
+            resultMap.set(
+              toolCall.id,
+              `No update needed: ${args.companyName} is already ${args.status}. Do not say the board was updated; acknowledge that the tracked status was already current.`
+            );
             return;
           }
 
