@@ -36,6 +36,8 @@ vi.mock("./db", () => ({
   createJobApplication: vi.fn().mockResolvedValue({ id: 99 }),
   updateJobApplicationStatus: vi.fn().mockResolvedValue(undefined),
   createJobStatusEvent: vi.fn().mockResolvedValue(undefined),
+  applyAgentJobStatusUpdate: vi.fn().mockResolvedValue(undefined),
+  createConfirmedAgentJobApplication: vi.fn().mockResolvedValue({ id: 99 }),
   saveAgentMemory: vi.fn().mockResolvedValue(undefined),
   getAgentMemory: vi.fn().mockResolvedValue([]),
   createTelegramBinding: vi.fn().mockResolvedValue(undefined),
@@ -231,6 +233,9 @@ describe("handleAgentChat", () => {
     vi.mocked(db.getJobApplications).mockResolvedValue([]);
     vi.mocked(db.createJobApplication).mockClear();
     vi.mocked(db.createJobApplication).mockResolvedValue({ id: 99 });
+    vi.mocked(db.createConfirmedAgentJobApplication).mockClear();
+    vi.mocked(db.createConfirmedAgentJobApplication).mockResolvedValue({ id: 99 });
+    vi.mocked(db.applyAgentJobStatusUpdate).mockClear();
     vi.mocked(db.updateJobApplicationStatus).mockClear();
     vi.mocked(db.createJobStatusEvent).mockClear();
     vi.mocked(db.listLatestJobStatusEventTimes).mockClear();
@@ -391,6 +396,7 @@ describe("handleAgentChat", () => {
     ]);
 
     expect(db.createJobApplication).not.toHaveBeenCalled();
+    expect(db.createConfirmedAgentJobApplication).not.toHaveBeenCalled();
     expect(db.updateJobApplicationStatus).not.toHaveBeenCalled();
     expect(result.reply).toContain("追加して更新していいですか");
   });
@@ -441,6 +447,7 @@ describe("handleAgentChat", () => {
     ]);
 
     expect(db.updateJobApplicationStatus).not.toHaveBeenCalled();
+    expect(db.applyAgentJobStatusUpdate).not.toHaveBeenCalled();
     expect(db.createJobStatusEvent).not.toHaveBeenCalled();
     expect(result.reply).toContain("すでに応募済み");
   });
@@ -510,6 +517,7 @@ describe("handleAgentChat", () => {
     ]);
 
     expect(db.updateJobApplicationStatus).not.toHaveBeenCalled();
+    expect(db.applyAgentJobStatusUpdate).not.toHaveBeenCalled();
     expect(db.createJobStatusEvent).not.toHaveBeenCalled();
     expect(result.reply).toContain("どちら");
   });
@@ -544,6 +552,7 @@ describe("handleAgentChat", () => {
     ]);
 
     expect(db.createJobApplication).not.toHaveBeenCalled();
+    expect(db.createConfirmedAgentJobApplication).not.toHaveBeenCalled();
     expect(db.createJobStatusEvent).not.toHaveBeenCalled();
     expect(result.reply).toContain("確認");
   });
@@ -581,6 +590,7 @@ describe("handleAgentChat", () => {
     ]);
 
     expect(db.createJobApplication).not.toHaveBeenCalled();
+    expect(db.createConfirmedAgentJobApplication).not.toHaveBeenCalled();
     expect(db.createJobStatusEvent).not.toHaveBeenCalled();
     expect(result.reply).toContain("追加はしません");
   });
@@ -588,7 +598,7 @@ describe("handleAgentChat", () => {
   it("creates a job application after a recent explicit confirmation", async () => {
     const db = await import("./db");
     vi.mocked(db.getJobApplications).mockResolvedValue([]);
-    vi.mocked(db.createJobApplication).mockResolvedValue({ id: 22 });
+    vi.mocked(db.createConfirmedAgentJobApplication).mockResolvedValue({ id: 22 });
     mockLLM
       .mockResolvedValueOnce({
         choices: [{
@@ -618,20 +628,13 @@ describe("handleAgentChat", () => {
       },
     ]);
 
-    expect(db.createJobApplication).toHaveBeenCalledWith({
+    expect(db.createConfirmedAgentJobApplication).toHaveBeenCalledWith({
       userId: 1,
-      companyNameJa: "未知株式会社",
+      companyName: "未知株式会社",
       status: "applied",
+      reason: "Created from confirmed agent chat for 未知株式会社",
     });
-    expect(db.createJobStatusEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        userId: 1,
-        jobApplicationId: 22,
-        source: "agent",
-        prevStatus: null,
-        nextStatus: "applied",
-      })
-    );
+    expect(db.createJobStatusEvent).not.toHaveBeenCalled();
     expect(result.reply).toContain("追加しました");
   });
 

@@ -604,6 +604,29 @@ export async function createTelegramBinding(binding: InsertTelegramBinding) {
 }
 
 // ─── Job Applications ──────────────────────────────────────────────────────
+type JobApplicationStatus = NonNullable<InsertJobApplication["status"]>;
+
+function jobStatusRankForWrite(status: JobApplicationStatus): number {
+  const ranks: Record<JobApplicationStatus, number> = {
+    researching: 10,
+    applied: 20,
+    briefing: 30,
+    es_preparing: 40,
+    es_submitted: 45,
+    document_screening: 50,
+    written_test: 55,
+    interview_1: 60,
+    interview_2: 70,
+    interview_3: 75,
+    interview_4: 80,
+    interview_final: 85,
+    offer: 90,
+    rejected: 90,
+    withdrawn: 90,
+  };
+  return ranks[status] ?? 0;
+}
+
 export async function getJobApplications(userId: number) {
   const db = await getDb();
   if (!db) return [];
@@ -712,6 +735,145 @@ export async function createJobStatusEvent(event: InsertJobStatusEvent) {
         reason: event.reason ?? null,
       },
     });
+}
+
+export async function applyAgentJobStatusUpdate(params: {
+  userId: number;
+  jobApplicationId: number;
+  prevStatus: JobApplicationStatus;
+  nextStatus: JobApplicationStatus;
+  reason: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(jobApplications)
+      .set({ status: params.nextStatus, updatedAt: new Date() })
+      .where(and(eq(jobApplications.id, params.jobApplicationId), eq(jobApplications.userId, params.userId)));
+
+    await tx.insert(jobStatusEvents).values({
+      userId: params.userId,
+      jobApplicationId: params.jobApplicationId,
+      source: "agent",
+      prevStatus: params.prevStatus,
+      nextStatus: params.nextStatus,
+      reason: params.reason,
+    });
+  });
+}
+
+export async function createConfirmedAgentJobApplication(params: {
+  userId: number;
+  companyName: string;
+  status: JobApplicationStatus;
+  reason: string;
+}): Promise<{ id: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.transaction(async (tx) => {
+    const [created] = await tx.insert(jobApplications).values({
+      userId: params.userId,
+      companyNameJa: params.companyName,
+      status: params.status,
+    });
+    const id = created.insertId;
+
+    await tx.insert(jobStatusEvents).values({
+      userId: params.userId,
+      jobApplicationId: id,
+      source: "agent",
+      prevStatus: null,
+      nextStatus: params.status,
+      reason: params.reason,
+    });
+
+    return { id };
+  });
+}
+
+export async function applyGmailJobStatusEvent(params: {
+  userId: number;
+  companyName: string;
+  nextStatus: JobApplicationStatus;
+  mailMessageId: string;
+  mailFrom: string;
+  mailSubject: string;
+  mailSnippet: string;
+  reason: string;
+}): Promise<{ changed: boolean; duplicate: boolean; jobId: number | null; nextStatus: JobApplicationStatus }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db.transaction(async (tx) => {
+    const existingEvent = await tx
+      .select()
+      .from(jobStatusEvents)
+      .where(and(eq(jobStatusEvents.userId, params.userId), eq(jobStatusEvents.mailMessageId, params.mailMessageId)))
+      .limit(1);
+    if (existingEvent[0]) {
+      return {
+        changed: false,
+        duplicate: true,
+        jobId: existingEvent[0].jobApplicationId ?? null,
+        nextStatus: params.nextStatus,
+      };
+    }
+
+    const targetKey = normalizeCompanyKey(params.companyName);
+    const existingJobs = await tx
+      .select()
+      .from(jobApplications)
+      .where(eq(jobApplications.userId, params.userId));
+    let existingJob = existingJobs.find((job) => {
+      const jaKey = normalizeCompanyKey(job.companyNameJa);
+      const enKey = normalizeCompanyKey(job.companyNameEn);
+      return targetKey && (jaKey === targetKey || enKey === targetKey);
+    });
+
+    let prevStatus: JobApplicationStatus | null = null;
+    let changed = false;
+    let jobId: number;
+    let finalStatus = params.nextStatus;
+
+    if (!existingJob) {
+      const [created] = await tx.insert(jobApplications).values({
+        userId: params.userId,
+        companyNameJa: params.companyName,
+        status: params.nextStatus,
+      });
+      jobId = created.insertId;
+      changed = true;
+    } else {
+      jobId = existingJob.id;
+      prevStatus = existingJob.status as JobApplicationStatus;
+      changed = jobStatusRankForWrite(params.nextStatus) > jobStatusRankForWrite(prevStatus);
+      finalStatus = changed ? params.nextStatus : prevStatus;
+      if (changed) {
+        await tx
+          .update(jobApplications)
+          .set({ status: params.nextStatus, updatedAt: new Date() })
+          .where(and(eq(jobApplications.id, existingJob.id), eq(jobApplications.userId, params.userId)));
+      }
+    }
+
+    await tx.insert(jobStatusEvents).values({
+      userId: params.userId,
+      jobApplicationId: jobId,
+      source: "gmail",
+      prevStatus,
+      nextStatus: finalStatus,
+      mailMessageId: params.mailMessageId,
+      mailFrom: params.mailFrom,
+      mailSubject: params.mailSubject,
+      mailSnippet: params.mailSnippet,
+      reason: params.reason,
+    });
+
+    return { changed, duplicate: false, jobId, nextStatus: finalStatus };
+  });
 }
 
 export async function listJobStatusEvents(userId: number, jobApplicationId: number, limit = 20) {

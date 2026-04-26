@@ -4,14 +4,13 @@ import {
   getAgentMemory,
   saveAgentMemory,
   updateAgentSession,
-  updateJobApplicationStatus,
-  createJobApplication,
   getJobApplications,
   updateUserCalendarColorPrefs,
   countAgentMemory,
   deleteOldestAgentMemory,
-  createJobStatusEvent,
   listLatestJobStatusEventTimes,
+  applyAgentJobStatusUpdate,
+  createConfirmedAgentJobApplication,
 } from "./db";
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
@@ -484,11 +483,9 @@ export async function handleAgentChat(
             return;
           }
 
-          await updateJobApplicationStatus(appId, userId, args.status);
-          await createJobStatusEvent({
+          await applyAgentJobStatusUpdate({
             userId,
             jobApplicationId: appId,
-            source: "agent",
             prevStatus: app.status,
             nextStatus: args.status,
             reason: `Updated from agent chat for ${args.companyName}`,
@@ -527,17 +524,10 @@ export async function handleAgentChat(
             return;
           }
 
-          const created = await createJobApplication({
+          await createConfirmedAgentJobApplication({
             userId,
-            companyNameJa: args.companyName,
+            companyName: args.companyName,
             status: args.status,
-          });
-          await createJobStatusEvent({
-            userId,
-            jobApplicationId: created.id,
-            source: "agent",
-            prevStatus: null,
-            nextStatus: args.status,
             reason: `Created from confirmed agent chat for ${args.companyName}`,
           });
           resultMap.set(toolCall.id, `Created ${args.companyName} on the job board with status ${args.status}`);

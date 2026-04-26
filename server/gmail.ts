@@ -14,9 +14,6 @@
 import {
   getGoogleAccountSyncState,
   getOauthToken,
-  getJobApplications,
-  createJobStatusEvent,
-  updateJobApplicationStatus,
   getUserCalendarColorPrefs,
   getCalendarWriteEnabled,
   saveAgentMemory,
@@ -25,9 +22,9 @@ import {
   upsertOauthToken,
   upsertOauthProviderAccount,
   trackCompanyForBilling,
-  createJobApplication,
   getCalendarEventSync,
   upsertCalendarEventSync,
+  applyGmailJobStatusEvent,
 } from "./db";
 
 import { invokeLLM } from "./_core/llm";
@@ -38,7 +35,7 @@ import { stashPendingCalendarWrite } from "./calendarWriteConsent";
 import { dispatchNotification } from "./_core/messaging";
 import { enqueueGmailJob } from "./gmailJobQueue";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
-import { resolveCanonicalCompanyName, normalizeCompanyKey } from "./companyName";
+import { resolveCanonicalCompanyName } from "./companyName";
 import { getDomainReputation, extractBestDateTime } from "./mailNer";
 
 const APP_DOMAIN = process.env.APP_DOMAIN ?? "https://careerpax.com";
@@ -821,27 +818,6 @@ export type JobStatus =
   | "rejected"
   | "withdrawn";
 
-function jobStatusRank(status: JobStatus): number {
-  const ranks: Record<JobStatus, number> = {
-    researching: 10,
-    applied: 20,
-    briefing: 30,
-    es_preparing: 40,
-    es_submitted: 45,
-    document_screening: 50,
-    written_test: 55,
-    interview_1: 60,
-    interview_2: 70,
-    interview_3: 75,
-    interview_4: 80,
-    interview_final: 85,
-    offer: 90,
-    rejected: 90,
-    withdrawn: 90,
-  };
-  return ranks[status] ?? 0;
-}
-
 export function jobStatusFromEmailDecision(input: {
   eventType: EmailEvent["eventType"];
   hardOutcome?: "offer" | "rejection" | null;
@@ -1101,6 +1077,7 @@ async function runCareerpassmailAgent(input: {
         location: merged.location,
         todoItems: merged.todoItems,
         _meta: {
+          ...(merged._meta ?? {}),
           pipelineOnly: true,
           pipelineShouldSkipLlm: false,
         },
@@ -1242,12 +1219,12 @@ export function __resetTelegramMailNoticeDedupForTests(): void {
 }
 
 function fallbackMailNotification(input: ComposeNotificationInput): string {
-  const { companyName, eventType, date, time, todoItems, mailLink, boardScreenshotLink, progressLabel, outcomeUncertain } = input;
+  const { companyName, eventType, date, time, todoItems, boardScreenshotLink, progressLabel, outcomeUncertain } = input;
   const primaryAction =
     todoItems[0] ??
     (date
       ? `把 ${date}${time ? ` ${time}` : ""} JST 的${typeLabels[eventType]}加进日程并提前做准备`
-      : `打开原邮件确认${typeLabels[eventType]}的具体安排`);
+      : `回到邮箱确认${typeLabels[eventType]}的具体安排`);
   const extra = todoItems.slice(1);
   const lines: string[] = [];
   lines.push(`先做这件事：${primaryAction}`);
@@ -1256,20 +1233,31 @@ function fallbackMailNotification(input: ComposeNotificationInput): string {
       date ? `（${date}${time ? ` ${time}` : ""} JST）` : ""
     }，我先替你拎出来了。`
   );
-  lines.push(`[查看原邮件](${mailLink})`);
   if (extra.length) {
     lines.push(`顺手再处理：${extra.join("；")}`);
   }
-  if (progressLabel) lines.push(`看板我也记好了：${progressLabel}。`);
-  if (boardScreenshotLink) lines.push(`[查看最新看板截图](${boardScreenshotLink})`);
+  if (progressLabel || boardScreenshotLink) {
+    lines.push(
+      [
+        progressLabel ? `看板我也记好了：${progressLabel}。` : null,
+        boardScreenshotLink ? `[查看最新看板截图](${boardScreenshotLink})` : null,
+      ].filter(Boolean).join(" ")
+    );
+  }
   if (outcomeUncertain) lines.push("这封邮件可能涉及结果，语义不够确定，我没有自动标记，方便时去看板确认。");
   return lines.join("\n");
+}
+
+export function isValidOneBubbleMailNotification(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (/\n\s*\n/.test(trimmed)) return false;
+  return trimmed.split("\n").length <= 6;
 }
 
 async function composeMailNotification(input: ComposeNotificationInput): Promise<string> {
   try {
     const soul = await loadAgentSoul("careerpass");
-    const agents = await loadAgentAgents("careerpass");
 
     const facts = {
       公司: input.companyName ?? "未知",
@@ -1278,7 +1266,6 @@ async function composeMailNotification(input: ComposeNotificationInput): Promise
       时间: input.time ? `${input.time} JST` : null,
       地点或链接: input.location ?? null,
       待办: input.todoItems,
-      原邮件链接: input.mailLink,
       最新看板截图: input.boardScreenshotLink,
       看板已更新到: input.progressLabel,
       结果语义不确定: input.outcomeUncertain,
@@ -1290,13 +1277,12 @@ async function composeMailNotification(input: ComposeNotificationInput): Promise
       `- 像朋友一样自然口吻，每次措辞都不一样，不要套固定模板。\n` +
       `- 开门见山点出「下一步要做什么」，但表达方式可以变化（不必每次都用「下一步：」开头）。\n` +
       `- 邮件内容只用一句话带过，不要复述邮件主题。\n` +
-      `- 必须把「原邮件链接」用 markdown 链接的形式放进消息里，方便用户点开核对。\n` +
+      `- 不要输出原邮件链接、Gmail 链接或让用户点击原邮件；链接会跳转失败。\n` +
       `- 如果有「最新看板截图」，也用 markdown 链接放进去。\n` +
       `- **重要：整条通知必须只用 1 个气泡**，不要用空行分段，不要输出多段。\n` +
       `- 总长度控制在 6 行内，保证移动端易读。\n` +
       `- 只输出最终消息正文，不要加引号、不要解释。` +
-      (soul.content ? `\n\n[SOUL]\n${soul.content}` : "") +
-      (agents.content ? `\n\n[AGENTS]\n${agents.content}` : "");
+      (soul.content ? `\n\n[SOUL]\n${soul.content}` : "");
     const effectiveSystemPrompt = appendUserFacingSoulContract("careerpass", systemPrompt);
 
     const response = await invokeLLM({
@@ -1309,12 +1295,14 @@ async function composeMailNotification(input: ComposeNotificationInput): Promise
             JSON.stringify(facts, null, 2),
         },
       ],
+      maxTokens: 512,
+      thinkingBudgetTokens: 32,
     });
 
     const raw = response?.choices?.[0]?.message?.content;
     const text = (typeof raw === "string" ? raw : "").trim();
-    if (!text || !text.includes(input.mailLink)) {
-      // LLM forgot the mail link — fall back to template to guarantee it.
+    if (!isValidOneBubbleMailNotification(text)) {
+      // Guarantee the one-bubble shape even when the LLM drifts.
       return fallbackMailNotification(input);
     }
     return text;
@@ -1425,21 +1413,6 @@ async function processGmailMessageIds(params: {
       return null;
     }
   });
-
-
-  // Local DB cache for the user's job applications to prevent N+1 queries
-  const localJobsCache = new Map<string, any>();
-  if (enableAutoBoardWrite) {
-    const existingJobs = await getJobApplications(userId);
-    for (const j of existingJobs) {
-      const jaKey = normalizeCompanyKey(j.companyNameJa);
-      const enKey = normalizeCompanyKey(j.companyNameEn);
-      if (jaKey) localJobsCache.set(jaKey, j);
-      if (enKey && enKey !== jaKey) localJobsCache.set(enKey, j);
-      localJobsCache.set(j.companyNameJa, j);
-      if (j.companyNameEn) localJobsCache.set(j.companyNameEn, j);
-    }
-  }
 
   const latestMessageIdPerCompany = new Map<string, string>();
   for (const entry of analyzed) {
@@ -1558,43 +1531,22 @@ async function processGmailMessageIds(params: {
 
       if (enableAutoBoardWrite && inferredStatus && companyName) {
         const canonicalCompanyName = resolveCanonicalCompanyName(companyName) ?? companyName;
-        const targetKey = normalizeCompanyKey(canonicalCompanyName);
-        
-        let existingJob = targetKey ? localJobsCache.get(targetKey) : localJobsCache.get(canonicalCompanyName);
-        
-        if (!existingJob) {
-          const newJob = await createJobApplication({ userId, companyNameJa: canonicalCompanyName });
-          existingJob = { ...newJob, companyNameJa: canonicalCompanyName, companyNameEn: null, status: "applied" };
-          const jaKey = normalizeCompanyKey(canonicalCompanyName);
-          if (jaKey) localJobsCache.set(jaKey, existingJob);
-          localJobsCache.set(canonicalCompanyName, existingJob);
-        }
 
-        const prevStatus = existingJob.status as JobStatus;
-        const shouldAdvance = jobStatusRank(inferredStatus) > jobStatusRank(prevStatus);
-        
-        if (shouldAdvance) {
-          await updateJobApplicationStatus(existingJob.id, userId, inferredStatus);
-          existingJob.status = inferredStatus; // Update local cache
-        }
-        
-        await createJobStatusEvent({
+        const applied = await applyGmailJobStatusEvent({
           userId,
-          jobApplicationId: existingJob.id,
-          source: "gmail",
-          prevStatus,
-          nextStatus: shouldAdvance ? inferredStatus : prevStatus,
           mailMessageId: messageId,
           mailFrom: detail.from,
           mailSubject: detail.subject,
           mailSnippet: detail.body.slice(0, 120),
+          companyName: canonicalCompanyName,
+          nextStatus: inferredStatus,
           reason: `${decision.reason ?? ""} (eventType=${rawEventType}, hardOutcome=${hardOutcome ?? "none"})`,
         });
 
         progressUpdate = {
-          changed: shouldAdvance,
-          jobId: existingJob.id,
-          nextStatus: shouldAdvance ? inferredStatus : prevStatus
+          changed: applied.changed,
+          jobId: applied.jobId,
+          nextStatus: applied.nextStatus
         };
       }
 

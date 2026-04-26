@@ -231,8 +231,7 @@ function buildScheduleDigestText(
       const action =
         e.todoItems?.[0] ??
         `${dt} 前后把 ${company} 这条 ${type} 相关安排确认并落实`;
-      const link = e.mailLink ? ` [原邮件链接](${e.mailLink})` : "";
-      return `${idx + 1}. ${dt}｜${company}｜${action}${link}`;
+      return `${idx + 1}. ${dt}｜${company}｜${action}`;
     });
     return `我把你接下来 14 天要做的事按顺序列好了（JST）：\n${lines.join("\n")}`;
   }
@@ -250,9 +249,7 @@ function buildScheduleDigestText(
       (lang === "en"
         ? `Confirm and prepare for this ${type.toLowerCase()} step`
         : `この${type}対応を確認して準備`);
-    const linkLabel = lang === "en" ? "Open mail" : "原メール";
-    const link = e.mailLink ? ` [${linkLabel}](${e.mailLink})` : "";
-    return `${idx + 1}. ${dt} | ${company} | ${action}${link}`;
+    return `${idx + 1}. ${dt} | ${company} | ${action}`;
   });
   return `${header}\n${lines.join("\n")}`;
 }

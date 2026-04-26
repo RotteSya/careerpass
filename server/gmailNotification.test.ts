@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   __resetTelegramMailNoticeDedupForTests,
   buildTelegramMailNoticeDedupKey,
+  isValidOneBubbleMailNotification,
   jobStatusFromEmailDecision,
   shouldSendTelegramMailNoticeOnce,
 } from "./gmail";
@@ -26,6 +27,18 @@ describe("gmail telegram notice dedupe", () => {
 
   it("dedupe key is stable by user+message", () => {
     expect(buildTelegramMailNoticeDedupKey({ userId: 1, messageId: "x" })).toBe("1:x");
+  });
+});
+
+describe("gmail mail notification shape", () => {
+  it("accepts a one-bubble notification without requiring an original mail link", () => {
+    const text = "先确认面试时间。\n株式会社ABCから面接案内が来ています。";
+    expect(isValidOneBubbleMailNotification(text)).toBe(true);
+  });
+
+  it("rejects blank-line bubbles and overlong messages", () => {
+    expect(isValidOneBubbleMailNotification("line1\n\nline2")).toBe(false);
+    expect(isValidOneBubbleMailNotification("1\n2\n3\n4\n5\n6\n7")).toBe(false);
   });
 });
 

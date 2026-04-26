@@ -57,11 +57,14 @@ export type ToolChoice =
 
 export type InvokeParams = {
   messages: Message[];
+  model?: string;
   tools?: Tool[];
   toolChoice?: ToolChoice;
   tool_choice?: ToolChoice;
   maxTokens?: number;
   max_tokens?: number;
+  thinkingBudgetTokens?: number | null;
+  thinking_budget_tokens?: number | null;
   outputSchema?: OutputSchema;
   output_schema?: OutputSchema;
   responseFormat?: ResponseFormat;
@@ -215,6 +218,27 @@ const resolveApiUrl = () =>
     ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
     : "https://forge.manus.im/v1/chat/completions";
 
+const resolveModel = (model?: string) => {
+  const requested = model?.trim();
+  if (requested) return requested;
+  const configured = process.env.CAREERPASS_LLM_MODEL?.trim();
+  return configured || "gemini-2.5-flash";
+};
+
+const resolvePositiveInteger = (value: number | undefined, fallback: number): number => {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return Math.floor(value);
+  }
+  return fallback;
+};
+
+const resolveNonNegativeInteger = (value: number | undefined, fallback: number): number => {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return Math.floor(value);
+  }
+  return fallback;
+};
+
 const assertApiKey = () => {
   if (!ENV.forgeApiKey) {
     throw new Error("OPENAI_API_KEY is not configured");
@@ -271,9 +295,14 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   const {
     messages,
+    model,
     tools,
     toolChoice,
     tool_choice,
+    maxTokens,
+    max_tokens,
+    thinkingBudgetTokens,
+    thinking_budget_tokens,
     outputSchema,
     output_schema,
     responseFormat,
@@ -282,7 +311,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: resolveModel(model),
     messages: messages.map(normalizeMessage),
   };
 
@@ -298,9 +327,13 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
+  payload.max_tokens = resolvePositiveInteger(maxTokens ?? max_tokens, 32768);
+
+  const thinkingBudget = thinkingBudgetTokens !== undefined ? thinkingBudgetTokens : thinking_budget_tokens;
+  if (thinkingBudget !== null) {
+    payload.thinking = {
+      budget_tokens: resolveNonNegativeInteger(thinkingBudget, 128),
+    };
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
