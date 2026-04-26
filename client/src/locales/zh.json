@@ -13,6 +13,8 @@
     "connectGoogle": "连接 Google 日历",
     "comingSoon": "即将推出",
     "comingSoonBtn": "敬请期待",
+    "calendarAutoWrite": "自动写入日历",
+    "calendarAutoWriteDesc": "默认关闭。关闭时检测到面试/说明会等事件，CareerPass 会先在 Telegram 询问你是否加入日历；同意后会自动开启此开关。",
     "recentEvents": "最近自动同步的事件",
     "recentEventsDesc": "点击“一键复制备注”可直接复制优化后的日程备注内容用于分享",
     "refresh": "刷新",

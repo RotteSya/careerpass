@@ -13,6 +13,8 @@
     "connectGoogle": "Google と連携する",
     "comingSoon": "準備中",
     "comingSoonBtn": "近日公開予定",
+    "calendarAutoWrite": "カレンダー自動登録",
+    "calendarAutoWriteDesc": "既定はオフ。オフのとき面接・説明会などを検知すると、CareerPass はまず Telegram で「カレンダーに追加しますか？」と確認します。同意するとこのスイッチが自動で ON になります。",
     "recentEvents": "最近自動書き込みされたイベント",
     "recentEventsDesc": "「一言コピー」をクリックしてイベント内容を共有できます",
     "refresh": "更新",

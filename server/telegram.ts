@@ -19,7 +19,18 @@ import {
 import { invokeLLM } from "./_core/llm";
 import { startMailMonitoringAndCheckmail, consumeBackgroundScanResult } from "./mailMonitoring";
 import { registerGmailPushWatch } from "./gmail";
-import { sendTelegramMessage, sendTelegramBubbles } from "./telegramMessaging";
+import {
+  sendTelegramMessage,
+  sendTelegramBubbles,
+  answerTelegramCallbackQuery,
+  editTelegramMessageText,
+} from "./telegramMessaging";
+import { takePendingCalendarWrite } from "./calendarWriteConsent";
+import {
+  setCalendarWriteEnabled,
+  upsertCalendarEventSync,
+} from "./db";
+import { getValidAccessToken, writeToGoogleCalendar } from "./gmail";
 import { createRateLimiter } from "./_core/rateLimit";
 import { createRateLimitMiddleware } from "./_core/rateLimitMiddleware";
 import { assertTelegramWebhookSecret } from "./_core/telegramWebhookAuth";
@@ -399,6 +410,106 @@ async function maybeSendTrialLifecycleNudges(userId: number, chatId: string | nu
   }
 }
 
+interface TelegramCallbackQuery {
+  id: string;
+  from?: { id?: number };
+  data?: string;
+  message?: { chat?: { id?: number | string }; message_id?: number };
+}
+
+async function handleCalendarConsentCallback(cb: TelegramCallbackQuery): Promise<void> {
+  const data = cb.data ?? "";
+  const ackId = cb.id;
+  const chatId = cb.message?.chat?.id;
+  const messageId = cb.message?.message_id;
+  const telegramId = String(cb.from?.id ?? chatId ?? "");
+
+  if (!data.startsWith("cal:")) {
+    await answerTelegramCallbackQuery(ackId);
+    return;
+  }
+
+  const [, action, token] = data.split(":");
+  if (!token || (action !== "y" && action !== "n")) {
+    await answerTelegramCallbackQuery(ackId);
+    return;
+  }
+
+  const binding = telegramId ? await getTelegramBindingByTelegramId(telegramId) : null;
+  const userId = binding?.userId;
+  if (!userId) {
+    await answerTelegramCallbackQuery(ackId, "未绑定账户");
+    return;
+  }
+
+  const pending = takePendingCalendarWrite(token);
+  if (!pending) {
+    await answerTelegramCallbackQuery(ackId, "请求已过期");
+    if (chatId !== undefined && messageId !== undefined) {
+      await editTelegramMessageText(chatId, messageId, "（这条加日历的请求已过期。）");
+    }
+    return;
+  }
+  if (pending.userId !== userId) {
+    await answerTelegramCallbackQuery(ackId, "无效请求");
+    return;
+  }
+
+  if (action === "n") {
+    await answerTelegramCallbackQuery(ackId, "好的，不加");
+    if (chatId !== undefined && messageId !== undefined) {
+      await editTelegramMessageText(
+        chatId,
+        messageId,
+        `好的，这条不加日历。\n📧 ${pending.subjectPreview}`
+      );
+    }
+    return;
+  }
+
+  // action === "y": flip toggle on permanently and write this event.
+  await setCalendarWriteEnabled(userId, true);
+  const accessToken = await getValidAccessToken(userId);
+  if (!accessToken) {
+    await answerTelegramCallbackQuery(ackId, "Google 未连接");
+    if (chatId !== undefined && messageId !== undefined) {
+      await editTelegramMessageText(
+        chatId,
+        messageId,
+        "⚠️ 还没连接 Google 日历，请先在 Dashboard 完成授权。"
+      );
+    }
+    return;
+  }
+
+  const calendarEventId = await writeToGoogleCalendar(accessToken, pending.calEvent);
+  if (calendarEventId) {
+    await upsertCalendarEventSync({
+      userId,
+      provider: "google",
+      mailMessageId: pending.messageId,
+      calendarEventId,
+    });
+    await answerTelegramCallbackQuery(ackId, "已加进日历");
+    if (chatId !== undefined && messageId !== undefined) {
+      await editTelegramMessageText(
+        chatId,
+        messageId,
+        `✅ 已加进 Google 日历。「写入日历」开关已为你打开，之后类似事件不会再问你（可在 Dashboard 关闭）。\n📧 ${pending.subjectPreview}`
+      );
+    }
+  } else {
+    await answerTelegramCallbackQuery(ackId, "写入失败");
+    if (chatId !== undefined && messageId !== undefined) {
+      await editTelegramMessageText(
+        chatId,
+        messageId,
+        `⚠️ 写入 Google 日历失败。可在 Dashboard 检查授权后重试。\n📧 ${pending.subjectPreview}`
+      );
+    }
+  }
+}
+
 // Webhook endpoint: POST /api/telegram/webhook
 telegramRouter.post("/webhook", async (req, res) => {
   try {
@@ -430,6 +541,13 @@ telegramRouter.post("/webhook", async (req, res) => {
       processedUpdateIds.set(updateId, now);
     }
     console.log("[Telegram] Received update:", { updateId });
+
+    const callbackQuery = update?.callback_query;
+    if (callbackQuery) {
+      await handleCalendarConsentCallback(callbackQuery);
+      res.json({ ok: true });
+      return;
+    }
 
     const message = update?.message;
     if (!message) {

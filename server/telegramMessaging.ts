@@ -59,6 +59,80 @@ export async function sendTelegramMessage(
   }
 }
 
+export interface TelegramInlineButton {
+  text: string;
+  callback_data: string;
+}
+
+export async function sendTelegramMessageWithInlineKeyboard(
+  chatId: string | number,
+  text: string,
+  buttons: TelegramInlineButton[][]
+): Promise<boolean> {
+  if (!TELEGRAM_API) {
+    console.error("[Telegram] inline keyboard send skipped: TELEGRAM_BOT_TOKEN is not configured.");
+    return false;
+  }
+  try {
+    const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text.length > 4096 ? text.slice(0, 4096) : text,
+        reply_markup: { inline_keyboard: buttons },
+      }),
+    });
+    if (res.ok) return true;
+    const errText = await res.text();
+    console.error("[Telegram] inline keyboard send failed:", {
+      status: res.status,
+      bodyPreview: errText.slice(0, 160),
+    });
+    return false;
+  } catch (err) {
+    console.error("[Telegram] Failed to send inline-keyboard message:", err);
+    return false;
+  }
+}
+
+export async function answerTelegramCallbackQuery(
+  callbackQueryId: string,
+  text?: string
+): Promise<void> {
+  if (!TELEGRAM_API) return;
+  try {
+    await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callback_query_id: callbackQueryId, text: text ?? "" }),
+    });
+  } catch (err) {
+    console.error("[Telegram] answerCallbackQuery failed:", err);
+  }
+}
+
+export async function editTelegramMessageText(
+  chatId: string | number,
+  messageId: number,
+  text: string
+): Promise<void> {
+  if (!TELEGRAM_API) return;
+  try {
+    await fetch(`${TELEGRAM_API}/editMessageText`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        text: text.length > 4096 ? text.slice(0, 4096) : text,
+      }),
+    });
+  } catch (err) {
+    console.error("[Telegram] editMessageText failed:", err);
+  }
+}
+
 export async function sendTelegramBubbles(
   chatId: string | number,
   text: string,

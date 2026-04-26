@@ -36,6 +36,9 @@ export const users = mysqlTable("users", {
   calendarColorBriefing: varchar("calendarColorBriefing", { length: 2 }).default("9"),
   calendarColorInterview: varchar("calendarColorInterview", { length: 2 }).default("6"),
   calendarColorDeadline: varchar("calendarColorDeadline", { length: 2 }).default("11"),
+  // Opt-in toggle for writing detected events to Google Calendar.
+  // Off by default; flipped to true via Dashboard toggle or Telegram consent.
+  calendarWriteEnabled: boolean("calendarWriteEnabled").default(false).notNull(),
   notificationSchedule: varchar("notificationSchedule", { length: 20 }),
   nudgeCategoriesEnabled: json("nudgeCategoriesEnabled"),
   profileCompleted: boolean("profileCompleted").default(false).notNull(),

@@ -107,7 +107,7 @@ export async function getUserByEmail(email: string) {
 
 export async function updateUserProfile(
   userId: number,
-  data: Partial<Pick<InsertUser, "name" | "birthDate" | "education" | "universityName" | "preferredLanguage" | "profileCompleted" | "calendarColorBriefing" | "calendarColorInterview" | "calendarColorDeadline" | "notificationSchedule" | "nudgeCategoriesEnabled">>
+  data: Partial<Pick<InsertUser, "name" | "birthDate" | "education" | "universityName" | "preferredLanguage" | "profileCompleted" | "calendarColorBriefing" | "calendarColorInterview" | "calendarColorDeadline" | "calendarWriteEnabled" | "notificationSchedule" | "nudgeCategoriesEnabled">>
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -143,6 +143,20 @@ export async function updateUserCalendarColorPrefs(
       calendarColorDeadline: updates.deadline,
       updatedAt: new Date(),
     })
+    .where(eq(users.id, userId));
+}
+
+export async function getCalendarWriteEnabled(userId: number): Promise<boolean> {
+  const user = await getUserById(userId);
+  return !!user?.calendarWriteEnabled;
+}
+
+export async function setCalendarWriteEnabled(userId: number, enabled: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(users)
+    .set({ calendarWriteEnabled: enabled, updatedAt: new Date() })
     .where(eq(users.id, userId));
 }
 

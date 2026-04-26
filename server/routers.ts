@@ -17,6 +17,8 @@ import {
   updateJobApplicationStatus,
   listJobStatusEvents,
   deleteUserAccountData,
+  getCalendarWriteEnabled,
+  setCalendarWriteEnabled,
 } from "./db";
 import { getValidAccessToken } from "./gmail";
 import { ENV } from "./_core/env";
@@ -291,6 +293,18 @@ export const appRouter = router({
       await deleteOauthToken(ctx.user.id, "google");
       return { success: true };
     }),
+
+    getWritePref: protectedProcedure.query(async ({ ctx }) => {
+      const enabled = await getCalendarWriteEnabled(ctx.user.id);
+      return { enabled };
+    }),
+
+    setWritePref: protectedProcedure
+      .input(z.object({ enabled: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        await setCalendarWriteEnabled(ctx.user.id, input.enabled);
+        return { enabled: input.enabled };
+      }),
 
     listRecentAutoEvents: protectedProcedure
       .input(z.object({ max: z.number().min(1).max(50).optional() }).optional())

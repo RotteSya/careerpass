@@ -18,6 +18,7 @@ import {
   createJobStatusEvent,
   updateJobApplicationStatus,
   getUserCalendarColorPrefs,
+  getCalendarWriteEnabled,
   saveAgentMemory,
   updateGoogleAccountSyncState,
   updateGoogleLastHistoryIdIfNewer,
@@ -32,7 +33,8 @@ import {
 import { invokeLLM } from "./_core/llm";
 import { appendUserFacingSoulContract, loadAgentAgents, loadAgentSoul } from "./_core/soul";
 import { createCompanyBatchDeduper, sortMailItemsByTsAsc } from "./gmail_dedup";
-import { sendTelegramMessage } from "./telegramMessaging";
+import { sendTelegramMessage, sendTelegramMessageWithInlineKeyboard } from "./telegramMessaging";
+import { stashPendingCalendarWrite } from "./calendarWriteConsent";
 import { dispatchNotification } from "./_core/messaging";
 import { enqueueGmailJob } from "./gmailJobQueue";
 import { runRecruitingNlpPipeline } from "./mailNlpPipeline";
@@ -1157,7 +1159,7 @@ async function reportToCareerpassAgent(userId: number, event: EmailEvent, reason
 
 // ─── Google Calendar Write ────────────────────────────────────────────────────
 
-async function writeToGoogleCalendar(
+export async function writeToGoogleCalendar(
   accessToken: string,
   event: CalendarEvent
 ): Promise<string | null> {
@@ -1343,6 +1345,7 @@ async function processGmailMessageIds(params: {
     enableAutoBoardWrite = true,
   } = params;
   const calendarColorPrefs = await getUserCalendarColorPrefs(userId);
+  const calendarWriteEnabled = await getCalendarWriteEnabled(userId);
   const detectedEvents: EmailEvent[] = [];
   const isFirstForCompanyInBatch = createCompanyBatchDeduper();
   const threadMeetingUrlCache = new Map<string, string | null>();
@@ -1697,20 +1700,43 @@ async function processGmailMessageIds(params: {
           colorId,
         };
 
-        const calendarEventId = await writeToGoogleCalendar(accessToken, calEvent);
-        if (calendarEventId) {
-          await upsertCalendarEventSync({
+        if (calendarWriteEnabled) {
+          const calendarEventId = await writeToGoogleCalendar(accessToken, calEvent);
+          if (calendarEventId) {
+            await upsertCalendarEventSync({
+              userId,
+              provider: "google",
+              mailMessageId: messageId,
+              calendarEventId,
+            });
+            calendarCount++;
+          } else if (!suppressCalendarFailureNotifications) {
+            await dispatchNotification({
+              userId,
+              body: `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`,
+            });
+          }
+        } else if (telegramChatId && !suppressTelegramItemNotifications) {
+          // Calendar write is opt-in. Ask the user via Telegram inline buttons;
+          // a Yes flips the toggle on permanently and writes this event.
+          const subjectPreview = detail.subject.slice(0, 80);
+          const token = stashPendingCalendarWrite({
             userId,
-            provider: "google",
-            mailMessageId: messageId,
-            calendarEventId,
+            chatId: String(telegramChatId),
+            messageId,
+            calEvent,
+            subjectPreview,
           });
-          calendarCount++;
-        } else if (!suppressCalendarFailureNotifications) {
-          await dispatchNotification({
-            userId,
-            body: `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`,
-          });
+          const dt = `${date}${time ? ` ${time}` : ""} JST`;
+          const promptText =
+            `要不要把这条${typeLabels[eventType]}加进 Google 日历？\n` +
+            `${companyName ?? "公司未知"}｜${dt}\n` +
+            `📧 ${subjectPreview}\n\n` +
+            `同意后我会自动开启「写入日历」开关，之后类似事件不会再问你。`;
+          await sendTelegramMessageWithInlineKeyboard(telegramChatId, promptText, [[
+            { text: "✅ 加进去", callback_data: `cal:y:${token}` },
+            { text: "✖️ 不用", callback_data: `cal:n:${token}` },
+          ]]);
         }
       }
     } catch (err) {

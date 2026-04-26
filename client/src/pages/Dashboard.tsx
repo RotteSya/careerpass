@@ -120,6 +120,17 @@ export default function Dashboard() {
       refetchCalendar();
     },
   });
+
+  const { data: calendarWritePref, refetch: refetchCalendarWritePref } =
+    trpc.calendar.getWritePref.useQuery(undefined, { enabled: isAuthenticated });
+  const setCalendarWritePref = trpc.calendar.setWritePref.useMutation({
+    onSuccess: () => {
+      refetchCalendarWritePref();
+    },
+    onError: (err: unknown) => {
+      toast.error(getErrorMessage(err));
+    },
+  });
   const updateJobStatusMutation = trpc.jobs.updateStatus.useMutation({
     onSuccess: () => {
       toast.success(i18n.t("dashboard.syncStatus")); // reusing generic success
@@ -427,6 +438,22 @@ export default function Dashboard() {
                     {t("dashboard.comingSoonBtn")}
                   </Button>
                 </div>
+              </div>
+
+              <div className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-border bg-secondary/10 p-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{t("dashboard.calendarAutoWrite")}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t("dashboard.calendarAutoWriteDesc")}
+                  </p>
+                </div>
+                <Switch
+                  checked={!!calendarWritePref?.enabled}
+                  disabled={setCalendarWritePref.isPending}
+                  onCheckedChange={(checked) => {
+                    setCalendarWritePref.mutate({ enabled: checked });
+                  }}
+                />
               </div>
 
               {calendarStatus?.google ? (

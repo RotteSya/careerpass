@@ -13,6 +13,8 @@
     "connectGoogle": "Connect Google Calendar",
     "comingSoon": "Coming Soon",
     "comingSoonBtn": "Stay Tuned",
+    "calendarAutoWrite": "Auto-write to Calendar",
+    "calendarAutoWriteDesc": "Off by default. When off, CareerPass asks you on Telegram before adding any detected interview/briefing event to your calendar. Saying yes turns this switch on automatically.",
     "recentEvents": "Recently Auto-Synced Events",
     "recentEventsDesc": "Click 'Copy Note' to easily copy optimized event details for sharing",
     "refresh": "Refresh",
