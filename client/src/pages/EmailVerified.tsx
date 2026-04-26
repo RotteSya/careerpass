@@ -1,14 +1,11 @@
-import { useEffect, useState } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function EmailVerified() {
-  const search = useSearch();
   const [, navigate] = useLocation();
-  const params = new URLSearchParams(search);
-  const token = params.get("token") ?? "";
 
   const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
   const [errorMsg, setErrorMsg] = useState("");
@@ -33,14 +30,37 @@ export default function EmailVerified() {
     },
   });
 
+  const ranRef = useRef(false);
   useEffect(() => {
-    if (token) {
-      verifyEmail.mutate({ token });
-    } else {
+    if (ranRef.current) return;
+    ranRef.current = true;
+
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token") ?? "";
+
+    // Strip the token from the URL before doing anything else so it doesn't
+    // linger in browser history, referer headers, or third-party scripts.
+    if (params.has("token")) {
+      params.delete("token");
+      const remaining = params.toString();
+      const newUrl =
+        window.location.pathname + (remaining ? `?${remaining}` : "") + window.location.hash;
+      window.history.replaceState({}, "", newUrl);
+    }
+
+    if (!token) {
       setStatus("error");
       setErrorMsg("確認トークンが見つかりません。");
+      return;
     }
-  }, [token]);
+
+    verifyEmail.mutate({ token });
+    // Intentionally run only once on mount; verifyEmail is captured by closure
+    // and the ref guards against React Strict Mode double-invocation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-[var(--color-warm-white)] flex items-center justify-center px-4 text-foreground">

@@ -2,14 +2,6 @@ import { COOKIE_NAME } from "@shared/const";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
-function originFromReferer(referer: string): string | null {
-  try {
-    return new URL(referer).origin;
-  } catch {
-    return null;
-  }
-}
-
 export function assertCsrf(
   req: {
     method?: string;
@@ -30,7 +22,11 @@ export function assertCsrf(
   const cookie = header("cookie") ?? "";
   if (!cookie.includes(`${COOKIE_NAME}=`)) return;
 
-  const origin = header("origin") ?? originFromReferer(header("referer") ?? "");
+  // Require Origin header on cookie-authenticated unsafe requests. Modern
+  // browsers always send Origin on cross-origin POST/PUT/DELETE; Referer can
+  // be stripped by referrer-policy or privacy extensions, so we no longer
+  // accept it as a fallback.
+  const origin = header("origin");
   if (!origin) {
     throw new Error("CSRF blocked: missing origin");
   }

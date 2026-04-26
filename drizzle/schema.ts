@@ -313,3 +313,23 @@ export const billingNotifications = mysqlTable("billing_notifications", {
 
 export type BillingNotification = typeof billingNotifications.$inferSelect;
 export type InsertBillingNotification = typeof billingNotifications.$inferInsert;
+
+// ─── Proactive delivered nudges ──────────────────────────────────────────────
+// Persists which proactive nudges we have already pushed, so the cooldown
+// survives server restarts and works across multiple processes. The
+// deliveryKey column holds a SHA-256 hex digest of the nudge identity tuple
+// (userId, category, target, title, companyName, relevantDate).
+export const deliveredNudges = mysqlTable("delivered_nudges", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  deliveryKey: varchar("deliveryKey", { length: 64 }).notNull(),
+  deliveredAt: timestamp("deliveredAt").defaultNow().notNull(),
+}, (table) => {
+  return {
+    userKeyUnique: uniqueIndex("delivered_nudges_user_key_unique").on(table.userId, table.deliveryKey),
+    deliveredAtIdx: index("delivered_nudges_delivered_at_idx").on(table.deliveredAt),
+  };
+});
+
+export type DeliveredNudge = typeof deliveredNudges.$inferSelect;
+export type InsertDeliveredNudge = typeof deliveredNudges.$inferInsert;

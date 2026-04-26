@@ -43,5 +43,34 @@ describe("assertCsrf", () => {
       )
     ).not.toThrow();
   });
+
+  it("rejects cookie-authenticated request when origin header is missing", () => {
+    expect(() =>
+      assertCsrf(
+        {
+          method: "POST",
+          headers: {
+            cookie: "app_session_id=abc",
+          },
+        },
+        { allowedOrigins: ["https://app.example.com"] }
+      )
+    ).toThrow(/csrf/i);
+  });
+
+  it("rejects cookie-authenticated request relying on referer alone", () => {
+    expect(() =>
+      assertCsrf(
+        {
+          method: "POST",
+          headers: {
+            referer: "https://app.example.com/page",
+            cookie: "app_session_id=abc",
+          },
+        },
+        { allowedOrigins: ["https://app.example.com"] }
+      )
+    ).toThrow(/csrf/i);
+  });
 });
 

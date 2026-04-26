@@ -5,9 +5,9 @@ import type { ProactiveNudge, UserJobContext, NudgeCategory } from "./types";
 import { collectTrialNudges, markTrialNudgeDelivered } from "../billing";
 import { isNotificationAllowed } from "./quietHours";
 import { humanizeNudgeBody } from "./humanize";
+import { getNudgeLastDeliveredAt, recordNudgeDelivered } from "./deliveredNudges";
 
 const NUDGE_COOLDOWN_MS = 23 * 60 * 60 * 1000;
-const deliveredNudges = new Map<string, number>();
 
 function isCategoryEnabled(
   category: NudgeCategory,
@@ -30,17 +30,19 @@ function nudgeDeliveryKey(nudge: ProactiveNudge): string {
   ].join(":");
 }
 
-function shouldDeliverNudge(nudge: ProactiveNudge, now: Date): boolean {
-  const key = nudgeDeliveryKey(nudge);
-  const lastDeliveredAt = deliveredNudges.get(key);
-  if (lastDeliveredAt && now.getTime() - lastDeliveredAt < NUDGE_COOLDOWN_MS) {
+async function shouldDeliverNudge(nudge: ProactiveNudge, now: Date): Promise<boolean> {
+  const lastDeliveredAt = await getNudgeLastDeliveredAt(
+    nudge.userId,
+    nudgeDeliveryKey(nudge)
+  );
+  if (lastDeliveredAt && now.getTime() - lastDeliveredAt.getTime() < NUDGE_COOLDOWN_MS) {
     return false;
   }
   return true;
 }
 
-function markNudgeDelivered(nudge: ProactiveNudge, now: Date): void {
-  deliveredNudges.set(nudgeDeliveryKey(nudge), now.getTime());
+async function markNudgeDelivered(nudge: ProactiveNudge, now: Date): Promise<void> {
+  await recordNudgeDelivered(nudge.userId, nudgeDeliveryKey(nudge), now);
 }
 
 export async function runProactiveCheckForUser(userId: number): Promise<ProactiveNudge[]> {
@@ -80,9 +82,13 @@ export async function runProactiveCheckForUser(userId: number): Promise<Proactiv
     app.lastStatusEventAt = latestStatusEventTimes.get(app.id) ?? app.updatedAt;
   }
 
-  const nudges = evaluateAllRules(context)
-    .filter((n) => isCategoryEnabled(n.category, nudgePrefs))
-    .filter((n) => shouldDeliverNudge(n, context.now));
+  const candidates = evaluateAllRules(context).filter((n) =>
+    isCategoryEnabled(n.category, nudgePrefs)
+  );
+  const cooldownChecks = await Promise.all(
+    candidates.map((n) => shouldDeliverNudge(n, context.now))
+  );
+  const nudges = candidates.filter((_, i) => cooldownChecks[i]);
 
   // Also check billing trial nudges
   try {
@@ -112,7 +118,7 @@ export async function runProactiveCheckForUser(userId: number): Promise<Proactiv
         title: nudge.title,
         body: `${prefix}${body}`,
       });
-      markNudgeDelivered(nudge, context.now);
+      await markNudgeDelivered(nudge, context.now);
     } catch (err) {
       console.error(`[Proactive] Failed to dispatch nudge for user ${userId}:`, err);
     }

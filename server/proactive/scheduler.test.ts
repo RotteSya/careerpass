@@ -1,7 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockDispatchNotification } = vi.hoisted(() => ({
+const { mockDispatchNotification, deliveredStore } = vi.hoisted(() => ({
   mockDispatchNotification: vi.fn().mockResolvedValue(undefined),
+  deliveredStore: new Map<string, Date>(),
+}));
+
+vi.mock("./deliveredNudges", () => ({
+  getNudgeLastDeliveredAt: vi.fn(async (userId: number, key: string) =>
+    deliveredStore.get(`${userId}:${key}`) ?? null
+  ),
+  recordNudgeDelivered: vi.fn(async (userId: number, key: string, at: Date) => {
+    deliveredStore.set(`${userId}:${key}`, at);
+  }),
 }));
 
 vi.mock("../db", () => ({
@@ -49,6 +59,7 @@ import { dispatchNotification } from "../_core/messaging";
 describe("runProactiveCheckForUser", () => {
   beforeEach(() => {
     vi.mocked(dispatchNotification).mockClear();
+    deliveredStore.clear();
   });
 
   it("does not dispatch the same proactive nudge twice within the cooldown window", async () => {
