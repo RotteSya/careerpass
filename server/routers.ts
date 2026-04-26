@@ -17,8 +17,6 @@ import {
   updateJobApplicationStatus,
   listJobStatusEvents,
   deleteUserAccountData,
-  addToWaitlist,
-  getWaitlistCount,
 } from "./db";
 import { getValidAccessToken } from "./gmail";
 import { ENV } from "./_core/env";
@@ -28,7 +26,6 @@ import {
   verifyEmail as verifyEmailToken,
   resendVerificationEmail,
   changePassword,
-  sendWaitlistEmail,
 } from "./emailAuth";
 import { sdk } from "./_core/sdk";
 import { runProactiveCheckForUser } from "./proactive/scheduler";
@@ -77,25 +74,6 @@ async function exchangeGoogleCode(code: string, redirectUri: string) {
 
 export const appRouter = router({
   system: systemRouter,
-
-  // ── Waitlist ────────────────────────────────────────────────────────────────
-  waitlist: router({
-    join: publicProcedure
-      .input(z.object({ email: z.string().email() }))
-      .mutation(async ({ input }) => {
-        // Save to DB
-        await addToWaitlist(input.email);
-        // Send Email
-        await sendWaitlistEmail(input.email);
-        // Get updated count
-        const count = await getWaitlistCount();
-        return { success: true, count };
-      }),
-    getCount: publicProcedure.query(async () => {
-      const count = await getWaitlistCount();
-      return { count };
-    }),
-  }),
 
   // ── Auth ────────────────────────────────────────────────────────────────────
   auth: router({
