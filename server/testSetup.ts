@@ -5,6 +5,6 @@ if (!process.env.GMAIL_PUBSUB_AUDIENCE)
 if (!process.env.GMAIL_PUBSUB_SERVICE_ACCOUNT)
   process.env.GMAIL_PUBSUB_SERVICE_ACCOUNT =
     "pubsub@example.iam.gserviceaccount.com";
-if (!process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN)
-  process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN = "test-telegram-secret";
+// Always override so webhook auth tests use a known value regardless of production env
+process.env.TELEGRAM_WEBHOOK_SECRET_TOKEN = "test-telegram-secret";
 
