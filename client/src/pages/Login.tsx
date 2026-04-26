@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BrainCircuit } from "lucide-react";
+import { BrainCircuit, BriefcaseBusiness, CalendarCheck2, CheckCircle2, Mail } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -33,8 +33,36 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-warm-white)] flex items-center justify-center px-4 text-foreground">
-      <div className="w-full max-w-md space-y-8">
+    <div className="relative min-h-screen overflow-hidden bg-[var(--color-warm-white)] flex items-center justify-center px-4 text-foreground">
+      <div className="login-value-visual pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="absolute inset-x-0 top-[9%] mx-auto h-px w-[min(760px,82vw)] bg-[linear-gradient(90deg,transparent,rgba(0,117,222,0.2),rgba(26,174,57,0.18),transparent)]" />
+        <div className="login-orbit login-orbit-one left-[8%] top-[16%] hidden sm:flex">
+          <Mail className="h-4 w-4 text-[var(--color-notion-blue)]" />
+          <span>説明会</span>
+        </div>
+        <div className="login-orbit login-orbit-two right-[9%] top-[23%] hidden md:flex">
+          <CalendarCheck2 className="h-4 w-4 text-[#dd5b00]" />
+          <span>面接日程</span>
+        </div>
+        <div className="login-orbit login-orbit-three bottom-[18%] left-[11%] hidden md:flex">
+          <BriefcaseBusiness className="h-4 w-4 text-[var(--color-warm-gray-500)]" />
+          <span>選考管理</span>
+        </div>
+        <div className="login-orbit login-orbit-four bottom-[14%] right-[12%] hidden sm:flex">
+          <CheckCircle2 className="h-4 w-4 text-[#1aae39]" />
+          <span>内定</span>
+        </div>
+        <div className="login-flow login-flow-one" />
+        <div className="login-flow login-flow-two" />
+        <div className="login-flow login-flow-three" />
+        <div className="login-pipeline left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <span className="bg-[var(--color-notion-blue)]" />
+          <span className="bg-[#dd5b00]" />
+          <span className="bg-[#1aae39]" />
+        </div>
+      </div>
+
+      <div className="relative z-10 w-full max-w-md space-y-8">
         <div className="text-center">
           <Link href="/">
             <span className="inline-flex items-center gap-3 cursor-pointer justify-center">
