@@ -509,6 +509,7 @@ async function handleCalendarConsentCallback(cb: TelegramCallbackQuery): Promise
 
 // Webhook endpoint: POST /api/telegram/webhook
 telegramRouter.post("/webhook", async (req, res) => {
+  let updateIdForDedupe: number | null = null;
   try {
     if (TELEGRAM_WEBHOOK_SECRET_TOKEN) {
       const header = req.headers["x-telegram-bot-api-secret-token"];
@@ -536,6 +537,7 @@ telegramRouter.post("/webhook", async (req, res) => {
         return;
       }
       processedUpdateIds.set(updateId, now);
+      updateIdForDedupe = updateId;
     }
     console.log("[Telegram] Received update:", { updateId });
 
@@ -935,6 +937,9 @@ telegramRouter.post("/webhook", async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
+    if (updateIdForDedupe !== null) {
+      processedUpdateIds.delete(updateIdForDedupe);
+    }
     console.error("[Telegram] Webhook error:", err);
     res.status(500).json({ ok: false, error: String(err) });
   }
