@@ -347,7 +347,7 @@ describe("handleAgentChat", () => {
       reconReportPath: null,
       esFilePath: null,
       notes: null,
-      nextActionAt: new Date("2026-04-26T09:00:00.000Z"),
+      nextActionAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // always in the future
       createdAt: new Date("2026-03-01T00:00:00.000Z"),
       updatedAt: new Date("2026-03-01T00:00:00.000Z"),
       _latestMailSubject: "ES締切のお知らせ",
