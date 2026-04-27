@@ -14,7 +14,11 @@ const gmailMocks = vi.hoisted(() => ({
 vi.mock("./db", () => dbMocks);
 vi.mock("./gmail", () => gmailMocks);
 
-import { consumeBackgroundScanResult, startBackgroundMailScan } from "./mailMonitoring";
+import {
+  consumeBackgroundScanResult,
+  isRealtimeTelegramSuppressed,
+  startBackgroundMailScan,
+} from "./mailMonitoring";
 
 describe("startBackgroundMailScan", () => {
   beforeEach(() => {
@@ -52,6 +56,7 @@ describe("startBackgroundMailScan", () => {
     expect(args[0]).toBe(1);
     expect(args[1]).toBeUndefined();
     expect(args[2]?.fullMailboxScan).toBe(true);
+    expect(args[2]?.suppressTelegramItemNotifications).toBe(true);
   });
 
   it("does not force full mailbox scan when forceFullMailboxScan is false/omitted", async () => {
@@ -79,5 +84,31 @@ describe("startBackgroundMailScan", () => {
 
     const args = gmailMocks.monitorGmailAndSync.mock.calls[0];
     expect(args[2]?.fullMailboxScan).toBeUndefined();
+    expect(args[2]?.suppressTelegramItemNotifications).toBe(true);
+  });
+
+  it("suppresses immediate realtime Telegram bursts after registering a watch", async () => {
+    dbMocks.getBillingFeatureAccess.mockResolvedValue({
+      phase: "trial",
+      autoMonitoringEnabled: true,
+      autoBoardWriteEnabled: true,
+      autoWorkflowEnabled: true,
+      dayFromTrialStart: 1,
+      trackedCompanyCount: 0,
+      trialEndsAt: new Date(),
+      graceEndsAt: new Date(),
+    });
+    dbMocks.getOauthToken.mockResolvedValue({ accessToken: "x" });
+    gmailMocks.monitorGmailAndSync.mockResolvedValue({
+      scanned: 0,
+      detected: 0,
+      calendarEvents: 0,
+      events: [],
+    });
+
+    startBackgroundMailScan(777);
+
+    expect(isRealtimeTelegramSuppressed(777)).toBe(true);
+    await consumeBackgroundScanResult(777);
   });
 });

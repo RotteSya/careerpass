@@ -1662,7 +1662,7 @@ async function processGmailMessageIds(params: {
               calendarEventId,
             });
             calendarCount++;
-          } else if (!suppressCalendarFailureNotifications) {
+          } else if (!suppressTelegramItemNotifications && !suppressCalendarFailureNotifications) {
             await dispatchNotification({
               userId,
               body: `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`,
@@ -1701,7 +1701,7 @@ async function processGmailMessageIds(params: {
   }
 
   // Trigger proactive check for status-based suggestions (fire-and-forget)
-  if (detectedEvents.length > 0) {
+  if (detectedEvents.length > 0 && !suppressTelegramItemNotifications) {
     import("./proactive/scheduler").then(({ runProactiveCheckForUser }) => {
       runProactiveCheckForUser(userId).catch(err =>
         console.error("[Gmail] Proactive check failed after mail processing:", err)
@@ -1847,11 +1847,11 @@ export async function syncGmailIncremental(
   const startHistoryId = state?.lastHistoryId ?? null;
 
   if (!startHistoryId) {
-    // First scan (no prior historyId) — sync everything to the board, but only
-    // notify the user about mails from the last 14 days to avoid an avalanche.
+    // First push without a prior checkpoint is historical bootstrap, not a
+    // realtime event. Sync the board silently; future pushes will notify.
     const fallback = await monitorGmailAndSync(userId, telegramChatId, {
       notifyWindowDays: 14,
-      suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
+      suppressTelegramItemNotifications: true,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
       fullMailboxScan: true,
     });
@@ -1866,11 +1866,11 @@ export async function syncGmailIncremental(
 
   const changes = await listGmailHistoryChanges({ accessToken, startHistoryId });
   if (!changes) {
-    // First scan (no prior historyId) — sync everything to the board, but only
-    // notify the user about mails from the last 14 days to avoid an avalanche.
+    // History expired or unavailable: resync board state silently to avoid
+    // replaying old mailbox state as a burst of Telegram messages.
     const fallback = await monitorGmailAndSync(userId, telegramChatId, {
       notifyWindowDays: 14,
-      suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
+      suppressTelegramItemNotifications: true,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
       fullMailboxScan: true,
     });

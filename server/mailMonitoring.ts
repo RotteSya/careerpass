@@ -90,6 +90,8 @@ export function startBackgroundMailScan(
   userId: number,
   options?: { forceFullMailboxScan?: boolean }
 ): void {
+  markRealtimeTelegramSuppressedAfterScan(userId);
+
   // Evict stale entries
   backgroundScans.forEach((entry, uid) => {
     if (Date.now() - entry.startedAt > BACKGROUND_SCAN_TTL_MS) {
@@ -114,9 +116,10 @@ export function startBackgroundMailScan(
         const token = await getOauthToken(userId, "google");
         if (!token) return null;
 
-        // Run without telegramChatId — we only want classification + board/calendar
-        // writes.  Telegram notifications will be sent separately after the greeting.
+        // Run silently: this bootstraps board/calendar state, while Telegram gets
+        // one digest after the greeting instead of a burst of historical nudges.
         return await monitorGmailAndSync(userId, undefined, {
+          suppressTelegramItemNotifications: true,
           enableAutoBoardWrite: access.autoBoardWriteEnabled,
           ...(options?.forceFullMailboxScan ? { fullMailboxScan: true } : {}),
         });
