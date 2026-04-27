@@ -62,9 +62,55 @@ export async function humanizeNudgeBody(
     const raw = response.choices?.[0]?.message?.content;
     const text = typeof raw === "string" ? raw.trim() : "";
     if (!text) return nudge.body;
-    return text.replace(/^["「『]|["」』]$/g, "").trim() || nudge.body;
+    const cleaned = stripWrappingQuotes(text);
+    if (!cleaned) return nudge.body;
+
+    if (!preservesFacts(nudge.body, cleaned)) {
+      console.warn(
+        `[Proactive] humanizeNudgeBody dropped facts for ${nudge.category}; falling back to template`
+      );
+      return nudge.body;
+    }
+    return cleaned;
   } catch (err) {
     console.warn(`[Proactive] humanizeNudgeBody failed for ${nudge.category}:`, err);
     return nudge.body;
   }
+}
+
+const QUOTE_PAIRS: Array<readonly [string, string]> = [
+  ['"', '"'],
+  ["'", "'"],
+  ["「", "」"],
+  ["『", "』"],
+];
+
+/**
+ * Strip a single matched outer quote pair the LLM sometimes adds. Earlier
+ * code globally stripped "」" which corrupted JP nudges that legitimately
+ * end with a closing bracket — only strip when both ends pair up.
+ */
+function stripWrappingQuotes(input: string): string {
+  const trimmed = input.trim();
+  for (const [open, close] of QUOTE_PAIRS) {
+    if (trimmed.startsWith(open) && trimmed.endsWith(close) && trimmed.length >= open.length + close.length) {
+      return trimmed.slice(open.length, trimmed.length - close.length).trim();
+    }
+  }
+  return trimmed;
+}
+
+/**
+ * Verify the humanized output kept every digit and the ⏰ marker from the
+ * original template. The style-guide prompt asks for this, but LLMs slip —
+ * a missing "3" turns "3 days no response" into "no response in a while".
+ */
+export function preservesFacts(original: string, candidate: string): boolean {
+  if (original.includes("⏰") && !candidate.includes("⏰")) return false;
+
+  const originalDigits = original.match(/\d+/g) ?? [];
+  for (const token of originalDigits) {
+    if (!candidate.includes(token)) return false;
+  }
+  return true;
 }

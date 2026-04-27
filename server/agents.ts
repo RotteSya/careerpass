@@ -11,6 +11,8 @@ import {
   listLatestJobStatusEventTimes,
   applyAgentJobStatusUpdate,
   createConfirmedAgentJobApplication,
+  getAgentUserTraits,
+  setAgentNickname,
 } from "./db";
 import { reconCompany as runRecon } from "./recon";
 import crypto from "crypto";
@@ -244,18 +246,113 @@ function isOnboardingStartMessage(message: string): boolean {
   return /^\/start(?:@\w+)?(?:\s|$)/.test(message.trim());
 }
 
-const NEGATION_PATTERN = /(不要|不用|别加|不需要|算了|先不要|あとで|やめて|しないで|不要です|don't|do not|\bno\b|nope|\bnah\b|not now|later|maybe later)/i;
-const AFFIRMATION_PATTERN = /(yes|yep|yeah|\bok\b|okay|sure|please|go ahead|add it|create it|let's|お願いします|はい|追加して|作成して|登録して|登録お願い|了解|分かりました|どうぞ|ええ|可以|好的|加上|创建|追加|登録|没问题|当然|对啊|是的|嗯)/i;
+const NICKNAME_PATTERNS: RegExp[] = [
+  // Chinese: "叫我 Ray" / "请叫我 Ray" / "你可以叫我 Ray" — stop at punctuation/particle
+  /(?:请叫我|你可以叫我|就叫我|叫我)\s*([^\s，。！？!?,、吧呀啊嘛哦呢]{1,30})/,
+  // Japanese: "私を Ray と呼んでください" / "Ray って呼んで"
+  /(?:私を|わたしを|私の事を)\s*(.{1,30}?)\s*(?:と|って)\s*(?:呼んで|呼ぶ)/,
+  /([A-Za-z][A-Za-z0-9_-]{1,30})\s*(?:と|って)\s*(?:呼んで|呼ぶ)/,
+  // English: "call me Ray" / "you can call me Ray"
+  /\b(?:please\s+)?(?:call\s+me|you\s+can\s+call\s+me)\s+([A-Za-z][A-Za-z0-9_-]{0,30})/i,
+];
 
-function hasRecentCreateConfirmation(message: string, history: any[], companyName: string): boolean {
+export function extractNicknameFromMessage(message: string): string | null {
+  for (const pattern of NICKNAME_PATTERNS) {
+    const match = message.match(pattern);
+    if (match?.[1]) {
+      const candidate = match[1].trim();
+      if (candidate.length >= 1 && candidate.length <= 32) return candidate;
+    }
+  }
+  return null;
+}
+
+const BUBBLE_SPLIT_MIN_CHARS = 120;
+const BUBBLE_SENTENCE_BOUNDARY = /([。！？!?][」』")]?|[.?!](?=\s))/g;
+
+/**
+ * If the LLM ignored the "split into bubbles with \n\n" prompt rule and
+ * returned a wall of text, split heuristically by sentence boundary so the
+ * Telegram dispatcher still produces multiple bubbles.
+ *
+ * Skips when the reply already has \n\n, is short, or contains code fences
+ * / list markers (where heuristic splitting would mangle structure).
+ */
+export function splitIntoBubbles(reply: string): string {
+  if (!reply || reply.length < BUBBLE_SPLIT_MIN_CHARS) return reply;
+  if (reply.includes("\n\n")) return reply;
+  if (reply.includes("```")) return reply;
+  if (/^\s*([-*+•]|\d+[.)])\s/m.test(reply)) return reply;
+
+  const segments: string[] = [];
+  let cursor = 0;
+  for (const match of reply.matchAll(BUBBLE_SENTENCE_BOUNDARY)) {
+    const end = (match.index ?? 0) + match[0].length;
+    segments.push(reply.slice(cursor, end).trim());
+    cursor = end;
+  }
+  const tail = reply.slice(cursor).trim();
+  if (tail) segments.push(tail);
+
+  const sentences = segments.filter(Boolean);
+  if (sentences.length < 2) return reply;
+
+  // Aim for 2-3 bubbles. Group sentences so each bubble is roughly balanced.
+  const bubbleTarget = Math.min(3, Math.max(2, Math.ceil(sentences.length / 2)));
+  const perBubble = Math.ceil(sentences.length / bubbleTarget);
+  const bubbles: string[] = [];
+  for (let i = 0; i < sentences.length; i += perBubble) {
+    bubbles.push(sentences.slice(i, i + perBubble).join(" "));
+  }
+  return bubbles.join("\n\n");
+}
+
+const NEGATION_PATTERN = /(不要|不用|别加|不需要|算了|先不要|あとで|やめて|しないで|不要です|don't|do not|\bno\b|nope|\bnah\b|not now|later|maybe later)/i;
+
+// Strong affirmation: explicit add/create action — the user is unambiguously
+// asking to create the tracked company.
+const STRONG_AFFIRMATION_PATTERN = /(add it|create it|please add|go ahead|sign me up|加上|加入|新增|添加|创建一个?|追加して|作成して|登録して|登録お願い|お願いします)/i;
+
+// Weak affirmation: generic yes that only counts as confirmation when the
+// most recent assistant message clearly asked a question (ending with ?/？).
+const WEAK_AFFIRMATION_PATTERN = /(\byes\b|\byep\b|\byeah\b|\bok\b|okay|sure|对|对啊|是的|是|可以|好|好的|没问题|当然|了解|分かりました|はい|ええ|どうぞ|嗯)/i;
+
+function endsWithQuestion(content: string): boolean {
+  return /[?？]\s*$/.test(content.trim());
+}
+
+function hasRecentCreateConfirmation(
+  message: string,
+  history: any[],
+  companyName: string,
+  options: { requireExplicitName?: boolean } = {}
+): boolean {
   const latest = message.trim();
   if (NEGATION_PATTERN.test(latest)) return false;
-  if (!AFFIRMATION_PATTERN.test(latest)) return false;
+
+  const isStrong = STRONG_AFFIRMATION_PATTERN.test(latest);
+  const isWeak = !isStrong && WEAK_AFFIRMATION_PATTERN.test(latest);
+  if (!isStrong && !isWeak) return false;
 
   const target = normalizeCompanyNameForMatch(companyName);
+
+  // When the agent is about to create multiple companies in one turn, a single
+  // bare "好" must not greenlight all of them — the user must name the company.
+  if (options.requireExplicitName && !normalizeCompanyNameForMatch(latest).includes(target)) {
+    return false;
+  }
+
   const recentAssistantMessages = history
     .filter((m) => m?.role === "assistant" && typeof m.content === "string")
     .slice(-3);
+
+  // Weak affirmations only count when the very last assistant message is a
+  // direct question — otherwise "嗯…" gets misread as consent.
+  if (isWeak) {
+    const lastAssistant = [...recentAssistantMessages].reverse()[0]?.content as string | undefined;
+    if (!lastAssistant || !endsWithQuestion(lastAssistant)) return false;
+  }
+
   return recentAssistantMessages.some((m) => {
     const content = m.content as string;
     const normalizedContent = normalizeCompanyNameForMatch(content);
@@ -377,13 +474,32 @@ export async function handleAgentChat(
   history: any[] = [],
   extraSystemInstruction?: string
 ) {
-  const user = await getUserById(userId);
+  const [user, existingTraits] = await Promise.all([
+    getUserById(userId),
+    getAgentUserTraits(userId),
+  ]);
   const lang = user?.preferredLanguage ?? "ja";
+
+  // Persist a fresh nickname if the user just told us one. Save before LLM
+  // call so the trait survives even if the upstream LLM call fails.
+  const detectedNickname = extractNicknameFromMessage(message);
+  let activeNickname = existingTraits?.nickname ?? null;
+  if (detectedNickname && detectedNickname !== activeNickname) {
+    try {
+      await setAgentNickname(userId, detectedNickname);
+      activeNickname = detectedNickname;
+    } catch (err) {
+      console.warn(`[Agent] Failed to persist nickname for user ${userId}:`, err);
+    }
+  }
+
+  const effectiveName = activeNickname ?? user?.name ?? null;
 
   const sid = sessionId ?? crypto.randomUUID();
 
   if (history.length === 0 && isOnboardingStartMessage(message)) {
-    const opening = buildFixedOpening(user, sid);
+    const userForOpening = user ? { ...user, name: effectiveName } : user;
+    const opening = buildFixedOpening(userForOpening, sid);
     await saveMemoryWithCap({
       userId,
       memoryType: "conversation",
@@ -409,10 +525,11 @@ export async function handleAgentChat(
   const jobBoardContext = buildJobBoardContext(applications, latestStatusEventTimes, lang as AgentLang);
 
   const systemPrompt = buildAgentBasePrompt(lang as AgentLang, {
-    name: user?.name ?? null,
+    name: effectiveName,
     age,
     educationKey: user?.education ?? null,
     universityName: user?.universityName ?? null,
+    registeredName: activeNickname && user?.name ? user.name : null,
   });
 
   const effectiveSystemPrompt = await buildSystemPrompt({
@@ -430,12 +547,23 @@ export async function handleAgentChat(
     { role: "user" as const, content: message },
   ];
 
-  const response = await invokeLLM({ messages, tools: AGENT_TOOLS, tool_choice: "auto" });
-  const choice = response.choices?.[0]?.message;
+  const MAX_TOOL_ROUNDS = 2;
+  let currentMessages: typeof messages = messages;
+  let currentChoice = (
+    await invokeLLM({ messages: currentMessages, tools: AGENT_TOOLS, tool_choice: "auto" })
+  ).choices?.[0]?.message;
 
-  if (choice?.tool_calls && choice.tool_calls.length > 0) {
-    const { parallel, serial } = classifyConcurrency(choice.tool_calls);
+  // Snapshot of applications shared across tool calls in a round; refreshed
+  // between rounds when writes may have invalidated it.
+  let applicationsSnapshot = applications;
+
+  const runToolCalls = async (
+    toolCalls: NonNullable<typeof currentChoice>["tool_calls"]
+  ): Promise<Map<string, string>> => {
+    const calls = toolCalls ?? [];
+    const { parallel, serial } = classifyConcurrency(calls);
     const resultMap = new Map<string, string>();
+    const createCallCount = calls.filter((tc) => tc.function.name === "createJobApplication").length;
 
     const executeTool = async (toolCall: { id: string; function: { name: string; arguments: string } }): Promise<void> => {
       const toolName = toolCall.function.name;
@@ -449,8 +577,7 @@ export async function handleAgentChat(
 
           const args = parsed.value;
           const targetCompany = normalizeCompanyNameForMatch(args.companyName);
-          const apps = await getJobApplications(userId);
-          const matches = apps.filter((a) => {
+          const matches = applicationsSnapshot.filter((a) => {
             const names = [a.companyNameJa, a.companyNameEn].filter((name): name is string => !!name);
             return names.some((name) => normalizeCompanyNameForMatch(name) === targetCompany);
           });
@@ -463,6 +590,39 @@ export async function handleAgentChat(
           }
           const app = matches[0];
           if (!app) {
+            const fuzzyMatches = targetCompany.length >= 2
+              ? applicationsSnapshot.filter((a) => {
+                  const names = [a.companyNameJa, a.companyNameEn].filter((n): n is string => !!n);
+                  return names.some((name) => {
+                    const normalized = normalizeCompanyNameForMatch(name);
+                    return (
+                      normalized.length >= 2 &&
+                      (normalized.includes(targetCompany) || targetCompany.includes(normalized))
+                    );
+                  });
+                })
+              : [];
+
+            if (fuzzyMatches.length === 1) {
+              const found = fuzzyMatches[0];
+              const display = found.companyNameJa || found.companyNameEn || args.companyName;
+              resultMap.set(
+                toolCall.id,
+                `updateJobStatus needs confirmation: no exact match for "${args.companyName}", but a similar tracked company exists: "${display}". Ask the user "do you mean ${display}?" before updating.`
+              );
+              return;
+            }
+            if (fuzzyMatches.length > 1) {
+              const list = fuzzyMatches
+                .map((f) => f.companyNameJa || f.companyNameEn || "")
+                .filter(Boolean)
+                .join(" / ");
+              resultMap.set(
+                toolCall.id,
+                `updateJobStatus needs confirmation: "${args.companyName}" matched no exact entry but ${fuzzyMatches.length} similar tracked companies (${list}). Ask the user which one before updating.`
+              );
+              return;
+            }
             resultMap.set(
               toolCall.id,
               `updateJobStatus needs confirmation: no existing application exactly matched "${args.companyName}". Ask the user before creating a new tracked company or changing the board.`
@@ -502,17 +662,25 @@ export async function handleAgentChat(
           }
 
           const args = parsed.value;
-          if (!args.confirmedByUser || !hasRecentCreateConfirmation(message, history, args.companyName)) {
+          const confirmed =
+            args.confirmedByUser &&
+            hasRecentCreateConfirmation(message, history, args.companyName, {
+              requireExplicitName: createCallCount > 1,
+            });
+          if (!confirmed) {
+            const hint =
+              createCallCount > 1
+                ? ` Multiple companies are queued — ask the user to name which one(s) to add.`
+                : "";
             resultMap.set(
               toolCall.id,
-              `createJobApplication needs confirmation: ask the user to confirm adding "${args.companyName}" to the job board before creating it.`
+              `createJobApplication needs confirmation: ask the user to confirm adding "${args.companyName}" to the job board before creating it.${hint}`
             );
             return;
           }
 
           const targetCompany = normalizeCompanyNameForMatch(args.companyName);
-          const apps = await getJobApplications(userId);
-          const existing = apps.find((a) => {
+          const existing = applicationsSnapshot.find((a) => {
             const names = [a.companyNameJa, a.companyNameEn].filter((name): name is string => !!name);
             return names.some((name) => normalizeCompanyNameForMatch(name) === targetCompany);
           });
@@ -574,7 +742,7 @@ export async function handleAgentChat(
         const errMessage = err instanceof Error ? err.message : String(err);
         resultMap.set(toolCall.id, `${toolName} failed: ${errMessage}`);
       }
-    }
+    };
 
     if (parallel.length > 0) {
       await Promise.all(parallel.map(executeTool));
@@ -583,37 +751,44 @@ export async function handleAgentChat(
       await executeTool(tc);
     }
 
-    const followUpMessages = [
-      ...messages,
-      { role: "assistant" as const, content: "", tool_calls: choice.tool_calls },
-      ...choice.tool_calls.map((tc) => ({
+    return resultMap;
+  };
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    if (!currentChoice?.tool_calls || currentChoice.tool_calls.length === 0) break;
+    const toolCalls = currentChoice.tool_calls;
+    const hadJobBoardWrite = toolCalls.some(
+      (tc) => tc.function.name === "updateJobStatus" || tc.function.name === "createJobApplication"
+    );
+    const resultMap = await runToolCalls(toolCalls);
+
+    currentMessages = [
+      ...currentMessages,
+      { role: "assistant" as const, content: "", tool_calls: toolCalls } as any,
+      ...toolCalls.map((tc) => ({
         role: "tool" as const,
         tool_call_id: tc.id,
         content: resultMap.get(tc.id) ?? `${tc.function.name} failed: no result returned`,
       })),
     ];
-    const finalResponse = await invokeLLM({ messages: followUpMessages });
-    const finalReply = finalResponse.choices?.[0]?.message?.content;
-    const reply = typeof finalReply === "string" ? finalReply : "Done";
 
-    await saveMemoryWithCap({
-      userId,
-      memoryType: "conversation",
-      title: `Chat ${new Date().toISOString()}`,
-      content: `User: ${message}\nAssistant: ${reply}`,
-      metadata: {
-        sessionId: sid,
-        dialogue: [
-          { role: "user", content: message },
-          { role: "assistant", content: reply },
-        ],
-      },
-    });
-    return { reply, sessionId: sid };
+    const isLastRound = round === MAX_TOOL_ROUNDS - 1;
+    if (!isLastRound && hadJobBoardWrite) {
+      applicationsSnapshot = await getJobApplications(userId);
+    }
+
+    currentChoice = (
+      await invokeLLM({
+        messages: currentMessages,
+        ...(isLastRound ? {} : { tools: AGENT_TOOLS, tool_choice: "auto" }),
+      })
+    ).choices?.[0]?.message;
   }
 
-  const rawReply = choice?.content;
-  const reply = typeof rawReply === "string" ? rawReply : "Error";
+  const rawReply = currentChoice?.content;
+  const reply = splitIntoBubbles(
+    typeof rawReply === "string" && rawReply.length > 0 ? rawReply : "Done"
+  );
 
   await saveMemoryWithCap({
     userId,

@@ -10,6 +10,7 @@ import {
   InsertAgentSession,
   agentMemory,
   agentSessions,
+  agentUserTraits,
   jobApplications,
   jobStatusEvents,
   oauthTokens,
@@ -996,6 +997,26 @@ export async function getActiveMessagingBinding(userId: number): Promise<{
   return null;
 }
 
+export async function listUserIdsWithActiveMessagingBinding(): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const ids = new Set<number>();
+
+  const unified = await db
+    .select({ userId: messagingBindings.userId })
+    .from(messagingBindings)
+    .where(eq(messagingBindings.isActive, true));
+  for (const row of unified) ids.add(row.userId);
+
+  const legacy = await db
+    .select({ userId: telegramBindings.userId })
+    .from(telegramBindings)
+    .where(eq(telegramBindings.isActive, true));
+  for (const row of legacy) ids.add(row.userId);
+
+  return Array.from(ids);
+}
+
 // ─── Agent Memory ──────────────────────────────────────────────────────────
 export async function saveAgentMemory(memory: InsertAgentMemory) {
   const db = await getDb();
@@ -1041,6 +1062,33 @@ export async function deleteOldestAgentMemory(userId: number, memoryType: Insert
   await db
     .delete(agentMemory)
     .where(inArray(agentMemory.id, oldest.map((r) => r.id)));
+}
+
+// ─── Agent User Traits ──────────────────────────────────────────────────────
+export async function getAgentUserTraits(userId: number): Promise<{
+  nickname: string | null;
+  notes: unknown | null;
+} | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({ nickname: agentUserTraits.nickname, notes: agentUserTraits.notes })
+    .from(agentUserTraits)
+    .where(eq(agentUserTraits.userId, userId))
+    .limit(1);
+  if (!rows[0]) return null;
+  return { nickname: rows[0].nickname ?? null, notes: rows[0].notes ?? null };
+}
+
+export async function setAgentNickname(userId: number, nickname: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const trimmed = nickname.trim();
+  if (!trimmed) return;
+  await db
+    .insert(agentUserTraits)
+    .values({ userId, nickname: trimmed })
+    .onDuplicateKeyUpdate({ set: { nickname: trimmed } });
 }
 
 // ─── Agent Sessions ────────────────────────────────────────────────────────

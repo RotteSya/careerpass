@@ -45,6 +45,10 @@ async function markNudgeDelivered(nudge: ProactiveNudge, now: Date): Promise<voi
   await recordNudgeDelivered(nudge.userId, nudgeDeliveryKey(nudge), now);
 }
 
+function canPierceQuietHours(nudge: ProactiveNudge): boolean {
+  return nudge.category === "deadline_warning" && nudge.priority === "high";
+}
+
 export async function runProactiveCheckForUser(userId: number): Promise<ProactiveNudge[]> {
   const user = await getUserById(userId);
   if (!user) return [];
@@ -52,11 +56,7 @@ export async function runProactiveCheckForUser(userId: number): Promise<Proactiv
   const binding = await getActiveMessagingBinding(userId);
   if (!binding) return [];
 
-  // Check quiet hours
-  if (!isNotificationAllowed(user.notificationSchedule ?? null)) {
-    console.info(`[Proactive] User ${userId} is in quiet hours, skipping`);
-    return [];
-  }
+  const inQuietHours = !isNotificationAllowed(user.notificationSchedule ?? null);
 
   const nudgePrefs = user.nudgeCategoriesEnabled as Record<string, boolean> | null;
 
@@ -86,23 +86,35 @@ export async function runProactiveCheckForUser(userId: number): Promise<Proactiv
     app.lastStatusEventAt = latestStatusEventTimes.get(app.id) ?? app.updatedAt;
   }
 
-  const candidates = evaluateAllRules(context).filter((n) =>
-    isCategoryEnabled(n.category, nudgePrefs)
-  );
+  const candidates = evaluateAllRules(context)
+    .filter((n) => isCategoryEnabled(n.category, nudgePrefs))
+    .filter((n) => !inQuietHours || canPierceQuietHours(n));
+
+  if (inQuietHours && candidates.length === 0) {
+    console.info(`[Proactive] User ${userId} is in quiet hours, skipping`);
+  } else if (inQuietHours) {
+    console.info(
+      `[Proactive] User ${userId} in quiet hours; ${candidates.length} high-priority deadline nudge(s) bypassing`
+    );
+  }
+
   const cooldownChecks = await Promise.all(
     candidates.map((n) => shouldDeliverNudge(n, context.now))
   );
   const nudges = candidates.filter((_, i) => cooldownChecks[i]);
 
-  // Also check billing trial nudges
-  try {
-    const trialNudges = await collectTrialNudges(userId);
-    for (const nudge of trialNudges) {
-      await dispatchNotification({ userId, body: nudge.text });
-      await markTrialNudgeDelivered(userId, nudge.kind);
+  // Trial nudges are billing-related — important but not urgent enough to
+  // wake someone up. Suppress during quiet hours; they'll fire next tick.
+  if (!inQuietHours) {
+    try {
+      const trialNudges = await collectTrialNudges(userId);
+      for (const nudge of trialNudges) {
+        await dispatchNotification({ userId, body: nudge.text });
+        await markTrialNudgeDelivered(userId, nudge.kind);
+      }
+    } catch (err) {
+      console.error("[Proactive] Failed to send trial nudges:", err);
     }
-  } catch (err) {
-    console.error("[Proactive] Failed to send trial nudges:", err);
   }
 
   // Humanize all nudge bodies in parallel before dispatching, so the message

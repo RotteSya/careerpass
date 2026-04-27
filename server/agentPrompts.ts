@@ -1,10 +1,16 @@
 export type AgentLang = "ja" | "zh" | "en";
 
 export interface UserPromptFields {
+  /** Effective name to address the user (nickname if set, otherwise registered name). */
   name: string | null;
   age: number | null;
   educationKey: string | null;
   universityName: string | null;
+  /**
+   * Set when the user has chosen a nickname distinct from their registered name.
+   * Provides context so the agent doesn't get confused if the registered name appears elsewhere.
+   */
+  registeredName?: string | null;
 }
 
 const educationLabelsJa: Record<string, string> = {
@@ -37,9 +43,12 @@ function localizeEducation(lang: AgentLang, key: string | null): string {
 }
 
 function buildProfileBlockZh(fields: UserPromptFields): string {
+  const nameLine = fields.registeredName
+    ? `- 称呼: ${fields.name}（注册名: ${fields.registeredName} — 一律用「称呼」对话）`
+    : `- 姓名: ${fields.name ?? "未填写"}`;
   return `
 【用户已知信息 — 禁止重复询问以下任何内容】
-- 姓名: ${fields.name ?? "未填写"}
+${nameLine}
 - 年龄: ${fields.age ? `${fields.age}岁` : "未填写"}
 - 最终学历: ${localizeEducation("zh", fields.educationKey)}
 - 学校名称: ${fields.universityName ?? "未填写"}
@@ -47,9 +56,12 @@ function buildProfileBlockZh(fields: UserPromptFields): string {
 }
 
 function buildProfileBlockEn(fields: UserPromptFields): string {
+  const nameLine = fields.registeredName
+    ? `- Preferred name: ${fields.name} (registered as ${fields.registeredName} — always address them by the preferred name)`
+    : `- Name: ${fields.name ?? "not provided"}`;
   return `
 [User's Known Profile — DO NOT ask about any of the following]
-- Name: ${fields.name ?? "not provided"}
+${nameLine}
 - Age: ${fields.age ? `${fields.age} years old` : "not provided"}
 - Education: ${localizeEducation("en", fields.educationKey)}
 - University: ${fields.universityName ?? "not provided"}
@@ -57,9 +69,12 @@ function buildProfileBlockEn(fields: UserPromptFields): string {
 }
 
 function buildProfileBlockJa(fields: UserPromptFields): string {
+  const nameLine = fields.registeredName
+    ? `- 呼び名: ${fields.name}（登録氏名: ${fields.registeredName} — 会話では必ず「呼び名」を使う）`
+    : `- 氏名: ${fields.name ?? "未記入"}`;
   return `
 【ユーザーの既知情報 — 以下の情報は絶対に再度質問しないこと】
-- 氏名: ${fields.name ?? "未記入"}
+${nameLine}
 - 年齢: ${fields.age ? `${fields.age}歳` : "未記入"}
 - 最終学歴: ${localizeEducation("ja", fields.educationKey)}
 - 大学・学校名: ${fields.universityName ?? "未記入"}

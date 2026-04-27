@@ -11,6 +11,7 @@ import { registerGmailPushWatch } from "../gmail";
 import { listUserIdsByOauthProvider } from "../db";
 import { appRouter } from "../routers";
 import { registerCalendarOAuthRoute } from "../calendarOAuth";
+import { startProactiveCron } from "../proactive/cron";
 
 import { createContext } from "./context";
 import { createCsrfMiddleware } from "./csrfMiddleware";
@@ -153,6 +154,15 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
+
+  if (process.env.PROACTIVE_CRON_DISABLED !== "true") {
+    const intervalMs = Number.parseInt(process.env.PROACTIVE_CRON_INTERVAL_MS ?? "", 10);
+    const concurrency = Number.parseInt(process.env.PROACTIVE_CRON_CONCURRENCY ?? "", 10);
+    startProactiveCron({
+      intervalMs: Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : undefined,
+      concurrency: Number.isFinite(concurrency) && concurrency > 0 ? concurrency : undefined,
+    });
+  }
 }
 
 startServer().catch(console.error);

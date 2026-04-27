@@ -1,39 +1,63 @@
 /**
- * Parse a quiet-hours schedule string like "09:00-21:00" and determine
- * whether the current JST time is within the allowed notification window.
- * Returns true if notifications are allowed (outside quiet hours).
+ * Notification time-window logic.
+ *
+ * Naming note: the user-facing concept is "quiet hours" (when NOT to
+ * disturb), but the stored `notificationSchedule` string actually encodes
+ * the *active window* — the hours during which notifications ARE allowed.
+ * `isNotificationAllowed` returns true when the current JST time falls
+ * inside that window. Don't invert the comparison without also flipping
+ * the schema semantics.
+ *
+ * Format: "HH:MM-HH:MM" (24-hour). Overnight ranges like "22:00-06:00"
+ * are supported by treating the window as wrapping past midnight.
  */
+
+const JST_TIME_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Tokyo",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 
 export function parseSchedule(schedule: string): { startHour: number; startMin: number; endHour: number; endMin: number } | null {
   const match = schedule.match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/);
   if (!match) return null;
-  return {
-    startHour: parseInt(match[1]),
-    startMin: parseInt(match[2]),
-    endHour: parseInt(match[3]),
-    endMin: parseInt(match[4]),
-  };
+  const startHour = parseInt(match[1]);
+  const startMin = parseInt(match[2]);
+  const endHour = parseInt(match[3]);
+  const endMin = parseInt(match[4]);
+
+  if (
+    startHour < 0 || startHour > 23 ||
+    endHour < 0 || endHour > 23 ||
+    startMin < 0 || startMin > 59 ||
+    endMin < 0 || endMin > 59
+  ) {
+    return null;
+  }
+
+  return { startHour, startMin, endHour, endMin };
 }
 
-export function isNotificationAllowed(schedule: string | null | undefined, nowUtc: Date = new Date()): boolean {
-  if (!schedule) return true; // No schedule = always allowed
+function getJstMinutes(now: Date): number {
+  const parts = JST_TIME_FORMAT.formatToParts(now);
+  const hour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const minute = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+  return hour * 60 + minute;
+}
 
+export function isNotificationAllowed(schedule: string | null | undefined, now: Date = new Date()): boolean {
+  if (!schedule) return true; // No schedule = always allowed
   const parsed = parseSchedule(schedule);
   if (!parsed) return true; // Invalid schedule = always allowed
 
-  // Convert to JST (UTC+9)
-  const jstMs = nowUtc.getTime() + 9 * 60 * 60 * 1000;
-  const jstDate = new Date(jstMs);
-  const currentMinutes = jstDate.getUTCHours() * 60 + jstDate.getUTCMinutes();
-
+  const currentMinutes = getJstMinutes(now);
   const startMinutes = parsed.startHour * 60 + parsed.startMin;
   const endMinutes = parsed.endHour * 60 + parsed.endMin;
 
   if (startMinutes <= endMinutes) {
-    // Normal range: e.g., 09:00-21:00
     return currentMinutes >= startMinutes && currentMinutes < endMinutes;
-  } else {
-    // Overnight range: e.g., 22:00-06:00
-    return currentMinutes >= startMinutes || currentMinutes < endMinutes;
   }
+  // Overnight window, e.g., 22:00-06:00
+  return currentMinutes >= startMinutes || currentMinutes < endMinutes;
 }

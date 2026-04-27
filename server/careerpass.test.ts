@@ -45,6 +45,8 @@ vi.mock("./db", () => ({
   countAgentMemory: vi.fn().mockResolvedValue(0),
   deleteOldestAgentMemory: vi.fn().mockResolvedValue(undefined),
   listLatestJobStatusEventTimes: vi.fn().mockResolvedValue(new Map()),
+  getAgentUserTraits: vi.fn().mockResolvedValue(null),
+  setAgentNickname: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("./_core/llm", () => ({
