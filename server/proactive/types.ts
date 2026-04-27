@@ -29,6 +29,10 @@ export interface UserJobContext {
     updatedAt: Date;
     nextActionAt: Date | null;
     lastStatusEventAt: Date | null;
+    portalUrl: string | null;
+    lastPortalCheckedAt: Date | null;
+    portalCheckIntervalDays: number;
+    portalStatusCheckEnabled: boolean;
   }>;
   now: Date;
 }

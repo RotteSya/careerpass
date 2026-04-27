@@ -15,6 +15,8 @@ import {
   createJobApplication,
   createJobStatusEvent,
   updateJobApplicationStatus,
+  updateJobApplicationPortalInfo,
+  markJobApplicationPortalChecked,
   listJobStatusEvents,
   deleteUserAccountData,
   getCalendarWriteEnabled,
@@ -429,6 +431,47 @@ export const appRouter = router({
         if (target?.companyNameJa) {
           // Notion sync removed — job board is maintained internally
         }
+        return { success: true };
+      }),
+
+    updatePortalInfo: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          portalUrl: z.string().trim().max(1024).optional(),
+          portalAccountHint: z.string().trim().max(255).optional(),
+          portalCheckIntervalDays: z.number().int().min(1).max(30),
+          portalStatusCheckEnabled: z.boolean(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const portalUrl = input.portalUrl?.trim() || null;
+        if (portalUrl) {
+          try {
+            new URL(portalUrl);
+          } catch {
+            throw new Error("Invalid portal URL");
+          }
+        }
+
+        await updateJobApplicationPortalInfo(input.id, ctx.user.id, {
+          portalUrl,
+          portalAccountHint: input.portalAccountHint?.trim() || null,
+          portalCheckIntervalDays: input.portalCheckIntervalDays,
+          portalStatusCheckEnabled: Boolean(portalUrl && input.portalStatusCheckEnabled),
+        });
+        return { success: true };
+      }),
+
+    markPortalChecked: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await markJobApplicationPortalChecked({
+          id: input.id,
+          userId: ctx.user.id,
+          checkedAt: new Date(),
+          reason: "Checked the company recruiting portal.",
+        });
         return { success: true };
       }),
 

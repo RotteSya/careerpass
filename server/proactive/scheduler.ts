@@ -73,6 +73,10 @@ export async function runProactiveCheckForUser(userId: number): Promise<Proactiv
       updatedAt: app.updatedAt,
       nextActionAt: app.nextActionAt ?? null,
       lastStatusEventAt: null,
+      portalUrl: app.portalUrl ?? null,
+      lastPortalCheckedAt: app.lastPortalCheckedAt ?? null,
+      portalCheckIntervalDays: app.portalCheckIntervalDays ?? 7,
+      portalStatusCheckEnabled: app.portalStatusCheckEnabled ?? false,
     })),
     now: new Date(),
   };

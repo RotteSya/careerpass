@@ -1,9 +1,11 @@
 import type { NudgeRule, ProactiveNudge, UserJobContext } from "../types";
+import { portalCheckRule } from "./portalChecks";
 import { statusSuggestionsRule } from "./statusSuggestions";
 import { timeNudgeRules } from "./timeNudges";
 
 const allRules: NudgeRule[] = [
   statusSuggestionsRule,
+  portalCheckRule,
   ...timeNudgeRules,
 ];
 

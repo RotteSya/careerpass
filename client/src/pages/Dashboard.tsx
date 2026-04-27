@@ -141,6 +141,25 @@ export default function Dashboard() {
       toast.error(`Error: ${getErrorMessage(err)}`);
     },
   });
+  const updatePortalInfoMutation = trpc.jobs.updatePortalInfo.useMutation({
+    onSuccess: () => {
+      toast.success(i18n.t("dashboard.portalSaved"));
+      refetchJobs();
+    },
+    onError: (err: unknown) => {
+      toast.error(`Error: ${getErrorMessage(err)}`);
+    },
+  });
+  const markPortalCheckedMutation = trpc.jobs.markPortalChecked.useMutation({
+    onSuccess: () => {
+      toast.success(i18n.t("dashboard.portalChecked"));
+      refetchJobs();
+      refetchStatusEvents();
+    },
+    onError: (err: unknown) => {
+      toast.error(`Error: ${getErrorMessage(err)}`);
+    },
+  });
   const changePasswordMutation = trpc.auth.changePassword.useMutation({
     onSuccess: () => {
       toast.success(i18n.t("dashboard.syncStatus"));
@@ -286,6 +305,22 @@ export default function Dashboard() {
         toast.error(i18n.t("dashboard.copyFailed"));
       }
     }
+  };
+
+  const savePortalInfo = (jobId: number, form: HTMLFormElement) => {
+    const formData = new FormData(form);
+    const portalUrl = String(formData.get("portalUrl") ?? "").trim();
+    const portalAccountHint = String(formData.get("portalAccountHint") ?? "").trim();
+    const portalCheckIntervalDays = Number(formData.get("portalCheckIntervalDays") ?? 7);
+    const portalStatusCheckEnabled = formData.get("portalStatusCheckEnabled") === "on";
+
+    updatePortalInfoMutation.mutate({
+      id: jobId,
+      portalUrl,
+      portalAccountHint,
+      portalCheckIntervalDays,
+      portalStatusCheckEnabled,
+    });
   };
 
   return (
@@ -796,6 +831,99 @@ export default function Dashboard() {
                               </div>
                             )}
                           </div>
+
+                          <form
+                            className="mt-3 rounded-lg border border-border bg-card p-3"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              savePortalInfo(job.id, e.currentTarget);
+                            }}
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-medium">{t("dashboard.portalCheck")}</p>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {t("dashboard.portalLastChecked", { value: formatDateTime(job.lastPortalCheckedAt) })}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {job.portalUrl ? (
+                                  <a
+                                    href={job.portalUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2 text-xs font-medium hover:bg-secondary"
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    {t("dashboard.openPortal")}
+                                  </a>
+                                ) : null}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={markPortalCheckedMutation.isPending}
+                                  onClick={() => markPortalCheckedMutation.mutate({ id: job.id })}
+                                >
+                                  {t("dashboard.markPortalChecked")}
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px]">
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`portal-url-${job.id}`}>{t("dashboard.portalUrl")}</Label>
+                                <Input
+                                  id={`portal-url-${job.id}`}
+                                  name="portalUrl"
+                                  type="url"
+                                  defaultValue={job.portalUrl ?? ""}
+                                  placeholder="https://..."
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`portal-interval-${job.id}`}>{t("dashboard.portalInterval")}</Label>
+                                <select
+                                  id={`portal-interval-${job.id}`}
+                                  name="portalCheckIntervalDays"
+                                  defaultValue={String(job.portalCheckIntervalDays ?? 7)}
+                                  className="h-10 w-full rounded-md border border-border bg-background px-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                                >
+                                  {[1, 3, 7, 14, 30].map((days) => (
+                                    <option key={days} value={days}>
+                                      {t("dashboard.portalIntervalDays", { count: days })}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                              <div className="space-y-1.5">
+                                <Label htmlFor={`portal-account-${job.id}`}>{t("dashboard.portalAccountHint")}</Label>
+                                <Input
+                                  id={`portal-account-${job.id}`}
+                                  name="portalAccountHint"
+                                  defaultValue={job.portalAccountHint ?? ""}
+                                  placeholder={t("dashboard.portalAccountHintPlaceholder")}
+                                />
+                              </div>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <label className="flex items-center gap-2 text-sm">
+                                  <input
+                                    type="checkbox"
+                                    name="portalStatusCheckEnabled"
+                                    defaultChecked={Boolean(job.portalStatusCheckEnabled)}
+                                    className="h-4 w-4 accent-primary"
+                                  />
+                                  {t("dashboard.portalReminderEnabled")}
+                                </label>
+                                <Button type="submit" size="sm" disabled={updatePortalInfoMutation.isPending}>
+                                  {t("dashboard.savePortal")}
+                                </Button>
+                              </div>
+                            </div>
+                          </form>
                         </div>
                       ) : null}
                     </div>

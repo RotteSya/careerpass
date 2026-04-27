@@ -718,6 +718,69 @@ export async function updateJobApplicationDetails(
     .where(and(eq(jobApplications.id, id), eq(jobApplications.userId, userId)));
 }
 
+export async function updateJobApplicationPortalInfo(
+  id: number,
+  userId: number,
+  updates: {
+    portalUrl?: string | null;
+    portalAccountHint?: string | null;
+    portalCheckIntervalDays?: number;
+    portalStatusCheckEnabled?: boolean;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const setObj: Record<string, any> = { updatedAt: new Date() };
+  if (updates.portalUrl !== undefined) setObj.portalUrl = updates.portalUrl;
+  if (updates.portalAccountHint !== undefined) setObj.portalAccountHint = updates.portalAccountHint;
+  if (updates.portalCheckIntervalDays !== undefined) setObj.portalCheckIntervalDays = updates.portalCheckIntervalDays;
+  if (updates.portalStatusCheckEnabled !== undefined) setObj.portalStatusCheckEnabled = updates.portalStatusCheckEnabled;
+
+  await db
+    .update(jobApplications)
+    .set(setObj)
+    .where(and(eq(jobApplications.id, id), eq(jobApplications.userId, userId)));
+}
+
+export async function markJobApplicationPortalChecked(params: {
+  id: number;
+  userId: number;
+  checkedAt: Date;
+  reason: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.transaction(async (tx) => {
+    const target = await tx
+      .select()
+      .from(jobApplications)
+      .where(and(eq(jobApplications.id, params.id), eq(jobApplications.userId, params.userId)))
+      .limit(1);
+
+    if (!target[0]) throw new Error("Job application not found");
+
+    await tx
+      .update(jobApplications)
+      .set({
+        lastPortalCheckedAt: params.checkedAt,
+        updatedAt: params.checkedAt,
+      })
+      .where(and(eq(jobApplications.id, params.id), eq(jobApplications.userId, params.userId)));
+
+    await tx.insert(jobStatusEvents).values({
+      userId: params.userId,
+      jobApplicationId: params.id,
+      source: "portal",
+      prevStatus: target[0].status,
+      nextStatus: target[0].status,
+      reason: params.reason,
+      createdAt: params.checkedAt,
+    });
+  });
+}
+
 export async function createJobStatusEvent(event: InsertJobStatusEvent) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
