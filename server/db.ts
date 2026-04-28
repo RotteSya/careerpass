@@ -6,11 +6,8 @@ import {
   InsertTelegramBinding,
   InsertJobApplication,
   InsertJobStatusEvent,
-  InsertAgentMemory,
   InsertAgentSession,
-  agentMemory,
   agentSessions,
-  agentUserTraits,
   jobApplications,
   jobStatusEvents,
   oauthTokens,
@@ -170,7 +167,6 @@ export async function deleteUserAccountData(userId: number): Promise<void> {
   await db.delete(billingAccounts).where(eq(billingAccounts.userId, userId));
   await db.delete(jobStatusEvents).where(eq(jobStatusEvents.userId, userId));
   await db.delete(jobApplications).where(eq(jobApplications.userId, userId));
-  await db.delete(agentMemory).where(eq(agentMemory.userId, userId));
   await db.delete(agentSessions).where(eq(agentSessions.userId, userId));
   await db.delete(telegramBindings).where(eq(telegramBindings.userId, userId));
   await db.delete(messagingBindings).where(eq(messagingBindings.userId, userId));
@@ -1015,80 +1011,6 @@ export async function listUserIdsWithActiveMessagingBinding(): Promise<number[]>
   for (const row of legacy) ids.add(row.userId);
 
   return Array.from(ids);
-}
-
-// ─── Agent Memory ──────────────────────────────────────────────────────────
-export async function saveAgentMemory(memory: InsertAgentMemory) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const result = await db.insert(agentMemory).values(memory);
-  return result;
-}
-
-export async function getAgentMemory(userId: number, memoryType?: InsertAgentMemory["memoryType"]) {
-  const db = await getDb();
-  if (!db) return [];
-  const conditions = memoryType
-    ? and(eq(agentMemory.userId, userId), eq(agentMemory.memoryType, memoryType))
-    : eq(agentMemory.userId, userId);
-  return db
-    .select()
-    .from(agentMemory)
-    .where(conditions)
-    .orderBy(desc(agentMemory.updatedAt));
-}
-
-// ── Memory cap helpers (Harness Pattern: bounded memory index) ───────────
-export async function countAgentMemory(userId: number, memoryType: InsertAgentMemory["memoryType"]): Promise<number> {
-  const db = await getDb();
-  if (!db) return 0;
-  const [row] = await db
-    .select({ value: count() })
-    .from(agentMemory)
-    .where(and(eq(agentMemory.userId, userId), eq(agentMemory.memoryType, memoryType)));
-  return row?.value ?? 0;
-}
-
-export async function deleteOldestAgentMemory(userId: number, memoryType: InsertAgentMemory["memoryType"], deleteCount: number): Promise<void> {
-  const db = await getDb();
-  if (!db || deleteCount <= 0) return;
-  const oldest = await db
-    .select({ id: agentMemory.id })
-    .from(agentMemory)
-    .where(and(eq(agentMemory.userId, userId), eq(agentMemory.memoryType, memoryType)))
-    .orderBy(asc(agentMemory.updatedAt))
-    .limit(deleteCount);
-  if (oldest.length === 0) return;
-  await db
-    .delete(agentMemory)
-    .where(inArray(agentMemory.id, oldest.map((r) => r.id)));
-}
-
-// ─── Agent User Traits ──────────────────────────────────────────────────────
-export async function getAgentUserTraits(userId: number): Promise<{
-  nickname: string | null;
-  notes: unknown | null;
-} | null> {
-  const db = await getDb();
-  if (!db) return null;
-  const rows = await db
-    .select({ nickname: agentUserTraits.nickname, notes: agentUserTraits.notes })
-    .from(agentUserTraits)
-    .where(eq(agentUserTraits.userId, userId))
-    .limit(1);
-  if (!rows[0]) return null;
-  return { nickname: rows[0].nickname ?? null, notes: rows[0].notes ?? null };
-}
-
-export async function setAgentNickname(userId: number, nickname: string): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const trimmed = nickname.trim();
-  if (!trimmed) return;
-  await db
-    .insert(agentUserTraits)
-    .values({ userId, nickname: trimmed })
-    .onDuplicateKeyUpdate({ set: { nickname: trimmed } });
 }
 
 // ─── Agent Sessions ────────────────────────────────────────────────────────

@@ -16,7 +16,6 @@ import {
   getOauthToken,
   getUserCalendarColorPrefs,
   getCalendarWriteEnabled,
-  saveAgentMemory,
   updateGoogleAccountSyncState,
   updateGoogleLastHistoryIdIfNewer,
   upsertOauthToken,
@@ -1113,27 +1112,6 @@ async function runCareerpassmailAgent(input: {
   };
 }
 
-async function reportToCareerpassAgent(userId: number, event: EmailEvent, reason: string) {
-  try {
-    const summary =
-      `System: careerpassmail detected job-related mail.\n` +
-      `Type: ${event.eventType}\n` +
-      `Company: ${event.companyName ?? "unknown"}\n` +
-      `DateTime: ${event.eventDate ?? "unknown"} ${event.eventTime ?? ""}\n` +
-      `Subject: ${event.subject}\n` +
-      `Reason: ${reason}`;
-    await saveAgentMemory({
-      userId,
-      memoryType: "conversation",
-      title: `careerpassmail ${new Date().toISOString()}`,
-      content: summary,
-      metadata: { source: "careerpassmail", eventType: event.eventType },
-    });
-  } catch (err) {
-    console.error("[careerpassmail] Failed to report event to CareerPass memory:", err);
-  }
-}
-
 // ─── Google Calendar Write ────────────────────────────────────────────────────
 
 export async function writeToGoogleCalendar(
@@ -1507,7 +1485,6 @@ async function processGmailMessageIds(params: {
       };
 
       detectedEvents.push(emailEvent);
-      await reportToCareerpassAgent(userId, emailEvent, decision.reason);
 
       const desiredStatus = jobStatusFromEmailDecision({
         eventType,

@@ -216,38 +216,6 @@ export const jobStatusEvents = mysqlTable("job_status_events", {
 export type JobStatusEvent = typeof jobStatusEvents.$inferSelect;
 export type InsertJobStatusEvent = typeof jobStatusEvents.$inferInsert;
 
-// ─── Agent Memory (記憶庫) ────────────────────────────────────────────────────
-export const agentMemory = mysqlTable("agent_memory", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  memoryType: mysqlEnum("memoryType", [
-    "resume",
-    "company_report",
-    "conversation",
-  ]).notNull(),
-  title: varchar("title", { length: 512 }).notNull(),
-  content: text("content").notNull(),
-  metadata: json("metadata"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type AgentMemory = typeof agentMemory.$inferSelect;
-export type InsertAgentMemory = typeof agentMemory.$inferInsert;
-
-// ─── Agent User Traits (永続的なユーザー特性) ─────────────────────────────────
-// One row per user. Written by the chat agent flow only (not registration).
-// Used to keep continuity across sessions — e.g. remembering a chosen nickname.
-export const agentUserTraits = mysqlTable("agent_user_traits", {
-  userId: int("userId").primaryKey(),
-  nickname: varchar("nickname", { length: 64 }),
-  notes: json("notes"),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type AgentUserTraits = typeof agentUserTraits.$inferSelect;
-export type InsertAgentUserTraits = typeof agentUserTraits.$inferInsert;
-
 // ─── Agent Sessions (Telegram conversation state) ────────────────────────────
 export const agentSessions = mysqlTable("agent_sessions", {
   id: int("id").autoincrement().primaryKey(),

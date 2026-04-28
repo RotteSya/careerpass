@@ -3,7 +3,6 @@ import {
   createTelegramBinding,
   getUserById,
   getOrCreateAgentSession,
-  saveAgentMemory,
   updateAgentSession,
   getTelegramBindingByTelegramId,
   getJobApplications,
@@ -704,19 +703,6 @@ telegramRouter.post("/webhook", async (req, res) => {
             if (opening.nicknamePrompt) {
               await sendTelegramMessage(chatId, opening.nicknamePrompt);
             }
-            await saveAgentMemory({
-              userId,
-              memoryType: "conversation",
-              title: `Chat ${new Date().toISOString()}`,
-              content: `User: /start user_${userId}\nAssistant: ${greeting}`,
-              metadata: {
-                sessionId,
-                dialogue: [
-                  { role: "user", content: `/start user_${userId}` },
-                  { role: "assistant", content: greeting },
-                ],
-              },
-            });
           } else {
             await sendTelegramMessage(
               chatId,
@@ -857,23 +843,6 @@ telegramRouter.post("/webhook", async (req, res) => {
           }
         })();
 
-        await saveAgentMemory({
-          userId: uid,
-          memoryType: "conversation",
-          title: `Chat ${new Date().toISOString()}`,
-          content: `User: ${text}\nAssistant: ${buildMailMonitoringKickoffText(nickname, lang)}`,
-          metadata: {
-            sessionId,
-            source: "nickname_capture",
-            dialogue: [
-              { role: "user", content: text },
-              {
-                role: "assistant",
-                content: buildMailMonitoringKickoffText(nickname, lang),
-              },
-            ],
-          },
-        });
         return res.json({ ok: true });
       }
 

@@ -26,7 +26,6 @@ vi.mock("./db", () => ({
   getOrCreateAgentSession: vi
     .fn()
     .mockResolvedValue({ id: 11, sessionState: {} }),
-  saveAgentMemory: vi.fn(),
   updateAgentSession: vi.fn(),
   getTelegramBindingByTelegramId: vi
     .fn()
