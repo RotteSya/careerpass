@@ -2,15 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { telegramRouter } from "./telegram";
 
 const mocks = vi.hoisted(() => ({
-  handleAgentChat: vi.fn(),
+  invokeLLM: vi.fn(),
   sendTelegramBubbles: vi.fn().mockResolvedValue(true),
   sendTelegramMessage: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("./agents", () => ({
-  handleAgentChat: mocks.handleAgentChat,
-  buildFixedOpening: vi.fn(),
-  reconCompany: vi.fn(),
+vi.mock("./_core/llm", () => ({
+  invokeLLM: mocks.invokeLLM,
 }));
 
 vi.mock("./telegramMessaging", () => ({
@@ -22,15 +20,22 @@ vi.mock("./telegramMessaging", () => ({
 
 vi.mock("./db", () => ({
   createTelegramBinding: vi.fn(),
-  getUserById: vi.fn().mockResolvedValue({ id: 1, preferredLanguage: "en", name: "Test User" }),
-  getOrCreateAgentSession: vi.fn().mockResolvedValue({ id: 11, sessionState: {} }),
+  getUserById: vi
+    .fn()
+    .mockResolvedValue({ id: 1, preferredLanguage: "en", name: "Test User" }),
+  getOrCreateAgentSession: vi
+    .fn()
+    .mockResolvedValue({ id: 11, sessionState: {} }),
   saveAgentMemory: vi.fn(),
-  getAgentMemory: vi.fn().mockResolvedValue([]),
   updateAgentSession: vi.fn(),
-  getTelegramBindingByTelegramId: vi.fn().mockResolvedValue({ userId: 1, isActive: true }),
+  getTelegramBindingByTelegramId: vi
+    .fn()
+    .mockResolvedValue({ userId: 1, isActive: true }),
   getJobApplications: vi.fn().mockResolvedValue([]),
   listJobStatusEvents: vi.fn().mockResolvedValue([]),
-  getBillingFeatureAccess: vi.fn().mockResolvedValue({ autoMonitoringEnabled: true }),
+  getBillingFeatureAccess: vi
+    .fn()
+    .mockResolvedValue({ autoMonitoringEnabled: true }),
   setCalendarWriteEnabled: vi.fn(),
   upsertCalendarEventSync: vi.fn(),
 }));
@@ -58,8 +63,21 @@ vi.mock("./billing", () => ({
 
 describe("telegram webhook dedupe", () => {
   beforeEach(() => {
-    mocks.handleAgentChat.mockReset();
-    mocks.sendTelegramBubbles.mockClear();
+    mocks.invokeLLM.mockReset();
+    mocks.invokeLLM.mockResolvedValue({
+      id: "x",
+      created: 0,
+      model: "test",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: "ok" },
+          finish_reason: "stop",
+        },
+      ],
+    });
+    mocks.sendTelegramBubbles.mockReset();
+    mocks.sendTelegramBubbles.mockResolvedValue(true);
     mocks.sendTelegramMessage.mockClear();
   });
 
@@ -67,8 +85,12 @@ describe("telegram webhook dedupe", () => {
     vi.clearAllMocks();
   });
 
-  async function postWebhook(update: unknown): Promise<{ status: number; body: unknown }> {
-    const layer = (telegramRouter as any).stack.find((item: any) => item.route?.path === "/webhook");
+  async function postWebhook(
+    update: unknown
+  ): Promise<{ status: number; body: unknown }> {
+    const layer = (telegramRouter as any).stack.find(
+      (item: any) => item.route?.path === "/webhook"
+    );
     if (!layer) throw new Error("telegram webhook route was not registered");
 
     let status = 200;
@@ -106,9 +128,9 @@ describe("telegram webhook dedupe", () => {
       },
     };
 
-    mocks.handleAgentChat
-      .mockRejectedValueOnce(new Error("LLM temporarily unavailable"))
-      .mockResolvedValueOnce({ reply: "retry ok", sessionId: "11" });
+    mocks.sendTelegramBubbles
+      .mockRejectedValueOnce(new Error("Telegram send transiently failed"))
+      .mockResolvedValueOnce(true);
 
     const first = await postWebhook(update);
     expect(first.status).toBe(500);
@@ -116,7 +138,7 @@ describe("telegram webhook dedupe", () => {
     const second = await postWebhook(update);
     expect(second.status).toBe(200);
 
-    expect(mocks.handleAgentChat).toHaveBeenCalledTimes(2);
-    expect(mocks.sendTelegramBubbles).toHaveBeenCalledWith(12345, "retry ok");
+    expect(mocks.sendTelegramBubbles).toHaveBeenCalledTimes(2);
+    expect(mocks.sendTelegramBubbles).toHaveBeenLastCalledWith(12345, "ok");
   });
 });
