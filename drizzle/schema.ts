@@ -30,15 +30,25 @@ export const users = mysqlTable("users", {
     "other",
   ]),
   universityName: varchar("universityName", { length: 255 }),
-  preferredLanguage: mysqlEnum("preferredLanguage", ["zh", "ja", "en"]).default("ja"),
+  preferredLanguage: mysqlEnum("preferredLanguage", ["zh", "ja", "en"]).default(
+    "ja"
+  ),
   // Google Calendar colorId defaults:
   // blue=9, orange=6, red=11
-  calendarColorBriefing: varchar("calendarColorBriefing", { length: 2 }).default("9"),
-  calendarColorInterview: varchar("calendarColorInterview", { length: 2 }).default("6"),
-  calendarColorDeadline: varchar("calendarColorDeadline", { length: 2 }).default("11"),
+  calendarColorBriefing: varchar("calendarColorBriefing", {
+    length: 2,
+  }).default("9"),
+  calendarColorInterview: varchar("calendarColorInterview", {
+    length: 2,
+  }).default("6"),
+  calendarColorDeadline: varchar("calendarColorDeadline", {
+    length: 2,
+  }).default("11"),
   // Opt-in toggle for writing detected events to Google Calendar.
   // Off by default; flipped to true via Dashboard toggle or Telegram consent.
-  calendarWriteEnabled: boolean("calendarWriteEnabled").default(false).notNull(),
+  calendarWriteEnabled: boolean("calendarWriteEnabled")
+    .default(false)
+    .notNull(),
   notificationSchedule: varchar("notificationSchedule", { length: 20 }),
   nudgeCategoriesEnabled: json("nudgeCategoriesEnabled"),
   profileCompleted: boolean("profileCompleted").default(false).notNull(),
@@ -67,44 +77,60 @@ export type EmailAuth = typeof emailAuth.$inferSelect;
 export type InsertEmailAuth = typeof emailAuth.$inferInsert;
 
 // ─── OAuth Tokens (Google / Outlook) ───────────────────────────────────────
-export const oauthTokens = mysqlTable("oauth_tokens", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
-  accessToken: text("accessToken").notNull(),
-  refreshToken: text("refreshToken"),
-  expiresAt: timestamp("expiresAt"),
-  scope: text("scope"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => {
-  return {
-    userProviderUnique: uniqueIndex("oauth_tokens_user_provider_unique").on(table.userId, table.provider),
-  };
-});
+export const oauthTokens = mysqlTable(
+  "oauth_tokens",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
+    accessToken: text("accessToken").notNull(),
+    refreshToken: text("refreshToken"),
+    expiresAt: timestamp("expiresAt"),
+    scope: text("scope"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => {
+    return {
+      userProviderUnique: uniqueIndex("oauth_tokens_user_provider_unique").on(
+        table.userId,
+        table.provider
+      ),
+    };
+  }
+);
 
 export type OauthToken = typeof oauthTokens.$inferSelect;
 export type InsertOauthToken = typeof oauthTokens.$inferInsert;
 
 // ─── OAuth Provider Account Mapping (provider email -> user) ─────────────────
-export const oauthProviderAccounts = mysqlTable("oauth_provider_accounts", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
-  accountEmail: varchar("accountEmail", { length: 320 }).notNull(),
-  lastHistoryId: varchar("lastHistoryId", { length: 64 }),
-  watchExpiration: timestamp("watchExpiration"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => {
-  return {
-    userProviderUnique: uniqueIndex("oauth_provider_accounts_user_provider_unique").on(table.userId, table.provider),
-    providerEmailUnique: uniqueIndex("oauth_provider_accounts_provider_email_unique").on(table.provider, table.accountEmail),
-  };
-});
+export const oauthProviderAccounts = mysqlTable(
+  "oauth_provider_accounts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
+    accountEmail: varchar("accountEmail", { length: 320 }).notNull(),
+    lastHistoryId: varchar("lastHistoryId", { length: 64 }),
+    watchExpiration: timestamp("watchExpiration"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => {
+    return {
+      userProviderUnique: uniqueIndex(
+        "oauth_provider_accounts_user_provider_unique"
+      ).on(table.userId, table.provider),
+      providerEmailUnique: uniqueIndex(
+        "oauth_provider_accounts_provider_email_unique"
+      ).on(table.provider, table.accountEmail),
+    };
+  }
+);
 
 export type OauthProviderAccount = typeof oauthProviderAccounts.$inferSelect;
-export type InsertOauthProviderAccount = typeof oauthProviderAccounts.$inferInsert;
+export type InsertOauthProviderAccount =
+  typeof oauthProviderAccounts.$inferInsert;
 
 // ─── Messaging Channel Bindings (Telegram / Line / WhatsApp / WeChat) ─────────
 /**
@@ -117,7 +143,12 @@ export const messagingBindings = mysqlTable("messaging_bindings", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   // Extensible provider enum: add 'line' | 'whatsapp' | 'wechat' when ready
-  provider: mysqlEnum("provider", ["telegram", "line", "whatsapp", "wechat"]).notNull(),
+  provider: mysqlEnum("provider", [
+    "telegram",
+    "line",
+    "whatsapp",
+    "wechat",
+  ]).notNull(),
   // Provider-specific external user ID (telegramId / lineUserId / waId / openid)
   externalId: varchar("externalId", { length: 128 }).notNull(),
   // Optional display handle (username, display name, phone number, etc.)
@@ -147,71 +178,104 @@ export type TelegramBinding = typeof telegramBindings.$inferSelect;
 export type InsertTelegramBinding = typeof telegramBindings.$inferInsert;
 
 // ─── Job Applications (求職状態追跡) ──────────────────────────────────────────
-export const jobApplications = mysqlTable("job_applications", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  companyNameJa: varchar("companyNameJa", { length: 255 }).notNull(),
-  companyNameEn: varchar("companyNameEn", { length: 255 }),
-  position: varchar("position", { length: 255 }),
-  contactInfo: varchar("contactInfo", { length: 255 }),
-  priority: mysqlEnum("priority", ["high", "medium", "low"]).default("medium").notNull(),
-  status: mysqlEnum("status", [
-    "researching",
-    "applied",
-    "briefing",
-    "es_preparing",
-    "es_submitted",
-    "document_screening",
-    "written_test",
-    "interview_1",
-    "interview_2",
-    "interview_3",
-    "interview_4",
-    "interview_final",
-    "offer",
-    "rejected",
-    "withdrawn",
-  ]).default("researching").notNull(),
-  reconReportPath: varchar("reconReportPath", { length: 512 }),
-  esFilePath: varchar("esFilePath", { length: 512 }),
-  portalUrl: varchar("portalUrl", { length: 1024 }),
-  portalAccountHint: varchar("portalAccountHint", { length: 255 }),
-  lastPortalCheckedAt: timestamp("lastPortalCheckedAt"),
-  portalCheckIntervalDays: int("portalCheckIntervalDays").default(7).notNull(),
-  portalStatusCheckEnabled: boolean("portalStatusCheckEnabled").default(false).notNull(),
-  notes: text("notes"),
-  nextActionAt: timestamp("nextActionAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => {
-  return {
-    userUpdatedIdx: index("job_applications_user_updated_idx").on(table.userId, table.updatedAt),
-    userCompanyIdx: index("job_applications_user_company_idx").on(table.userId, table.companyNameJa),
-  };
-});
+export const jobApplications = mysqlTable(
+  "job_applications",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    companyNameJa: varchar("companyNameJa", { length: 255 }).notNull(),
+    companyNameEn: varchar("companyNameEn", { length: 255 }),
+    position: varchar("position", { length: 255 }),
+    contactInfo: varchar("contactInfo", { length: 255 }),
+    priority: mysqlEnum("priority", ["high", "medium", "low"])
+      .default("medium")
+      .notNull(),
+    status: mysqlEnum("status", [
+      "researching",
+      "applied",
+      "briefing",
+      "es_preparing",
+      "es_submitted",
+      "document_screening",
+      "written_test",
+      "interview_1",
+      "interview_2",
+      "interview_3",
+      "interview_4",
+      "interview_final",
+      "offer",
+      "rejected",
+      "withdrawn",
+    ])
+      .default("researching")
+      .notNull(),
+    reconReportPath: varchar("reconReportPath", { length: 512 }),
+    esFilePath: varchar("esFilePath", { length: 512 }),
+    portalUrl: varchar("portalUrl", { length: 1024 }),
+    portalAccountHint: varchar("portalAccountHint", { length: 255 }),
+    lastPortalCheckedAt: timestamp("lastPortalCheckedAt"),
+    portalCheckIntervalDays: int("portalCheckIntervalDays")
+      .default(7)
+      .notNull(),
+    portalStatusCheckEnabled: boolean("portalStatusCheckEnabled")
+      .default(false)
+      .notNull(),
+    notes: text("notes"),
+    nextActionAt: timestamp("nextActionAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => {
+    return {
+      userUpdatedIdx: index("job_applications_user_updated_idx").on(
+        table.userId,
+        table.updatedAt
+      ),
+      userCompanyIdx: index("job_applications_user_company_idx").on(
+        table.userId,
+        table.companyNameJa
+      ),
+    };
+  }
+);
 
 export type JobApplication = typeof jobApplications.$inferSelect;
 export type InsertJobApplication = typeof jobApplications.$inferInsert;
 
-export const jobStatusEvents = mysqlTable("job_status_events", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  jobApplicationId: int("jobApplicationId"),
-  source: mysqlEnum("source", ["gmail", "manual", "agent", "portal"]).notNull(),
-  prevStatus: varchar("prevStatus", { length: 32 }),
-  nextStatus: varchar("nextStatus", { length: 32 }),
-  mailMessageId: varchar("mailMessageId", { length: 128 }),
-  mailFrom: text("mailFrom"),
-  mailSubject: text("mailSubject"),
-  mailSnippet: text("mailSnippet"),
-  reason: text("reason"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => {
-  return {
-    userJobCreatedIdx: index("job_status_events_user_job_created_idx").on(table.userId, table.jobApplicationId, table.createdAt),
-    userMailMessageUnique: uniqueIndex("job_status_events_user_mail_message_unique").on(table.userId, table.mailMessageId),
-  };
-});
+export const jobStatusEvents = mysqlTable(
+  "job_status_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    jobApplicationId: int("jobApplicationId"),
+    source: mysqlEnum("source", [
+      "gmail",
+      "manual",
+      "agent",
+      "portal",
+    ]).notNull(),
+    prevStatus: varchar("prevStatus", { length: 32 }),
+    nextStatus: varchar("nextStatus", { length: 32 }),
+    mailMessageId: varchar("mailMessageId", { length: 128 }),
+    mailFrom: text("mailFrom"),
+    mailSubject: text("mailSubject"),
+    mailSnippet: text("mailSnippet"),
+    reason: text("reason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => {
+    return {
+      userJobCreatedIdx: index("job_status_events_user_job_created_idx").on(
+        table.userId,
+        table.jobApplicationId,
+        table.createdAt
+      ),
+      userMailMessageUnique: uniqueIndex(
+        "job_status_events_user_mail_message_unique"
+      ).on(table.userId, table.mailMessageId),
+    };
+  }
+);
 
 export type JobStatusEvent = typeof jobStatusEvents.$inferSelect;
 export type InsertJobStatusEvent = typeof jobStatusEvents.$inferInsert;
@@ -221,10 +285,9 @@ export const agentSessions = mysqlTable("agent_sessions", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   telegramChatId: varchar("telegramChatId", { length: 64 }),
-  currentAgent: mysqlEnum("currentAgent", [
-    "careerpass",
-    "careerpassrecon",
-  ]).default("careerpass").notNull(),
+  currentAgent: mysqlEnum("currentAgent", ["careerpass", "careerpassrecon"])
+    .default("careerpass")
+    .notNull(),
   sessionState: json("sessionState"),
   interviewMode: boolean("interviewMode").default(false).notNull(),
   targetCompanyId: int("targetCompanyId"),
@@ -239,7 +302,9 @@ export type InsertAgentSession = typeof agentSessions.$inferInsert;
 export const billingAccounts = mysqlTable("billing_accounts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
-  billingMode: mysqlEnum("billingMode", ["monthly", "company"]).default("company").notNull(),
+  billingMode: mysqlEnum("billingMode", ["monthly", "company"])
+    .default("company")
+    .notNull(),
   companyPlanLimit: int("companyPlanLimit").default(10), // 10 or 20 for company-based pricing
   cycleStartedAt: timestamp("cycleStartedAt").notNull(),
   cycleEndsAt: timestamp("cycleEndsAt"),
@@ -253,39 +318,55 @@ export const billingAccounts = mysqlTable("billing_accounts", {
 export type BillingAccount = typeof billingAccounts.$inferSelect;
 export type InsertBillingAccount = typeof billingAccounts.$inferInsert;
 
-export const billingCompanyLedger = mysqlTable("billing_company_ledger", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  companyKey: varchar("companyKey", { length: 255 }).notNull(),
-  companyName: varchar("companyName", { length: 255 }).notNull(),
-  firstStatus: varchar("firstStatus", { length: 32 }),
-  countable: boolean("countable").default(true).notNull(),
-  firstSeenAt: timestamp("firstSeenAt").defaultNow().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => {
-  return {
-    userCompanyUnique: uniqueIndex("billing_company_ledger_user_company_unique").on(table.userId, table.companyKey),
-    userFirstSeenIdx: index("billing_company_ledger_user_first_seen_idx").on(table.userId, table.firstSeenAt),
-  };
-});
+export const billingCompanyLedger = mysqlTable(
+  "billing_company_ledger",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    companyKey: varchar("companyKey", { length: 255 }).notNull(),
+    companyName: varchar("companyName", { length: 255 }).notNull(),
+    firstStatus: varchar("firstStatus", { length: 32 }),
+    countable: boolean("countable").default(true).notNull(),
+    firstSeenAt: timestamp("firstSeenAt").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => {
+    return {
+      userCompanyUnique: uniqueIndex(
+        "billing_company_ledger_user_company_unique"
+      ).on(table.userId, table.companyKey),
+      userFirstSeenIdx: index("billing_company_ledger_user_first_seen_idx").on(
+        table.userId,
+        table.firstSeenAt
+      ),
+    };
+  }
+);
 
 export type BillingCompanyLedger = typeof billingCompanyLedger.$inferSelect;
-export type InsertBillingCompanyLedger = typeof billingCompanyLedger.$inferInsert;
+export type InsertBillingCompanyLedger =
+  typeof billingCompanyLedger.$inferInsert;
 
-export const calendarEventSyncs = mysqlTable("calendar_event_syncs", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
-  mailMessageId: varchar("mailMessageId", { length: 128 }).notNull(),
-  calendarEventId: varchar("calendarEventId", { length: 256 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => {
-  return {
-    userProviderMessageUnique: uniqueIndex("calendar_event_syncs_user_provider_message_unique").on(table.userId, table.provider, table.mailMessageId),
-  };
-});
+export const calendarEventSyncs = mysqlTable(
+  "calendar_event_syncs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    provider: mysqlEnum("provider", ["google", "outlook"]).notNull(),
+    mailMessageId: varchar("mailMessageId", { length: 128 }).notNull(),
+    calendarEventId: varchar("calendarEventId", { length: 256 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => {
+    return {
+      userProviderMessageUnique: uniqueIndex(
+        "calendar_event_syncs_user_provider_message_unique"
+      ).on(table.userId, table.provider, table.mailMessageId),
+    };
+  }
+);
 
 export type CalendarEventSync = typeof calendarEventSyncs.$inferSelect;
 export type InsertCalendarEventSync = typeof calendarEventSyncs.$inferInsert;
@@ -301,24 +382,34 @@ export const billingNotifications = mysqlTable("billing_notifications", {
 });
 
 export type BillingNotification = typeof billingNotifications.$inferSelect;
-export type InsertBillingNotification = typeof billingNotifications.$inferInsert;
+export type InsertBillingNotification =
+  typeof billingNotifications.$inferInsert;
 
 // ─── Proactive delivered nudges ──────────────────────────────────────────────
 // Persists which proactive nudges we have already pushed, so the cooldown
 // survives server restarts and works across multiple processes. The
 // deliveryKey column holds a SHA-256 hex digest of the nudge identity tuple
 // (userId, category, target, title, companyName, relevantDate).
-export const deliveredNudges = mysqlTable("delivered_nudges", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  deliveryKey: varchar("deliveryKey", { length: 64 }).notNull(),
-  deliveredAt: timestamp("deliveredAt").defaultNow().notNull(),
-}, (table) => {
-  return {
-    userKeyUnique: uniqueIndex("delivered_nudges_user_key_unique").on(table.userId, table.deliveryKey),
-    deliveredAtIdx: index("delivered_nudges_delivered_at_idx").on(table.deliveredAt),
-  };
-});
+export const deliveredNudges = mysqlTable(
+  "delivered_nudges",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    deliveryKey: varchar("deliveryKey", { length: 64 }).notNull(),
+    deliveredAt: timestamp("deliveredAt").defaultNow().notNull(),
+  },
+  table => {
+    return {
+      userKeyUnique: uniqueIndex("delivered_nudges_user_key_unique").on(
+        table.userId,
+        table.deliveryKey
+      ),
+      deliveredAtIdx: index("delivered_nudges_delivered_at_idx").on(
+        table.deliveredAt
+      ),
+    };
+  }
+);
 
 export type DeliveredNudge = typeof deliveredNudges.$inferSelect;
 export type InsertDeliveredNudge = typeof deliveredNudges.$inferInsert;

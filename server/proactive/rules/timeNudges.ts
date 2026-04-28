@@ -11,6 +11,17 @@ const INACTIVITY_DAYS = 7;
 const DEADLINE_WARNING_DAYS = 3;
 const POST_INTERVIEW_SILENCE_DAYS = 5;
 
+const EVENT_REMINDER_STATUSES = new Set<string>([
+  "briefing",
+  "interview_1",
+  "interview_2",
+  "interview_3",
+  "interview_4",
+  "interview_final",
+]);
+const EVENT_REMINDER_MIN_HOURS = 12;
+const EVENT_REMINDER_MAX_HOURS = 36;
+
 function daysBetween(a: Date, b: Date): number {
   return (b.getTime() - a.getTime()) / (24 * 60 * 60 * 1000);
 }
@@ -40,6 +51,16 @@ const MESSAGES = {
     ja: { title: "放置中の選考があります", body: "「{company}」は{days}日以上ステータス更新がありません。まだ進めるならフォローアップ、動かさないなら辞退済みとして整理するか確認しましょう。" },
     zh: { title: "有公司可能该整理了", body: "「{company}」已经 {days} 天以上没有状态进展。还想继续就跟进一下；不打算继续的话，可以确认后标记为放弃。" },
     en: { title: "Application may need cleanup", body: "No status progress on \"{company}\" for {days}+ days. Follow up if you're still pursuing it, or confirm and mark it withdrawn if not." },
+  },
+  briefingTomorrow: {
+    ja: { title: "📌 明日は説明会です", body: "「{company}」の説明会が明日{time}にあります。参加方法とアクセスを確認しましょう。" },
+    zh: { title: "📌 明天有说明会", body: "「{company}」的说明会就在明天 {time}，确认一下参加方式和入口。" },
+    en: { title: "📌 Briefing tomorrow", body: "\"{company}\" briefing is tomorrow at {time}. Confirm the access link and format." },
+  },
+  interviewTomorrow: {
+    ja: { title: "📌 明日は面接です", body: "「{company}」の面接が明日{time}にあります。自己紹介・志望動機・逆質問を最終確認しましょう。" },
+    zh: { title: "📌 明天有面试", body: "「{company}」的面试就在明天 {time}，最后过一遍自我介绍、志望动机和逆问问题。" },
+    en: { title: "📌 Interview tomorrow", body: "\"{company}\" interview is tomorrow at {time}. Final-check your intro, motivation, and reverse questions." },
   },
 };
 
@@ -212,10 +233,62 @@ const postInterviewRule: NudgeRule = {
   },
 };
 
+// T-1 reminder for upcoming briefing / interview events. Fires when
+// nextActionAt is 12–36 hours away. Uses category="deadline_warning" with
+// priority="high" so it pierces quiet hours (see scheduler.canPierceQuietHours).
+// Dedupe key includes expiresAt's date, so it fires at most once per event day.
+function formatEventTime(when: Date): string {
+  const hh = String(when.getHours()).padStart(2, "0");
+  const mm = String(when.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+const eventReminderRule: NudgeRule = {
+  id: "event_reminder_t_minus_1",
+  category: "deadline_warning",
+  evaluate(context: UserJobContext): ProactiveNudge[] {
+    const nudges: ProactiveNudge[] = [];
+    for (const app of context.applications) {
+      if (!app.nextActionAt) continue;
+      if (!EVENT_REMINDER_STATUSES.has(app.status)) continue;
+      const hoursUntil =
+        (app.nextActionAt.getTime() - context.now.getTime()) / (60 * 60 * 1000);
+      if (
+        hoursUntil < EVENT_REMINDER_MIN_HOURS ||
+        hoursUntil > EVENT_REMINDER_MAX_HOURS
+      ) {
+        continue;
+      }
+
+      const isInterview = INTERVIEW_STATUSES.has(app.status);
+      const msgs = isInterview
+        ? MESSAGES.interviewTomorrow
+        : MESSAGES.briefingTomorrow;
+      const msg = localize(msgs, context.preferredLanguage, {
+        company: app.companyNameJa,
+        time: formatEventTime(app.nextActionAt),
+      });
+
+      nudges.push({
+        userId: context.userId,
+        category: "deadline_warning",
+        jobApplicationId: app.id,
+        companyName: app.companyNameJa,
+        priority: "high",
+        ...msg,
+        scheduledAt: context.now,
+        expiresAt: app.nextActionAt,
+      });
+    }
+    return nudges;
+  },
+};
+
 export const timeNudgeRules: NudgeRule[] = [
   staleAppRule,
   abandonSuggestionRule,
   inactivityRule,
   deadlineRule,
   postInterviewRule,
+  eventReminderRule,
 ];

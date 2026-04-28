@@ -66,3 +66,70 @@ describe("time nudge abandon suggestion", () => {
     expect(nudges.some((n) => n.title === "有公司可能该整理了")).toBe(false);
   });
 });
+
+describe("event reminder T-1", () => {
+  function fromNow(hoursFromNow: number): Date {
+    return new Date(
+      Date.parse("2026-04-24T00:00:00.000Z") + hoursFromNow * 3600 * 1000,
+    );
+  }
+
+  it("fires for an interview ~24 hours away", () => {
+    const nudges = evaluateTimeNudges(
+      makeContext({
+        status: "interview_1",
+        nextActionAt: fromNow(24),
+        updatedAt: new Date("2026-04-23T00:00:00.000Z"),
+        lastStatusEventAt: new Date("2026-04-23T00:00:00.000Z"),
+      }),
+    );
+    const reminder = nudges.find((n) => n.title === "📌 明天有面试");
+    expect(reminder).toBeTruthy();
+    expect(reminder?.priority).toBe("high");
+    expect(reminder?.category).toBe("deadline_warning");
+  });
+
+  it("fires for a briefing ~24 hours away with the briefing-specific copy", () => {
+    const nudges = evaluateTimeNudges(
+      makeContext({
+        status: "briefing",
+        nextActionAt: fromNow(24),
+        updatedAt: new Date("2026-04-23T00:00:00.000Z"),
+        lastStatusEventAt: new Date("2026-04-23T00:00:00.000Z"),
+      }),
+    );
+    expect(nudges.some((n) => n.title === "📌 明天有说明会")).toBe(true);
+    expect(nudges.some((n) => n.title === "📌 明天有面试")).toBe(false);
+  });
+
+  it("does not fire when the event is more than 36 hours away", () => {
+    const nudges = evaluateTimeNudges(
+      makeContext({
+        status: "interview_1",
+        nextActionAt: fromNow(48),
+      }),
+    );
+    expect(nudges.some((n) => n.title === "📌 明天有面试")).toBe(false);
+  });
+
+  it("does not fire when the event is less than 12 hours away", () => {
+    const nudges = evaluateTimeNudges(
+      makeContext({
+        status: "interview_1",
+        nextActionAt: fromNow(6),
+      }),
+    );
+    expect(nudges.some((n) => n.title === "📌 明天有面试")).toBe(false);
+  });
+
+  it("does not fire for non-event statuses even with nextActionAt set", () => {
+    const nudges = evaluateTimeNudges(
+      makeContext({
+        status: "document_screening",
+        nextActionAt: fromNow(24),
+      }),
+    );
+    expect(nudges.some((n) => n.title === "📌 明天有面试")).toBe(false);
+    expect(nudges.some((n) => n.title === "📌 明天有说明会")).toBe(false);
+  });
+});

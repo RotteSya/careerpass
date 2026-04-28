@@ -24,12 +24,20 @@ import {
   getCalendarEventSync,
   upsertCalendarEventSync,
   applyGmailJobStatusEvent,
+  setJobApplicationNextActionIfSooner,
 } from "./db";
 
 import { invokeLLM } from "./_core/llm";
-import { appendUserFacingSoulContract, loadAgentAgents, loadAgentSoul } from "./_core/soul";
+import {
+  appendUserFacingSoulContract,
+  loadAgentAgents,
+  loadAgentSoul,
+} from "./_core/soul";
 import { createCompanyBatchDeduper, sortMailItemsByTsAsc } from "./gmail_dedup";
-import { sendTelegramMessage, sendTelegramMessageWithInlineKeyboard } from "./telegramMessaging";
+import {
+  sendTelegramMessage,
+  sendTelegramMessageWithInlineKeyboard,
+} from "./telegramMessaging";
 import { stashPendingCalendarWrite } from "./calendarWriteConsent";
 import { dispatchNotification } from "./_core/messaging";
 import { enqueueGmailJob } from "./gmailJobQueue";
@@ -56,7 +64,17 @@ export interface EmailEvent {
   from: string;
   date: string;
   body: string;
-  eventType: "interview" | "briefing" | "test" | "deadline" | "entry" | "offer" | "rejection" | "document_screening" | "casual_interview" | "other";
+  eventType:
+    | "interview"
+    | "briefing"
+    | "test"
+    | "deadline"
+    | "entry"
+    | "offer"
+    | "rejection"
+    | "document_screening"
+    | "casual_interview"
+    | "other";
   companyName: string | null;
   eventDate: string | null; // ISO 8601 if detected
   eventTime: string | null;
@@ -90,14 +108,18 @@ async function mapWithConcurrency<T, R>(
     }
   };
 
-  const workers = Array.from({ length: Math.min(limit, items.length) }, () => run());
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () =>
+    run()
+  );
   await Promise.all(workers);
   return results;
 }
 
 // ─── Token Refresh ────────────────────────────────────────────────────────────
 
-async function refreshGoogleToken(refreshToken: string): Promise<string | null> {
+async function refreshGoogleToken(
+  refreshToken: string
+): Promise<string | null> {
   try {
     const res = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -109,7 +131,10 @@ async function refreshGoogleToken(refreshToken: string): Promise<string | null> 
         grant_type: "refresh_token",
       }).toString(),
     });
-    const data = (await res.json()) as { access_token?: string; expires_in?: number };
+    const data = (await res.json()) as {
+      access_token?: string;
+      expires_in?: number;
+    };
     return data.access_token ?? null;
   } catch {
     return null;
@@ -118,12 +143,17 @@ async function refreshGoogleToken(refreshToken: string): Promise<string | null> 
 
 // ─── Gmail API ────────────────────────────────────────────────────────────────
 
-export async function getValidAccessToken(userId: number): Promise<string | null> {
+export async function getValidAccessToken(
+  userId: number
+): Promise<string | null> {
   const tokenRow = await getOauthToken(userId, "google");
   if (!tokenRow) return null;
 
   // Check if token is still valid (with 5-minute buffer)
-  if (tokenRow.expiresAt && tokenRow.expiresAt.getTime() > Date.now() + 5 * 60 * 1000) {
+  if (
+    tokenRow.expiresAt &&
+    tokenRow.expiresAt.getTime() > Date.now() + 5 * 60 * 1000
+  ) {
     return tokenRow.accessToken;
   }
 
@@ -153,29 +183,40 @@ export async function registerGmailPushWatch(userId: number): Promise<boolean> {
 
   const topicName = process.env.GMAIL_PUBSUB_TOPIC;
   if (!topicName) {
-    console.warn("[Gmail] GMAIL_PUBSUB_TOPIC is not configured. Skipping Gmail push watch registration.");
+    console.warn(
+      "[Gmail] GMAIL_PUBSUB_TOPIC is not configured. Skipping Gmail push watch registration."
+    );
     return false;
   }
 
   try {
-    const mapped = await ensureGoogleProviderAccountMapping(userId, accessToken);
+    const mapped = await ensureGoogleProviderAccountMapping(
+      userId,
+      accessToken
+    );
     if (!mapped) {
-      console.warn("[Gmail] Cannot register watch because provider-account mapping is missing.", { userId });
+      console.warn(
+        "[Gmail] Cannot register watch because provider-account mapping is missing.",
+        { userId }
+      );
       return false;
     }
 
-    const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/watch", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        topicName,
-        labelIds: ["INBOX"],
-        labelFilterAction: "include",
-      }),
-    });
+    const res = await fetch(
+      "https://gmail.googleapis.com/gmail/v1/users/me/watch",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          topicName,
+          labelIds: ["INBOX"],
+          labelFilterAction: "include",
+        }),
+      }
+    );
 
     if (!res.ok) {
       const errText = await res.text();
@@ -183,12 +224,23 @@ export async function registerGmailPushWatch(userId: number): Promise<boolean> {
       return false;
     }
 
-    const data = (await res.json()) as { expiration?: string | number; historyId?: string };
-    const historyId = typeof data.historyId === "string" ? data.historyId : null;
-    const expirationMs = typeof data.expiration === "string" || typeof data.expiration === "number" ? Number(data.expiration) : NaN;
-    const expirationDate = Number.isFinite(expirationMs) ? new Date(expirationMs) : null;
+    const data = (await res.json()) as {
+      expiration?: string | number;
+      historyId?: string;
+    };
+    const historyId =
+      typeof data.historyId === "string" ? data.historyId : null;
+    const expirationMs =
+      typeof data.expiration === "string" || typeof data.expiration === "number"
+        ? Number(data.expiration)
+        : NaN;
+    const expirationDate = Number.isFinite(expirationMs)
+      ? new Date(expirationMs)
+      : null;
 
-    await updateGoogleAccountSyncState(userId, { watchExpiration: expirationDate });
+    await updateGoogleAccountSyncState(userId, {
+      watchExpiration: expirationDate,
+    });
     if (historyId) {
       await updateGoogleLastHistoryIdIfNewer(userId, historyId);
     }
@@ -204,11 +256,16 @@ export async function registerGmailPushWatch(userId: number): Promise<boolean> {
   }
 }
 
-async function fetchGoogleAccountEmailFromGmailProfile(accessToken: string): Promise<string | null> {
+async function fetchGoogleAccountEmailFromGmailProfile(
+  accessToken: string
+): Promise<string | null> {
   try {
-    const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const res = await fetch(
+      "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
     if (!res.ok) return null;
     const data = (await res.json()) as { emailAddress?: string };
     const email = data.emailAddress?.trim().toLowerCase();
@@ -243,7 +300,9 @@ async function fetchInboxMessageIdPage(params: {
   maxResults: number;
   pageToken?: string;
 }): Promise<{ messageIds: string[]; nextPageToken: string | null }> {
-  const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
+  const url = new URL(
+    "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+  );
   url.searchParams.set("maxResults", String(params.maxResults));
   url.searchParams.set("q", params.q);
   if (params.pageToken) url.searchParams.set("pageToken", params.pageToken);
@@ -258,7 +317,7 @@ async function fetchInboxMessageIdPage(params: {
     nextPageToken?: string;
   };
   return {
-    messageIds: (data.messages ?? []).map((m) => m.id).filter(Boolean),
+    messageIds: (data.messages ?? []).map(m => m.id).filter(Boolean),
     nextPageToken: data.nextPageToken ?? null,
   };
 }
@@ -278,9 +337,11 @@ async function fetchInboxMessageIds(params: {
 
     // Broad pull (without hard keyword gate). Actual job-related decision is delegated to monitor agent.
     // First bootstrap scan is capped to recent mail; older mail is backfilled in batches.
-    const q = params.query ?? (fullMailbox
-      ? `newer_than:${FIRST_FULL_SCAN_DAYS}d -category:social -category:promotions`
-      : "newer_than:5d -category:social -category:promotions");
+    const q =
+      params.query ??
+      (fullMailbox
+        ? `newer_than:${FIRST_FULL_SCAN_DAYS}d -category:social -category:promotions`
+        : "newer_than:5d -category:social -category:promotions");
 
     while (maxResults === null || messageIds.length < maxResults) {
       const page = await fetchInboxMessageIdPage({
@@ -316,7 +377,9 @@ function extractMeetingUrlFromText(text: string): string | null {
   return m?.[1] ?? null;
 }
 
-export function __extractMeetingUrlFromTextForTests(text: string): string | null {
+export function __extractMeetingUrlFromTextForTests(
+  text: string
+): string | null {
   return extractMeetingUrlFromText(text);
 }
 
@@ -327,7 +390,10 @@ function decodeGmailBase64Url(input: string): string {
   return Buffer.from(padded, "base64").toString("utf-8");
 }
 
-function collectTextPlainBodies(part: GmailPayloadPart | undefined, out: string[]): void {
+function collectTextPlainBodies(
+  part: GmailPayloadPart | undefined,
+  out: string[]
+): void {
   if (!part) return;
   if (part.mimeType?.toLowerCase() === "text/plain" && part.body?.data) {
     out.push(decodeGmailBase64Url(part.body.data));
@@ -335,7 +401,10 @@ function collectTextPlainBodies(part: GmailPayloadPart | undefined, out: string[
   for (const child of part.parts ?? []) collectTextPlainBodies(child, out);
 }
 
-function collectTextHtmlBodies(part: GmailPayloadPart | undefined, out: string[]): void {
+function collectTextHtmlBodies(
+  part: GmailPayloadPart | undefined,
+  out: string[]
+): void {
   if (!part) return;
   if (part.mimeType?.toLowerCase() === "text/html" && part.body?.data) {
     out.push(decodeGmailBase64Url(part.body.data));
@@ -405,36 +474,47 @@ function cleanMailTextForAi(input: string): string {
     const raw = lines[i] ?? "";
     const line = raw.trim();
     if (!line) continue;
-    if (stopPatterns.some((re) => re.test(line))) break;
-    if (dropLine.some((re) => re.test(line))) continue;
-    if (headerLike.some((re) => re.test(line)) && i > 3) break;
+    if (stopPatterns.some(re => re.test(line))) break;
+    if (dropLine.some(re => re.test(line))) continue;
+    if (headerLike.some(re => re.test(line)) && i > 3) break;
     out.push(line);
     if (out.length >= 120) break;
   }
 
-  const merged = out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  const merged = out
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
   return merged.slice(0, 8000);
 }
 
 function decodeGmailHeaderValue(value: string): string {
   // Minimal RFC 2047 support for common UTF-8/B payloads from Gmail headers.
-  return value.replace(/=\?([^?]+)\?([bBqQ])\?([^?]+)\?=/g, (_m, _charset: string, enc: string, payload: string) => {
-    try {
-      if (enc.toUpperCase() === "B") {
-        return Buffer.from(payload, "base64").toString("utf-8");
+  return value.replace(
+    /=\?([^?]+)\?([bBqQ])\?([^?]+)\?=/g,
+    (_m, _charset: string, enc: string, payload: string) => {
+      try {
+        if (enc.toUpperCase() === "B") {
+          return Buffer.from(payload, "base64").toString("utf-8");
+        }
+        // Q-encoding: "_" stands for space.
+        const qp = payload
+          .replace(/_/g, " ")
+          .replace(/=([0-9A-Fa-f]{2})/g, (_s: string, h: string) =>
+            String.fromCharCode(parseInt(h, 16))
+          );
+        return Buffer.from(qp, "binary").toString("utf-8");
+      } catch {
+        return payload;
       }
-      // Q-encoding: "_" stands for space.
-      const qp = payload.replace(/_/g, " ").replace(/=([0-9A-Fa-f]{2})/g, (_s: string, h: string) =>
-        String.fromCharCode(parseInt(h, 16))
-      );
-      return Buffer.from(qp, "binary").toString("utf-8");
-    } catch {
-      return payload;
     }
-  });
+  );
 }
 
-export function __extractGmailBodyFromPayloadForTests(payload: GmailPayloadPart, snippet = ""): string {
+export function __extractGmailBodyFromPayloadForTests(
+  payload: GmailPayloadPart,
+  snippet = ""
+): string {
   let body = snippet;
   const plainBodies: string[] = [];
   collectTextPlainBodies(payload, plainBodies);
@@ -452,14 +532,25 @@ export function __extractGmailBodyFromPayloadForTests(payload: GmailPayloadPart,
   return body.slice(0, 8000);
 }
 
-export function __extractCleanMailTextFromGmailPayloadForTests(payload: GmailPayloadPart, snippet = ""): string {
-  return cleanMailTextForAi(__extractGmailBodyFromPayloadForTests(payload, snippet));
+export function __extractCleanMailTextFromGmailPayloadForTests(
+  payload: GmailPayloadPart,
+  snippet = ""
+): string {
+  return cleanMailTextForAi(
+    __extractGmailBodyFromPayloadForTests(payload, snippet)
+  );
 }
 
 async function fetchEmailDetail(
   accessToken: string,
   messageId: string
-): Promise<{ subject: string; from: string; date: string; body: string; threadId: string | null } | null> {
+): Promise<{
+  subject: string;
+  from: string;
+  date: string;
+  body: string;
+  threadId: string | null;
+} | null> {
   try {
     const res = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`,
@@ -468,22 +559,28 @@ async function fetchEmailDetail(
     if (!res.ok) return null;
 
     const data = (await res.json()) as {
-      payload?: GmailPayloadPart & { headers?: Array<{ name: string; value: string }> };
+      payload?: GmailPayloadPart & {
+        headers?: Array<{ name: string; value: string }>;
+      };
       snippet?: string;
       threadId?: string;
     };
 
     const headers = data.payload?.headers ?? [];
-    const subjectRaw = headers.find((h) => h.name === "Subject")?.value ?? "(件名なし)";
-    const fromRaw = headers.find((h) => h.name === "From")?.value ?? "";
-    const dateRaw = headers.find((h) => h.name === "Date")?.value ?? "";
+    const subjectRaw =
+      headers.find(h => h.name === "Subject")?.value ?? "(件名なし)";
+    const fromRaw = headers.find(h => h.name === "From")?.value ?? "";
+    const dateRaw = headers.find(h => h.name === "Date")?.value ?? "";
     const subject = decodeGmailHeaderValue(subjectRaw);
     const from = decodeGmailHeaderValue(fromRaw);
     const date = decodeGmailHeaderValue(dateRaw);
 
     // Extract body text
     const body = data.payload
-      ? __extractCleanMailTextFromGmailPayloadForTests(data.payload, data.snippet ?? "")
+      ? __extractCleanMailTextFromGmailPayloadForTests(
+          data.payload,
+          data.snippet ?? ""
+        )
       : cleanMailTextForAi(data.snippet ?? "");
 
     return { subject, from, date, body, threadId: data.threadId ?? null };
@@ -492,18 +589,27 @@ async function fetchEmailDetail(
   }
 }
 
-async function fetchThreadMeetingUrl(accessToken: string, threadId: string): Promise<string | null> {
+async function fetchThreadMeetingUrl(
+  accessToken: string,
+  threadId: string
+): Promise<string | null> {
   try {
-    const res = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const res = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
     if (!res.ok) return null;
     const data = (await res.json()) as {
       messages?: Array<{ payload?: GmailPayloadPart; snippet?: string }>;
     };
     for (const msg of data.messages ?? []) {
       const body = msg.payload
-        ? __extractCleanMailTextFromGmailPayloadForTests(msg.payload, msg.snippet ?? "")
+        ? __extractCleanMailTextFromGmailPayloadForTests(
+            msg.payload,
+            msg.snippet ?? ""
+          )
         : cleanMailTextForAi(msg.snippet ?? "");
       const url = extractMeetingUrlFromText(body);
       if (url) return url;
@@ -521,7 +627,9 @@ function buildMeetingUrlSearchQuery(params: {
 }): string {
   const parts: string[] = [];
   parts.push("-category:social -category:promotions");
-  parts.push("(teams.microsoft.com OR meet.google.com OR zoom.us OR webex.com)");
+  parts.push(
+    "(teams.microsoft.com OR meet.google.com OR zoom.us OR webex.com)"
+  );
   if (params.fromDomain) parts.push(`from:${params.fromDomain}`);
   if (params.companyName) parts.push(`(${params.companyName})`);
   if (params.eventDate) {
@@ -549,7 +657,10 @@ function formatYmdSlash(d: Date): string {
   return `${y}/${m}/${day}`;
 }
 
-function extractKeywordHintsFromHeaders(input: { subject: string; from: string }): string[] {
+function extractKeywordHintsFromHeaders(input: {
+  subject: string;
+  from: string;
+}): string[] {
   const out: string[] = [];
   for (const m of input.subject.matchAll(/【([^】]{2,32})】/g)) {
     const v = (m[1] ?? "").trim();
@@ -557,7 +668,10 @@ function extractKeywordHintsFromHeaders(input: { subject: string; from: string }
   }
   const displayName = input.from.split("<")[0]?.trim() ?? "";
   const cleaned = displayName
-    .replace(/新卒採用|中途採用|採用担当|採用チーム|人事|人事部|人事課|担当|事務局/gi, "")
+    .replace(
+      /新卒採用|中途採用|採用担当|採用チーム|人事|人事部|人事課|担当|事務局/gi,
+      ""
+    )
     .replace(/[()（）<>\[\]【】]/g, " ")
     .trim();
   if (cleaned && cleaned.length >= 2) out.push(cleaned);
@@ -573,7 +687,8 @@ function buildMeetingUrlSearchQueries(params: {
   from: string;
 }): string[] {
   const queries: string[] = [];
-  const baseDomains = "(teams.microsoft.com OR meet.google.com OR zoom.us OR webex.com)";
+  const baseDomains =
+    "(teams.microsoft.com OR meet.google.com OR zoom.us OR webex.com)";
 
   // 1) Strict: use eventDate + companyName if present
   queries.push(
@@ -596,8 +711,12 @@ function buildMeetingUrlSearchQueries(params: {
     afterBefore = `after:${formatYmdSlash(after)} before:${formatYmdSlash(before)}`;
   }
 
-  const hints = extractKeywordHintsFromHeaders({ subject: params.subject, from: params.from });
-  const hintQuery = hints.length > 0 ? `(${hints.map((h) => `"${h}"`).join(" OR ")})` : null;
+  const hints = extractKeywordHintsFromHeaders({
+    subject: params.subject,
+    from: params.from,
+  });
+  const hintQuery =
+    hints.length > 0 ? `(${hints.map(h => `"${h}"`).join(" OR ")})` : null;
 
   const relaxedParts: string[] = [];
   relaxedParts.push("-category:social -category:promotions");
@@ -643,13 +762,23 @@ async function searchGmailMessageIds(params: {
     const ids: string[] = [];
     let pageToken: string | undefined;
     while (ids.length < maxResults) {
-      const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
-      url.searchParams.set("maxResults", String(Math.min(50, maxResults - ids.length)));
+      const url = new URL(
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages"
+      );
+      url.searchParams.set(
+        "maxResults",
+        String(Math.min(50, maxResults - ids.length))
+      );
       url.searchParams.set("q", q);
       if (pageToken) url.searchParams.set("pageToken", pageToken);
-      const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (!res.ok) return ids;
-      const data = (await res.json()) as { messages?: Array<{ id: string }>; nextPageToken?: string };
+      const data = (await res.json()) as {
+        messages?: Array<{ id: string }>;
+        nextPageToken?: string;
+      };
       for (const m of data.messages ?? []) {
         if (m.id) ids.push(m.id);
         if (ids.length >= maxResults) break;
@@ -683,7 +812,11 @@ async function fetchMeetingUrlBySearch(params: {
   });
 
   for (const q of queries) {
-    const ids = await searchGmailMessageIds({ accessToken: params.accessToken, q, maxResults: 12 });
+    const ids = await searchGmailMessageIds({
+      accessToken: params.accessToken,
+      q,
+      maxResults: 12,
+    });
     for (const id of ids) {
       if (!id || id === params.excludeMessageId) continue;
       const detail = await fetchEmailDetail(params.accessToken, id);
@@ -695,11 +828,16 @@ async function fetchMeetingUrlBySearch(params: {
   return null;
 }
 
-async function fetchGmailProfileHistoryId(accessToken: string): Promise<string | null> {
+async function fetchGmailProfileHistoryId(
+  accessToken: string
+): Promise<string | null> {
   try {
-    const res = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const res = await fetch(
+      "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
     if (!res.ok) return null;
     const data = (await res.json()) as { historyId?: string };
     return data.historyId ?? null;
@@ -729,7 +867,9 @@ async function listGmailHistoryChanges(params: {
   let latestHistoryId: string | null = null;
 
   while (true) {
-    const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/history");
+    const url = new URL(
+      "https://gmail.googleapis.com/gmail/v1/users/me/history"
+    );
     url.searchParams.set("startHistoryId", startHistoryId);
     url.searchParams.set("labelId", "INBOX");
     url.searchParams.append("historyTypes", "messageAdded");
@@ -737,7 +877,9 @@ async function listGmailHistoryChanges(params: {
     url.searchParams.append("historyTypes", "labelRemoved");
     if (pageToken) url.searchParams.set("pageToken", pageToken);
 
-    const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     if (!res.ok) return null;
 
     const data = (await res.json()) as GmailHistoryResponse;
@@ -765,7 +907,7 @@ async function listGmailHistoryChanges(params: {
   }
 
   const seen = new Set<string>();
-  const deduped = messageIds.filter((id) => {
+  const deduped = messageIds.filter(id => {
     if (seen.has(id)) return false;
     seen.add(id);
     return true;
@@ -782,10 +924,7 @@ const DATE_PATTERNS = [
   /(\d{4})-(\d{2})-(\d{2})/,
 ];
 
-const TIME_PATTERNS = [
-  /(\d{1,2})時(\d{2})?分?/,
-  /(\d{1,2}):(\d{2})/,
-];
+const TIME_PATTERNS = [/(\d{1,2})時(\d{2})?分?/, /(\d{1,2}):(\d{2})/];
 
 const typeLabels: Record<EmailEvent["eventType"], string> = {
   interview: "【面接】",
@@ -861,26 +1000,61 @@ function jobStatusLabelZh(status: JobStatus): string {
 }
 
 function nextStepsZh(status: JobStatus): string[] {
-  if (status === "researching") return ["确认投递岗位与截止时间", "准备 ES 的两段核心素材（志望动机/自己PR）"];
-  if (status === "applied") return ["确认网申是否完成并保存凭证", "补齐后续材料清单与截止日期"];
-  if (status === "briefing") return ["确认说明会时间与参加方式", "准备 2 个聚焦岗位的问题"];
-  if (status === "es_preparing") return ["把志望动机写成 5 句（公司痛点→你的能力→为什么现在）", "整理 1 个可量化 STAR 案例用于自己PR"];
-  if (status === "es_submitted") return ["准备面试用的 30 秒自我介绍", "准备 3 个高价值逆質問"];
-  if (status === "document_screening") return ["确认筛选周期与反馈时间", "先准备常见面试题与案例证据"];
-  if (status === "written_test") return ["确认笔试范围与平台", "做一套时限模拟题并复盘错题"];
-  if (status === "interview_1") return ["整理面试题库：动机/强项/失败经历", "把 ES 的每一句都准备可追问的证据"];
-  if (status === "interview_2") return ["补齐职业规划与岗位匹配的逻辑链", "准备 1 个'你如何推进项目'的深挖案例"];
-  if (status === "interview_3") return ["补充跨团队协作与抗压案例", "准备对业务理解和价值贡献的回答"];
-  if (status === "interview_4") return ["准备高层关注点：入社动机与长期发展", "确认最后一轮的提问清单和条件确认项"];
-  if (status === "interview_final") return ["准备入社动机与价值观对齐", "准备薪资/条件/入社时间的确认问题"];
-  if (status === "offer") return ["确认条件（入社时间/勤務地/待遇）", "准备对比与决策标准"];
-  if (status === "rejected") return ["复盘 1 个关键失分点并改写答案", "把经验迁移到下一家公司投递"];
-  if (status === "withdrawn") return ["记录撤回原因与学到的筛选标准", "更新投递优先级列表"];
+  if (status === "researching")
+    return [
+      "确认投递岗位与截止时间",
+      "准备 ES 的两段核心素材（志望动机/自己PR）",
+    ];
+  if (status === "applied")
+    return ["确认网申是否完成并保存凭证", "补齐后续材料清单与截止日期"];
+  if (status === "briefing")
+    return ["确认说明会时间与参加方式", "准备 2 个聚焦岗位的问题"];
+  if (status === "es_preparing")
+    return [
+      "把志望动机写成 5 句（公司痛点→你的能力→为什么现在）",
+      "整理 1 个可量化 STAR 案例用于自己PR",
+    ];
+  if (status === "es_submitted")
+    return ["准备面试用的 30 秒自我介绍", "准备 3 个高价值逆質問"];
+  if (status === "document_screening")
+    return ["确认筛选周期与反馈时间", "先准备常见面试题与案例证据"];
+  if (status === "written_test")
+    return ["确认笔试范围与平台", "做一套时限模拟题并复盘错题"];
+  if (status === "interview_1")
+    return [
+      "整理面试题库：动机/强项/失败经历",
+      "把 ES 的每一句都准备可追问的证据",
+    ];
+  if (status === "interview_2")
+    return [
+      "补齐职业规划与岗位匹配的逻辑链",
+      "准备 1 个'你如何推进项目'的深挖案例",
+    ];
+  if (status === "interview_3")
+    return ["补充跨团队协作与抗压案例", "准备对业务理解和价值贡献的回答"];
+  if (status === "interview_4")
+    return [
+      "准备高层关注点：入社动机与长期发展",
+      "确认最后一轮的提问清单和条件确认项",
+    ];
+  if (status === "interview_final")
+    return ["准备入社动机与价值观对齐", "准备薪资/条件/入社时间的确认问题"];
+  if (status === "offer")
+    return ["确认条件（入社时间/勤務地/待遇）", "准备对比与决策标准"];
+  if (status === "rejected")
+    return ["复盘 1 个关键失分点并改写答案", "把经验迁移到下一家公司投递"];
+  if (status === "withdrawn")
+    return ["记录撤回原因与学到的筛选标准", "更新投递优先级列表"];
   return [];
 }
 
 // Only events that represent a real appointment should be written to calendar.
-const CALENDAR_WRITABLE_TYPES: EmailEvent["eventType"][] = ["interview", "briefing", "test", "deadline"];
+const CALENDAR_WRITABLE_TYPES: EmailEvent["eventType"][] = [
+  "interview",
+  "briefing",
+  "test",
+  "deadline",
+];
 
 interface CareerpassmailDecision extends Partial<EmailEvent> {
   isJobRelated: boolean;
@@ -898,14 +1072,16 @@ function calendarColorForEventType(
   return undefined;
 }
 
-
-
 async function runCareerpassmailAgent(input: {
   subject: string;
   body: string;
   from: string;
   fallbackDate: string | null;
-}): Promise<CareerpassmailDecision & { _meta?: { pipelineOnly?: boolean; pipelineShouldSkipLlm?: boolean } }> {
+}): Promise<
+  CareerpassmailDecision & {
+    _meta?: { pipelineOnly?: boolean; pipelineShouldSkipLlm?: boolean };
+  }
+> {
   const domainRep = getDomainReputation(input.from);
   const extractedDate = extractBestDateTime(`${input.subject}\n${input.body}`);
   const preflight = runRecruitingNlpPipeline({
@@ -945,9 +1121,10 @@ async function runCareerpassmailAgent(input: {
   const nerDate = preflight.eventDate;
   const nerTime = preflight.eventTime;
   const nerLocation = preflight.location;
-  const ruleHint = (preflight._meta?.ruleSignals ?? [])
-    .map((s) => `${s.eventType}(${s.confidence.toFixed(2)})`)
-    .join(", ") || "none";
+  const ruleHint =
+    (preflight._meta?.ruleSignals ?? [])
+      .map(s => `${s.eventType}(${s.confidence.toFixed(2)})`)
+      .join(", ") || "none";
   const domainTier = preflight._meta?.domainReputation?.tier ?? "unknown";
 
   const systemPrompt = `你是 CareerPass 的"邮件监控 Agent"——一个专业的日本求职邮件智能分析系统。
@@ -1028,8 +1205,12 @@ async function runCareerpassmailAgent(input: {
 }`;
   const soul = await loadAgentSoul("careerpassmail");
   const agents = await loadAgentAgents("careerpassmail");
-  const systemWithSoul = soul.content ? `${systemPrompt}\n\n[SOUL]\n${soul.content}` : systemPrompt;
-  const systemWithSoulAndAgents = agents.content ? `${systemWithSoul}\n\n[AGENTS]\n${agents.content}` : systemWithSoul;
+  const systemWithSoul = soul.content
+    ? `${systemPrompt}\n\n[SOUL]\n${soul.content}`
+    : systemPrompt;
+  const systemWithSoulAndAgents = agents.content
+    ? `${systemWithSoul}\n\n[AGENTS]\n${agents.content}`
+    : systemWithSoul;
   const effectiveSystemPrompt =
     `${systemWithSoulAndAgents}\n\n` +
     `【输出格式强约束】你必须严格输出一个 JSON object，且不得输出任何多余文本。若[SOUL]/[AGENTS]与输出格式冲突，以输出格式为准。`;
@@ -1100,7 +1281,8 @@ async function runCareerpassmailAgent(input: {
     confidence: fallback.confidence,
     reason: `fallback-pipeline:${fallback.reason}`,
     eventType: fallback.eventType,
-    companyName: fallback.companyName ?? extractCompanyName(input.from, input.subject),
+    companyName:
+      fallback.companyName ?? extractCompanyName(input.from, input.subject),
     eventDate: fallback.eventDate,
     eventTime: fallback.eventTime,
     location: fallback.location,
@@ -1153,7 +1335,6 @@ function buildLatestBoardScreenshotUrl(): string {
   return `${APP_DOMAIN.replace(/\/+$/, "")}/images/latest-dashboard-board.png`;
 }
 
-
 interface ComposeNotificationInput {
   userId: number;
   companyName: string | null;
@@ -1172,7 +1353,10 @@ interface ComposeNotificationInput {
 const TELEGRAM_MAIL_NOTICE_TTL_MS = 15 * 60 * 1000;
 const telegramMailNoticeDedup = new Map<string, number>();
 
-export function buildTelegramMailNoticeDedupKey(params: { userId: number; messageId: string }): string {
+export function buildTelegramMailNoticeDedupKey(params: {
+  userId: number;
+  messageId: string;
+}): string {
   return `${params.userId}:${params.messageId}`;
 }
 
@@ -1185,7 +1369,10 @@ export function shouldSendTelegramMailNoticeOnce(params: {
   for (const [k, expireAt] of telegramMailNoticeDedup.entries()) {
     if (expireAt <= now) telegramMailNoticeDedup.delete(k);
   }
-  const key = buildTelegramMailNoticeDedupKey({ userId: params.userId, messageId: params.messageId });
+  const key = buildTelegramMailNoticeDedupKey({
+    userId: params.userId,
+    messageId: params.messageId,
+  });
   const existing = telegramMailNoticeDedup.get(key);
   if (existing && existing > now) return false;
   telegramMailNoticeDedup.set(key, now + TELEGRAM_MAIL_NOTICE_TTL_MS);
@@ -1197,7 +1384,16 @@ export function __resetTelegramMailNoticeDedupForTests(): void {
 }
 
 function fallbackMailNotification(input: ComposeNotificationInput): string {
-  const { companyName, eventType, date, time, todoItems, boardScreenshotLink, progressLabel, outcomeUncertain } = input;
+  const {
+    companyName,
+    eventType,
+    date,
+    time,
+    todoItems,
+    boardScreenshotLink,
+    progressLabel,
+    outcomeUncertain,
+  } = input;
   const primaryAction =
     todoItems[0] ??
     (date
@@ -1218,11 +1414,18 @@ function fallbackMailNotification(input: ComposeNotificationInput): string {
     lines.push(
       [
         progressLabel ? `看板我也记好了：${progressLabel}。` : null,
-        boardScreenshotLink ? `[查看最新看板截图](${boardScreenshotLink})` : null,
-      ].filter(Boolean).join(" ")
+        boardScreenshotLink
+          ? `[查看最新看板截图](${boardScreenshotLink})`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ")
     );
   }
-  if (outcomeUncertain) lines.push("这封邮件可能涉及结果，语义不够确定，我没有自动标记，方便时去看板确认。");
+  if (outcomeUncertain)
+    lines.push(
+      "这封邮件可能涉及结果，语义不够确定，我没有自动标记，方便时去看板确认。"
+    );
   return lines.join("\n");
 }
 
@@ -1233,7 +1436,9 @@ export function isValidOneBubbleMailNotification(text: string): boolean {
   return trimmed.split("\n").length <= 6;
 }
 
-async function composeMailNotification(input: ComposeNotificationInput): Promise<string> {
+async function composeMailNotification(
+  input: ComposeNotificationInput
+): Promise<string> {
   try {
     const soul = await loadAgentSoul("careerpass");
 
@@ -1261,7 +1466,10 @@ async function composeMailNotification(input: ComposeNotificationInput): Promise
       `- 总长度控制在 6 行内，保证移动端易读。\n` +
       `- 只输出最终消息正文，不要加引号、不要解释。` +
       (soul.content ? `\n\n[SOUL]\n${soul.content}` : "");
-    const effectiveSystemPrompt = appendUserFacingSoulContract("careerpass", systemPrompt);
+    const effectiveSystemPrompt = appendUserFacingSoulContract(
+      "careerpass",
+      systemPrompt
+    );
 
     const response = await invokeLLM({
       messages: [
@@ -1325,26 +1533,44 @@ async function processGmailMessageIds(params: {
 
   const fetched: Array<{
     messageId: string;
-    detail: { subject: string; from: string; date: string; body: string; threadId: string | null };
+    detail: {
+      subject: string;
+      from: string;
+      date: string;
+      body: string;
+      threadId: string | null;
+    };
     mailTs: number;
   }> = [];
-  const fetchedResults = await mapWithConcurrency(messageIds, 12, async (messageId) => {
-    try {
-      const detail = await fetchEmailDetail(accessToken, messageId);
-      if (!detail) return null;
-      return { messageId, detail, mailTs: Date.parse(detail.date) };
-    } catch (err) {
-      console.error("[Gmail] Failed to fetch detail for message:", { userId, messageId, err });
-      return null;
+  const fetchedResults = await mapWithConcurrency(
+    messageIds,
+    12,
+    async messageId => {
+      try {
+        const detail = await fetchEmailDetail(accessToken, messageId);
+        if (!detail) return null;
+        return { messageId, detail, mailTs: Date.parse(detail.date) };
+      } catch (err) {
+        console.error("[Gmail] Failed to fetch detail for message:", {
+          userId,
+          messageId,
+          err,
+        });
+        return null;
+      }
     }
-  });
+  );
   for (const row of fetchedResults) {
     if (!row) continue;
     fetched.push(row);
   }
 
   const sorted = sortMailItemsByTsAsc(
-    fetched.map((x) => ({ messageId: x.messageId, mailTs: x.mailTs, value: x.detail }))
+    fetched.map(x => ({
+      messageId: x.messageId,
+      mailTs: x.mailTs,
+      value: x.detail,
+    }))
   );
 
   const candidates: typeof sorted = [];
@@ -1357,7 +1583,10 @@ async function processGmailMessageIds(params: {
       /mynavi|rikunabi/.test(senderDomain);
     const inboxNoticePattern =
       /(新着メッセージ|メッセージが届|マイページに新しい|新着のお知らせ|站内|站内信|新しいお知らせが届)/;
-    if (isJobBoardSender && inboxNoticePattern.test(`${detail.subject}\n${detail.body}`)) {
+    if (
+      isJobBoardSender &&
+      inboxNoticePattern.test(`${detail.subject}\n${detail.body}`)
+    ) {
       continue;
     }
 
@@ -1368,26 +1597,34 @@ async function processGmailMessageIds(params: {
       /syukatsu-kaigi|syukatsukaigi|就活会議|openwork|vorkers|onecareer|one-career/.test(
         `${detail.from}\n${detail.subject}`.toLowerCase()
       ) ||
-      /syukatsu-kaigi|syukatsukaigi|openwork|vorkers|onecareer|one-career/.test(senderDomain);
+      /syukatsu-kaigi|syukatsukaigi|openwork|vorkers|onecareer|one-career/.test(
+        senderDomain
+      );
     if (isReviewPlatformSender) {
       continue;
     }
     candidates.push(item);
   }
 
-  const analyzed = await mapWithConcurrency(candidates, 4, async (item) => {
+  const analyzed = await mapWithConcurrency(candidates, 4, async item => {
     try {
-        const fallbackDate = item.mailTs ? new Date(item.mailTs).toISOString().split("T")[0] : null;
-        const decision = await runCareerpassmailAgent({
-          subject: item.value.subject,
-          body: item.value.body,
-          from: item.value.from,
-          fallbackDate,
-        });
+      const fallbackDate = item.mailTs
+        ? new Date(item.mailTs).toISOString().split("T")[0]
+        : null;
+      const decision = await runCareerpassmailAgent({
+        subject: item.value.subject,
+        body: item.value.body,
+        from: item.value.from,
+        fallbackDate,
+      });
       if (!decision.isJobRelated) return null;
       return { item, decision };
     } catch (err) {
-      console.error("[Gmail] Failed to analyze message:", { userId, messageId: item.messageId, err });
+      console.error("[Gmail] Failed to analyze message:", {
+        userId,
+        messageId: item.messageId,
+        err,
+      });
       return null;
     }
   });
@@ -1418,18 +1655,24 @@ async function processGmailMessageIds(params: {
 
       let location = decision.location ?? null;
       if (eventType === "interview" && detail.threadId) {
-        const hasUrlInLocation = typeof location === "string" && /https?:\/\//i.test(location);
+        const hasUrlInLocation =
+          typeof location === "string" && /https?:\/\//i.test(location);
         const hasUrlInBody = /https?:\/\//i.test(mailText);
-        const needsUrlHint = /(teams|zoom|webex|google\s*meet|会議に参加|参加ください|url|リンク)/i.test(mailText);
+        const needsUrlHint =
+          /(teams|zoom|webex|google\s*meet|会議に参加|参加ください|url|リンク)/i.test(
+            mailText
+          );
         if (!hasUrlInLocation && !hasUrlInBody && needsUrlHint) {
           const cached = threadMeetingUrlCache.get(detail.threadId);
           const url =
             cached !== undefined
               ? cached
-              : await fetchThreadMeetingUrl(accessToken, detail.threadId).then((u) => {
-                  threadMeetingUrlCache.set(detail.threadId as string, u);
-                  return u;
-                });
+              : await fetchThreadMeetingUrl(accessToken, detail.threadId).then(
+                  u => {
+                    threadMeetingUrlCache.set(detail.threadId as string, u);
+                    return u;
+                  }
+                );
           let finalUrl = url ?? null;
           if (!finalUrl) {
             const senderDomain = getSenderDomain(detail.from);
@@ -1447,7 +1690,7 @@ async function processGmailMessageIds(params: {
                     subject: detail.subject,
                     from: detail.from,
                     excludeMessageId: messageId,
-                  }).then((u) => {
+                  }).then(u => {
                     searchMeetingUrlCache.set(cacheKey, u);
                     return u;
                   });
@@ -1504,10 +1747,15 @@ async function processGmailMessageIds(params: {
           reason: decision.reason,
         });
       }
-      let progressUpdate: { changed: boolean; jobId: number | null; nextStatus: JobStatus } | null = null;
+      let progressUpdate: {
+        changed: boolean;
+        jobId: number | null;
+        nextStatus: JobStatus;
+      } | null = null;
 
       if (enableAutoBoardWrite && inferredStatus && companyName) {
-        const canonicalCompanyName = resolveCanonicalCompanyName(companyName) ?? companyName;
+        const canonicalCompanyName =
+          resolveCanonicalCompanyName(companyName) ?? companyName;
 
         const applied = await applyGmailJobStatusEvent({
           userId,
@@ -1523,8 +1771,26 @@ async function processGmailMessageIds(params: {
         progressUpdate = {
           changed: applied.changed,
           jobId: applied.jobId,
-          nextStatus: applied.nextStatus
+          nextStatus: applied.nextStatus,
         };
+
+        // Persist briefing/interview event time to nextActionAt so the
+        // proactive T-1 reminder can fire. Only write when the new date is
+        // sooner than any existing value (manual or prior email).
+        if (
+          applied.jobId &&
+          date &&
+          (eventType === "briefing" || eventType === "interview")
+        ) {
+          const dt = new Date(`${date}T${time ?? "09:00"}:00`);
+          if (Number.isFinite(dt.getTime())) {
+            await setJobApplicationNextActionIfSooner(
+              applied.jobId,
+              userId,
+              dt
+            );
+          }
+        }
       }
 
       if (companyName) {
@@ -1532,10 +1798,11 @@ async function processGmailMessageIds(params: {
           userId,
           companyName,
           firstStatus: inferredStatus,
-          occurredAt: Number.isFinite(Date.parse(detail.date)) ? new Date(detail.date) : null,
+          occurredAt: Number.isFinite(Date.parse(detail.date))
+            ? new Date(detail.date)
+            : null,
         });
       }
-
 
       // Decide whether to notify the user about this mail.
       // - First-scan window: skip notifications for mails older than notifyWindowDays
@@ -1543,17 +1810,25 @@ async function processGmailMessageIds(params: {
       // - Same-company dedup: only notify for the newest mail per company in this batch.
       const mailTs = item.mailTs;
       const isWithinWindow =
-        notifyCutoffMs === null || (Number.isFinite(mailTs) && mailTs >= notifyCutoffMs);
+        notifyCutoffMs === null ||
+        (Number.isFinite(mailTs) && mailTs >= notifyCutoffMs);
 
       const companyKey = companyName?.toLowerCase() ?? null;
-      const isNewestForCompany = companyKey ? latestMessageIdPerCompany.get(companyKey) === item.messageId : false;
+      const isNewestForCompany = companyKey
+        ? latestMessageIdPerCompany.get(companyKey) === item.messageId
+        : false;
 
       const shouldNotify =
-        !suppressTelegramItemNotifications && isWithinWindow && isNewestForCompany;
+        !suppressTelegramItemNotifications &&
+        isWithinWindow &&
+        isNewestForCompany;
 
       if (telegramChatId && shouldNotify) {
         if (!shouldSendTelegramMailNoticeOnce({ userId, messageId })) {
-          console.info("[Gmail] telegram-notice-dedup-skip", { userId, messageId });
+          console.info("[Gmail] telegram-notice-dedup-skip", {
+            userId,
+            messageId,
+          });
           continue;
         }
         const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
@@ -1578,7 +1853,8 @@ async function processGmailMessageIds(params: {
               ? jobStatusLabelZh(progressUpdate.nextStatus)
               : null,
           outcomeUncertain:
-            (rawEventType === "offer" || rawEventType === "rejection") && !hardOutcome,
+            (rawEventType === "offer" || rawEventType === "rejection") &&
+            !hardOutcome,
         });
 
         await dispatchNotification({ userId, body: notifText });
@@ -1599,11 +1875,15 @@ async function processGmailMessageIds(params: {
           ? `${date}T${String(parseInt(time.split(":")[0]) + 1).padStart(2, "0")}:${time.split(":")[1]}:00`
           : `${date}T10:00:00`;
 
-        const colorId = calendarColorForEventType(eventType, calendarColorPrefs);
+        const colorId = calendarColorForEventType(
+          eventType,
+          calendarColorPrefs
+        );
         const mailLink = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
-        const todoText = emailEvent.todoItems.length > 0
-          ? emailEvent.todoItems.map(t => `- ${t}`).join("\n")
-          : "- なし";
+        const todoText =
+          emailEvent.todoItems.length > 0
+            ? emailEvent.todoItems.map(t => `- ${t}`).join("\n")
+            : "- なし";
         const calEvent: CalendarEvent & { colorId?: string } = {
           summary: `${typeLabels[eventType]}${companyName ?? ""} - ${detail.subject.slice(0, 40)}`,
           description: [
@@ -1630,7 +1910,10 @@ async function processGmailMessageIds(params: {
         };
 
         if (calendarWriteEnabled) {
-          const calendarEventId = await writeToGoogleCalendar(accessToken, calEvent);
+          const calendarEventId = await writeToGoogleCalendar(
+            accessToken,
+            calEvent
+          );
           if (calendarEventId) {
             await upsertCalendarEventSync({
               userId,
@@ -1639,7 +1922,10 @@ async function processGmailMessageIds(params: {
               calendarEventId,
             });
             calendarCount++;
-          } else if (!suppressTelegramItemNotifications && !suppressCalendarFailureNotifications) {
+          } else if (
+            !suppressTelegramItemNotifications &&
+            !suppressCalendarFailureNotifications
+          ) {
             await dispatchNotification({
               userId,
               body: `⚠️ 检测到邮件事件，但写入 Google Calendar 失败。\n📧 ${detail.subject.slice(0, 80)}`,
@@ -1662,18 +1948,27 @@ async function processGmailMessageIds(params: {
             `${companyName ?? "公司未知"}｜${dt}\n` +
             `📧 ${subjectPreview}\n\n` +
             `同意后我会自动开启「写入日历」开关，之后类似事件不会再问你。`;
-          await sendTelegramMessageWithInlineKeyboard(telegramChatId, promptText, [[
-            { text: "✅ 加进去", callback_data: `cal:y:${token}` },
-            { text: "✖️ 不用", callback_data: `cal:n:${token}` },
-          ]]);
+          await sendTelegramMessageWithInlineKeyboard(
+            telegramChatId,
+            promptText,
+            [
+              [
+                { text: "✅ 加进去", callback_data: `cal:y:${token}` },
+                { text: "✖️ 不用", callback_data: `cal:n:${token}` },
+              ],
+            ]
+          );
         }
       }
     } catch (err) {
-      console.error("[Gmail] Failed to process analyzed message. Continue with next one.", {
-        userId,
-        messageId: entry.item.messageId,
-        err,
-      });
+      console.error(
+        "[Gmail] Failed to process analyzed message. Continue with next one.",
+        {
+          userId,
+          messageId: entry.item.messageId,
+          err,
+        }
+      );
     }
   }
 
@@ -1681,7 +1976,10 @@ async function processGmailMessageIds(params: {
   if (detectedEvents.length > 0 && !suppressTelegramItemNotifications) {
     import("./proactive/scheduler").then(({ runProactiveCheckForUser }) => {
       runProactiveCheckForUser(userId).catch(err =>
-        console.error("[Gmail] Proactive check failed after mail processing:", err)
+        console.error(
+          "[Gmail] Proactive check failed after mail processing:",
+          err
+        )
       );
     });
   }
@@ -1782,7 +2080,8 @@ export async function monitorGmailAndSync(
     accessToken,
     messageIds: ids,
     notifyWindowDays: options?.notifyWindowDays,
-    suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
+    suppressTelegramItemNotifications:
+      options?.suppressTelegramItemNotifications ?? false,
     enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
   });
 
@@ -1841,7 +2140,10 @@ export async function syncGmailIncremental(
     return fallback;
   }
 
-  const changes = await listGmailHistoryChanges({ accessToken, startHistoryId });
+  const changes = await listGmailHistoryChanges({
+    accessToken,
+    startHistoryId,
+  });
   if (!changes) {
     // History expired or unavailable: resync board state silently to avoid
     // replaying old mailbox state as a burst of Telegram messages.
@@ -1865,7 +2167,8 @@ export async function syncGmailIncremental(
     telegramChatId,
     accessToken,
     messageIds: changes.messageIds,
-    suppressTelegramItemNotifications: options?.suppressTelegramItemNotifications ?? false,
+    suppressTelegramItemNotifications:
+      options?.suppressTelegramItemNotifications ?? false,
     enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
   });
 

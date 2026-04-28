@@ -1,4 +1,15 @@
-import { and, asc, count, desc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -23,7 +34,10 @@ import {
   InsertCalendarEventSync,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
-import { normalizeCompanyKey, resolveCanonicalCompanyName } from "./companyName";
+import {
+  normalizeCompanyKey,
+  resolveCanonicalCompanyName,
+} from "./companyName";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -43,21 +57,36 @@ export async function getDb() {
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) { console.warn("[Database] Cannot upsert user: database not available"); return; }
+  if (!db) {
+    console.warn("[Database] Cannot upsert user: database not available");
+    return;
+  }
 
   const values: InsertUser = { openId: user.openId };
   const updateSet: Record<string, unknown> = {};
 
-  const fields = ["name", "email", "loginMethod", "birthDate", "universityName"] as const;
+  const fields = [
+    "name",
+    "email",
+    "loginMethod",
+    "birthDate",
+    "universityName",
+  ] as const;
   for (const f of fields) {
     const v = user[f];
-    if (v !== undefined) { values[f] = v ?? null; updateSet[f] = v ?? null; }
+    if (v !== undefined) {
+      values[f] = v ?? null;
+      updateSet[f] = v ?? null;
+    }
   }
 
   const enumFields = ["education", "preferredLanguage"] as const;
   for (const f of enumFields) {
     const v = user[f];
-    if (v !== undefined) { values[f] = v as any; updateSet[f] = v; }
+    if (v !== undefined) {
+      values[f] = v as any;
+      updateSet[f] = v;
+    }
   }
 
   if (user.profileCompleted !== undefined) {
@@ -79,13 +108,20 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   if (!values.lastSignedIn) values.lastSignedIn = new Date();
   if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
 
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  await db
+    .insert(users)
+    .values(values)
+    .onDuplicateKeyUpdate({ set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.openId, openId))
+    .limit(1);
   return result[0] ?? undefined;
 }
 
@@ -99,17 +135,40 @@ export async function getUserById(id: number) {
 export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
   return result[0] ?? undefined;
 }
 
 export async function updateUserProfile(
   userId: number,
-  data: Partial<Pick<InsertUser, "name" | "birthDate" | "education" | "universityName" | "preferredLanguage" | "profileCompleted" | "calendarColorBriefing" | "calendarColorInterview" | "calendarColorDeadline" | "calendarWriteEnabled" | "notificationSchedule" | "nudgeCategoriesEnabled">>
+  data: Partial<
+    Pick<
+      InsertUser,
+      | "name"
+      | "birthDate"
+      | "education"
+      | "universityName"
+      | "preferredLanguage"
+      | "profileCompleted"
+      | "calendarColorBriefing"
+      | "calendarColorInterview"
+      | "calendarColorDeadline"
+      | "calendarWriteEnabled"
+      | "notificationSchedule"
+      | "nudgeCategoriesEnabled"
+    >
+  >
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(users).set({ ...data, updatedAt: new Date() }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(users.id, userId));
 }
 
 export interface UserCalendarColorPrefs {
@@ -118,7 +177,9 @@ export interface UserCalendarColorPrefs {
   deadline: string;
 }
 
-export async function getUserCalendarColorPrefs(userId: number): Promise<UserCalendarColorPrefs> {
+export async function getUserCalendarColorPrefs(
+  userId: number
+): Promise<UserCalendarColorPrefs> {
   const user = await getUserById(userId);
   return {
     briefing: user?.calendarColorBriefing ?? "9",
@@ -144,12 +205,17 @@ export async function updateUserCalendarColorPrefs(
     .where(eq(users.id, userId));
 }
 
-export async function getCalendarWriteEnabled(userId: number): Promise<boolean> {
+export async function getCalendarWriteEnabled(
+  userId: number
+): Promise<boolean> {
   const user = await getUserById(userId);
   return !!user?.calendarWriteEnabled;
 }
 
-export async function setCalendarWriteEnabled(userId: number, enabled: boolean): Promise<void> {
+export async function setCalendarWriteEnabled(
+  userId: number,
+  enabled: boolean
+): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db
@@ -162,15 +228,23 @@ export async function deleteUserAccountData(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.delete(billingCompanyLedger).where(eq(billingCompanyLedger.userId, userId));
-  await db.delete(billingNotifications).where(eq(billingNotifications.userId, userId));
+  await db
+    .delete(billingCompanyLedger)
+    .where(eq(billingCompanyLedger.userId, userId));
+  await db
+    .delete(billingNotifications)
+    .where(eq(billingNotifications.userId, userId));
   await db.delete(billingAccounts).where(eq(billingAccounts.userId, userId));
   await db.delete(jobStatusEvents).where(eq(jobStatusEvents.userId, userId));
   await db.delete(jobApplications).where(eq(jobApplications.userId, userId));
   await db.delete(agentSessions).where(eq(agentSessions.userId, userId));
   await db.delete(telegramBindings).where(eq(telegramBindings.userId, userId));
-  await db.delete(messagingBindings).where(eq(messagingBindings.userId, userId));
-  await db.delete(oauthProviderAccounts).where(eq(oauthProviderAccounts.userId, userId));
+  await db
+    .delete(messagingBindings)
+    .where(eq(messagingBindings.userId, userId));
+  await db
+    .delete(oauthProviderAccounts)
+    .where(eq(oauthProviderAccounts.userId, userId));
   await db.delete(oauthTokens).where(eq(oauthTokens.userId, userId));
   await db.delete(emailAuth).where(eq(emailAuth.userId, userId));
   await db.delete(users).where(eq(users.id, userId));
@@ -227,7 +301,9 @@ export interface BillingFeatureAccess {
   graceEndsAt: Date;
 }
 
-export async function countTrackedCompaniesInCurrentCycle(userId: number): Promise<number> {
+export async function countTrackedCompaniesInCurrentCycle(
+  userId: number
+): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
   const account = await getOrCreateBillingAccount(userId);
@@ -237,7 +313,9 @@ export async function countTrackedCompaniesInCurrentCycle(userId: number): Promi
     gte(billingCompanyLedger.firstSeenAt, account.cycleStartedAt),
   ];
   if (account.cycleEndsAt) {
-    baseConditions.push(lte(billingCompanyLedger.firstSeenAt, account.cycleEndsAt));
+    baseConditions.push(
+      lte(billingCompanyLedger.firstSeenAt, account.cycleEndsAt)
+    );
   }
   const rows = await db
     .select({ id: billingCompanyLedger.id })
@@ -246,11 +324,16 @@ export async function countTrackedCompaniesInCurrentCycle(userId: number): Promi
   return rows.length;
 }
 
-export async function getBillingFeatureAccess(userId: number): Promise<BillingFeatureAccess> {
+export async function getBillingFeatureAccess(
+  userId: number
+): Promise<BillingFeatureAccess> {
   const account = await getOrCreateBillingAccount(userId);
   const now = new Date();
   const trialStartMs = account.trialStartedAt.getTime();
-  const dayFromTrialStart = Math.max(1, Math.floor((now.getTime() - trialStartMs) / (24 * 60 * 60 * 1000)) + 1);
+  const dayFromTrialStart = Math.max(
+    1,
+    Math.floor((now.getTime() - trialStartMs) / (24 * 60 * 60 * 1000)) + 1
+  );
   const trackedCompanyCount = await countTrackedCompaniesInCurrentCycle(userId);
 
   let phase: BillingFeatureAccess["phase"] = "suspended";
@@ -262,7 +345,8 @@ export async function getBillingFeatureAccess(userId: number): Promise<BillingFe
     phase = "paid";
   }
 
-  const autoEnabled = phase === "trial" || phase === "grace" || phase === "paid";
+  const autoEnabled =
+    phase === "trial" || phase === "grace" || phase === "paid";
   return {
     phase,
     autoMonitoringEnabled: autoEnabled,
@@ -276,7 +360,10 @@ export async function getBillingFeatureAccess(userId: number): Promise<BillingFe
 }
 
 export function normalizeCompanyKeyForBilling(companyName: string): string {
-  return normalizeCompanyKey(companyName) ?? companyName.trim().toLowerCase().replace(/\s+/g, " ");
+  return (
+    normalizeCompanyKey(companyName) ??
+    companyName.trim().toLowerCase().replace(/\s+/g, " ")
+  );
 }
 
 export async function trackCompanyForBilling(params: {
@@ -288,13 +375,16 @@ export async function trackCompanyForBilling(params: {
   const db = await getDb();
   if (!db) return;
   const account = await getOrCreateBillingAccount(params.userId);
-  const companyName = (resolveCanonicalCompanyName(params.companyName) ?? params.companyName).trim();
+  const companyName = (
+    resolveCanonicalCompanyName(params.companyName) ?? params.companyName
+  ).trim();
   if (!companyName) return;
   const companyKey = normalizeCompanyKeyForBilling(companyName);
 
   const occurredAt = params.occurredAt ?? new Date();
   const status = (params.firstStatus ?? "").toLowerCase();
-  const terminal = status === "offer" || status === "rejected" || status === "withdrawn";
+  const terminal =
+    status === "offer" || status === "rejected" || status === "withdrawn";
   const countable = !(terminal && occurredAt < account.cycleStartedAt);
   await db
     .insert(billingCompanyLedger)
@@ -333,8 +423,8 @@ export async function markBillingNotificationSent(
     kind === "day10"
       ? { day10SentAt: now }
       : kind === "day13"
-      ? { day13SentAt: now }
-      : { suspensionSentAt: now };
+        ? { day13SentAt: now }
+        : { suspensionSentAt: now };
   await db
     .insert(billingNotifications)
     .values({
@@ -387,24 +477,32 @@ export async function upsertCalendarEventSync(sync: InsertCalendarEventSync) {
 export async function upsertOauthToken(token: InsertOauthToken) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(oauthTokens).values(token).onDuplicateKeyUpdate({
-    set: {
-      accessToken: token.accessToken,
-      refreshToken: token.refreshToken ?? null,
-      expiresAt: token.expiresAt ?? null,
-      scope: token.scope ?? null,
-      updatedAt: new Date(),
-    },
-  });
+  await db
+    .insert(oauthTokens)
+    .values(token)
+    .onDuplicateKeyUpdate({
+      set: {
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken ?? null,
+        expiresAt: token.expiresAt ?? null,
+        scope: token.scope ?? null,
+        updatedAt: new Date(),
+      },
+    });
 }
 
-export async function getOauthToken(userId: number, provider: "google" | "outlook") {
+export async function getOauthToken(
+  userId: number,
+  provider: "google" | "outlook"
+) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db
     .select()
     .from(oauthTokens)
-    .where(and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, provider)))
+    .where(
+      and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, provider))
+    )
     .limit(1);
   return result[0] ?? undefined;
 }
@@ -417,34 +515,46 @@ export async function patchOauthTokenScope(params: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const current = await getOauthToken(params.userId, params.provider);
-  const base: Record<string, unknown> =
-    current?.scope
-      ? (() => {
-          try {
-            const parsed = JSON.parse(current.scope) as unknown;
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
-            return {};
-          } catch {
-            return {};
-          }
-        })()
-      : {};
+  const base: Record<string, unknown> = current?.scope
+    ? (() => {
+        try {
+          const parsed = JSON.parse(current.scope) as unknown;
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+            return parsed as Record<string, unknown>;
+          return {};
+        } catch {
+          return {};
+        }
+      })()
+    : {};
   const next = { ...base, ...params.patch };
   await db
     .update(oauthTokens)
     .set({ scope: JSON.stringify(next), updatedAt: new Date() })
-    .where(and(eq(oauthTokens.userId, params.userId), eq(oauthTokens.provider, params.provider)));
+    .where(
+      and(
+        eq(oauthTokens.userId, params.userId),
+        eq(oauthTokens.provider, params.provider)
+      )
+    );
 }
 
-export async function deleteOauthToken(userId: number, provider: "google" | "outlook") {
+export async function deleteOauthToken(
+  userId: number,
+  provider: "google" | "outlook"
+) {
   const db = await getDb();
   if (!db) return;
   await db
     .delete(oauthTokens)
-    .where(and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, provider)));
+    .where(
+      and(eq(oauthTokens.userId, userId), eq(oauthTokens.provider, provider))
+    );
 }
 
-export async function listUserIdsByOauthProvider(provider: "google" | "outlook"): Promise<number[]> {
+export async function listUserIdsByOauthProvider(
+  provider: "google" | "outlook"
+): Promise<number[]> {
   const db = await getDb();
   if (!db) return [];
   const rows = await db
@@ -488,7 +598,12 @@ export async function getUserIdByOauthProviderAccount(
   const result = await db
     .select({ userId: oauthProviderAccounts.userId })
     .from(oauthProviderAccounts)
-    .where(and(eq(oauthProviderAccounts.provider, provider), eq(oauthProviderAccounts.accountEmail, normalizedEmail)))
+    .where(
+      and(
+        eq(oauthProviderAccounts.provider, provider),
+        eq(oauthProviderAccounts.accountEmail, normalizedEmail)
+      )
+    )
     .limit(1);
   return result[0]?.userId ?? null;
 }
@@ -499,7 +614,9 @@ export interface GoogleAccountSyncState {
   watchExpiration: Date | null;
 }
 
-export async function getGoogleAccountSyncState(userId: number): Promise<GoogleAccountSyncState | null> {
+export async function getGoogleAccountSyncState(
+  userId: number
+): Promise<GoogleAccountSyncState | null> {
   const db = await getDb();
   if (!db) return null;
   const result = await db
@@ -509,7 +626,12 @@ export async function getGoogleAccountSyncState(userId: number): Promise<GoogleA
       watchExpiration: oauthProviderAccounts.watchExpiration,
     })
     .from(oauthProviderAccounts)
-    .where(and(eq(oauthProviderAccounts.provider, "google"), eq(oauthProviderAccounts.userId, userId)))
+    .where(
+      and(
+        eq(oauthProviderAccounts.provider, "google"),
+        eq(oauthProviderAccounts.userId, userId)
+      )
+    )
     .limit(1);
   if (!result[0]) return null;
   return {
@@ -521,21 +643,34 @@ export async function getGoogleAccountSyncState(userId: number): Promise<GoogleA
 
 export async function updateGoogleAccountSyncState(
   userId: number,
-  updates: Partial<Pick<GoogleAccountSyncState, "lastHistoryId" | "watchExpiration">>
+  updates: Partial<
+    Pick<GoogleAccountSyncState, "lastHistoryId" | "watchExpiration">
+  >
 ): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const set: { lastHistoryId?: string | null; watchExpiration?: Date | null } = {};
-  if (updates.lastHistoryId !== undefined) set.lastHistoryId = updates.lastHistoryId;
-  if (updates.watchExpiration !== undefined) set.watchExpiration = updates.watchExpiration;
+  const set: { lastHistoryId?: string | null; watchExpiration?: Date | null } =
+    {};
+  if (updates.lastHistoryId !== undefined)
+    set.lastHistoryId = updates.lastHistoryId;
+  if (updates.watchExpiration !== undefined)
+    set.watchExpiration = updates.watchExpiration;
   if (Object.keys(set).length === 0) return;
   await db
     .update(oauthProviderAccounts)
     .set(set)
-    .where(and(eq(oauthProviderAccounts.provider, "google"), eq(oauthProviderAccounts.userId, userId)));
+    .where(
+      and(
+        eq(oauthProviderAccounts.provider, "google"),
+        eq(oauthProviderAccounts.userId, userId)
+      )
+    );
 }
 
-export async function updateGoogleLastHistoryIdIfNewer(userId: number, newHistoryId: string): Promise<void> {
+export async function updateGoogleLastHistoryIdIfNewer(
+  userId: number,
+  newHistoryId: string
+): Promise<void> {
   const state = await getGoogleAccountSyncState(userId);
   if (!state) return;
   const current = state.lastHistoryId;
@@ -547,11 +682,15 @@ export async function updateGoogleLastHistoryIdIfNewer(userId: number, newHistor
     const next = BigInt(newHistoryId);
     const prev = BigInt(current);
     if (next > prev) {
-      await updateGoogleAccountSyncState(userId, { lastHistoryId: newHistoryId });
+      await updateGoogleAccountSyncState(userId, {
+        lastHistoryId: newHistoryId,
+      });
     }
   } catch {
     if (newHistoryId !== current) {
-      await updateGoogleAccountSyncState(userId, { lastHistoryId: newHistoryId });
+      await updateGoogleAccountSyncState(userId, {
+        lastHistoryId: newHistoryId,
+      });
     }
   }
 }
@@ -652,10 +791,7 @@ export async function getJobApplications(userId: number) {
       latestEventIds,
       eq(jobApplications.id, latestEventIds.jobApplicationId)
     )
-    .leftJoin(
-      jobStatusEvents,
-      eq(jobStatusEvents.id, latestEventIds.latestId)
-    )
+    .leftJoin(jobStatusEvents, eq(jobStatusEvents.id, latestEventIds.latestId))
     .where(eq(jobApplications.userId, userId))
     .orderBy(desc(jobApplications.updatedAt));
 
@@ -702,17 +838,50 @@ export async function updateJobApplicationDetails(
   if (!db) return;
   const setObj: Record<string, any> = {};
   if (updates.status !== undefined) setObj.status = updates.status;
-  if (updates.position !== undefined && updates.position !== null) setObj.position = updates.position;
-  if (updates.contactInfo !== undefined && updates.contactInfo !== null) setObj.contactInfo = updates.contactInfo;
-  if (updates.priority !== undefined && updates.priority !== null) setObj.priority = updates.priority;
-  if (updates.nextActionAt !== undefined) setObj.nextActionAt = updates.nextActionAt;
-  
+  if (updates.position !== undefined && updates.position !== null)
+    setObj.position = updates.position;
+  if (updates.contactInfo !== undefined && updates.contactInfo !== null)
+    setObj.contactInfo = updates.contactInfo;
+  if (updates.priority !== undefined && updates.priority !== null)
+    setObj.priority = updates.priority;
+  if (updates.nextActionAt !== undefined)
+    setObj.nextActionAt = updates.nextActionAt;
+
   if (Object.keys(setObj).length === 0) return;
 
   await db
     .update(jobApplications)
     .set(setObj)
     .where(and(eq(jobApplications.id, id), eq(jobApplications.userId, userId)));
+}
+
+// Set nextActionAt only when the proposed time is in the future AND
+// either no existing value is set or the proposed time is sooner.
+// Used by the email pipeline so an emailed event date can never clobber a
+// closer manual deadline, and stale-after-the-fact emails never reset to a
+// later date.
+export async function setJobApplicationNextActionIfSooner(
+  id: number,
+  userId: number,
+  when: Date
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  if (!Number.isFinite(when.getTime())) return;
+  if (when.getTime() <= Date.now()) return;
+  await db
+    .update(jobApplications)
+    .set({ nextActionAt: when })
+    .where(
+      and(
+        eq(jobApplications.id, id),
+        eq(jobApplications.userId, userId),
+        or(
+          sql`${jobApplications.nextActionAt} IS NULL`,
+          sql`${jobApplications.nextActionAt} > ${when}`
+        )
+      )
+    );
 }
 
 export async function updateJobApplicationPortalInfo(
@@ -730,9 +899,12 @@ export async function updateJobApplicationPortalInfo(
 
   const setObj: Record<string, any> = { updatedAt: new Date() };
   if (updates.portalUrl !== undefined) setObj.portalUrl = updates.portalUrl;
-  if (updates.portalAccountHint !== undefined) setObj.portalAccountHint = updates.portalAccountHint;
-  if (updates.portalCheckIntervalDays !== undefined) setObj.portalCheckIntervalDays = updates.portalCheckIntervalDays;
-  if (updates.portalStatusCheckEnabled !== undefined) setObj.portalStatusCheckEnabled = updates.portalStatusCheckEnabled;
+  if (updates.portalAccountHint !== undefined)
+    setObj.portalAccountHint = updates.portalAccountHint;
+  if (updates.portalCheckIntervalDays !== undefined)
+    setObj.portalCheckIntervalDays = updates.portalCheckIntervalDays;
+  if (updates.portalStatusCheckEnabled !== undefined)
+    setObj.portalStatusCheckEnabled = updates.portalStatusCheckEnabled;
 
   await db
     .update(jobApplications)
@@ -749,11 +921,16 @@ export async function markJobApplicationPortalChecked(params: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async tx => {
     const target = await tx
       .select()
       .from(jobApplications)
-      .where(and(eq(jobApplications.id, params.id), eq(jobApplications.userId, params.userId)))
+      .where(
+        and(
+          eq(jobApplications.id, params.id),
+          eq(jobApplications.userId, params.userId)
+        )
+      )
       .limit(1);
 
     if (!target[0]) throw new Error("Job application not found");
@@ -764,7 +941,12 @@ export async function markJobApplicationPortalChecked(params: {
         lastPortalCheckedAt: params.checkedAt,
         updatedAt: params.checkedAt,
       })
-      .where(and(eq(jobApplications.id, params.id), eq(jobApplications.userId, params.userId)));
+      .where(
+        and(
+          eq(jobApplications.id, params.id),
+          eq(jobApplications.userId, params.userId)
+        )
+      );
 
     await tx.insert(jobStatusEvents).values({
       userId: params.userId,
@@ -807,11 +989,16 @@ export async function applyAgentJobStatusUpdate(params: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.transaction(async (tx) => {
+  await db.transaction(async tx => {
     await tx
       .update(jobApplications)
       .set({ status: params.nextStatus, updatedAt: new Date() })
-      .where(and(eq(jobApplications.id, params.jobApplicationId), eq(jobApplications.userId, params.userId)));
+      .where(
+        and(
+          eq(jobApplications.id, params.jobApplicationId),
+          eq(jobApplications.userId, params.userId)
+        )
+      );
 
     await tx.insert(jobStatusEvents).values({
       userId: params.userId,
@@ -833,7 +1020,7 @@ export async function createConfirmedAgentJobApplication(params: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return db.transaction(async (tx) => {
+  return db.transaction(async tx => {
     const [created] = await tx.insert(jobApplications).values({
       userId: params.userId,
       companyNameJa: params.companyName,
@@ -863,15 +1050,25 @@ export async function applyGmailJobStatusEvent(params: {
   mailSubject: string;
   mailSnippet: string;
   reason: string;
-}): Promise<{ changed: boolean; duplicate: boolean; jobId: number | null; nextStatus: JobApplicationStatus }> {
+}): Promise<{
+  changed: boolean;
+  duplicate: boolean;
+  jobId: number | null;
+  nextStatus: JobApplicationStatus;
+}> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  return db.transaction(async (tx) => {
+  return db.transaction(async tx => {
     const existingEvent = await tx
       .select()
       .from(jobStatusEvents)
-      .where(and(eq(jobStatusEvents.userId, params.userId), eq(jobStatusEvents.mailMessageId, params.mailMessageId)))
+      .where(
+        and(
+          eq(jobStatusEvents.userId, params.userId),
+          eq(jobStatusEvents.mailMessageId, params.mailMessageId)
+        )
+      )
       .limit(1);
     if (existingEvent[0]) {
       return {
@@ -887,7 +1084,7 @@ export async function applyGmailJobStatusEvent(params: {
       .select()
       .from(jobApplications)
       .where(eq(jobApplications.userId, params.userId));
-    let existingJob = existingJobs.find((job) => {
+    let existingJob = existingJobs.find(job => {
       const jaKey = normalizeCompanyKey(job.companyNameJa);
       const enKey = normalizeCompanyKey(job.companyNameEn);
       return targetKey && (jaKey === targetKey || enKey === targetKey);
@@ -909,13 +1106,20 @@ export async function applyGmailJobStatusEvent(params: {
     } else {
       jobId = existingJob.id;
       prevStatus = existingJob.status as JobApplicationStatus;
-      changed = jobStatusRankForWrite(params.nextStatus) > jobStatusRankForWrite(prevStatus);
+      changed =
+        jobStatusRankForWrite(params.nextStatus) >
+        jobStatusRankForWrite(prevStatus);
       finalStatus = changed ? params.nextStatus : prevStatus;
       if (changed) {
         await tx
           .update(jobApplications)
           .set({ status: params.nextStatus, updatedAt: new Date() })
-          .where(and(eq(jobApplications.id, existingJob.id), eq(jobApplications.userId, params.userId)));
+          .where(
+            and(
+              eq(jobApplications.id, existingJob.id),
+              eq(jobApplications.userId, params.userId)
+            )
+          );
       }
     }
 
@@ -936,24 +1140,37 @@ export async function applyGmailJobStatusEvent(params: {
   });
 }
 
-export async function listJobStatusEvents(userId: number, jobApplicationId: number, limit = 20) {
+export async function listJobStatusEvents(
+  userId: number,
+  jobApplicationId: number,
+  limit = 20
+) {
   const db = await getDb();
   if (!db) return [];
   return db
     .select()
     .from(jobStatusEvents)
-    .where(and(eq(jobStatusEvents.userId, userId), eq(jobStatusEvents.jobApplicationId, jobApplicationId)))
+    .where(
+      and(
+        eq(jobStatusEvents.userId, userId),
+        eq(jobStatusEvents.jobApplicationId, jobApplicationId)
+      )
+    )
     .orderBy(desc(jobStatusEvents.createdAt))
     .limit(limit);
 }
 
-export async function listLatestJobStatusEventTimes(userId: number): Promise<Map<number, Date>> {
+export async function listLatestJobStatusEventTimes(
+  userId: number
+): Promise<Map<number, Date>> {
   const db = await getDb();
   if (!db) return new Map();
   const rows = await db
     .select({
       jobApplicationId: jobStatusEvents.jobApplicationId,
-      latestCreatedAt: sql<Date>`max(${jobStatusEvents.createdAt})`.as("latestCreatedAt"),
+      latestCreatedAt: sql<Date>`max(${jobStatusEvents.createdAt})`.as(
+        "latestCreatedAt"
+      ),
     })
     .from(jobStatusEvents)
     .where(eq(jobStatusEvents.userId, userId))
@@ -978,9 +1195,17 @@ export async function getActiveMessagingBinding(userId: number): Promise<{
 
   // Prefer unified messagingBindings table
   const unified = await db
-    .select({ provider: messagingBindings.provider, externalId: messagingBindings.externalId })
+    .select({
+      provider: messagingBindings.provider,
+      externalId: messagingBindings.externalId,
+    })
     .from(messagingBindings)
-    .where(and(eq(messagingBindings.userId, userId), eq(messagingBindings.isActive, true)))
+    .where(
+      and(
+        eq(messagingBindings.userId, userId),
+        eq(messagingBindings.isActive, true)
+      )
+    )
     .limit(1);
   if (unified[0]) return unified[0];
 
@@ -993,7 +1218,9 @@ export async function getActiveMessagingBinding(userId: number): Promise<{
   return null;
 }
 
-export async function listUserIdsWithActiveMessagingBinding(): Promise<number[]> {
+export async function listUserIdsWithActiveMessagingBinding(): Promise<
+  number[]
+> {
   const db = await getDb();
   if (!db) return [];
   const ids = new Set<number>();
@@ -1014,7 +1241,10 @@ export async function listUserIdsWithActiveMessagingBinding(): Promise<number[]>
 }
 
 // ─── Agent Sessions ────────────────────────────────────────────────────────
-export async function getOrCreateAgentSession(userId: number, telegramChatId?: string) {
+export async function getOrCreateAgentSession(
+  userId: number,
+  telegramChatId?: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const existing = await db
