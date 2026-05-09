@@ -1,9 +1,14 @@
 import express from "express";
 import { createRemoteJWKSet } from "jose";
-import { getTelegramBinding, getUserByEmail, getUserIdByOauthProviderAccount } from "./db";
+import {
+  getTelegramBinding,
+  getUserByEmail,
+  getUserIdByOauthProviderAccount,
+} from "./db";
 import { monitorGmailAndSync, syncGmailIncremental } from "./gmail";
 import { isRealtimeTelegramSuppressed } from "./mailMonitoring";
 import { authorizeGmailPushRequest } from "./_core/gmailPushAuth";
+import { isPrivateAllowedUserId } from "./_core/privateMode";
 import { createRateLimiter } from "./_core/rateLimit";
 import { createRateLimitMiddleware } from "./_core/rateLimitMiddleware";
 
@@ -18,7 +23,7 @@ const pushLimiter = createRateLimiter({ windowMs: 60_000, max: 120 });
 gmailPushRouter.use(
   createRateLimitMiddleware({
     limiter: pushLimiter,
-    key: (req) => `ip:${req.ip}`,
+    key: req => `ip:${req.ip}`,
   })
 );
 
@@ -48,7 +53,10 @@ function decodePubSubPayload(data?: string): GmailPushPayload | null {
 
 const perUserQueue = new Map<number, Promise<void>>();
 
-function enqueuePerUser(userId: number, fn: () => Promise<void>): Promise<void> {
+function enqueuePerUser(
+  userId: number,
+  fn: () => Promise<void>
+): Promise<void> {
   const prev = perUserQueue.get(userId) ?? Promise.resolve();
   const next = prev
     .catch(() => undefined)
@@ -88,13 +96,17 @@ gmailPushRouter.post("/push", async (req, res) => {
       }
     );
 
-    const expectedServiceAccount = (process.env.GMAIL_PUBSUB_SERVICE_ACCOUNT ?? "")
+    const expectedServiceAccount = (
+      process.env.GMAIL_PUBSUB_SERVICE_ACCOUNT ?? ""
+    )
       .trim()
       .toLowerCase();
     if (expectedServiceAccount) {
       const email =
         typeof (result.payload as any).email === "string"
-          ? String((result.payload as any).email).trim().toLowerCase()
+          ? String((result.payload as any).email)
+              .trim()
+              .toLowerCase()
           : "";
       if (!email || email !== expectedServiceAccount) {
         res.status(401).end();
@@ -118,17 +130,34 @@ gmailPushRouter.post("/push", async (req, res) => {
         return;
       }
 
-      const mappedUserId = await getUserIdByOauthProviderAccount("google", emailAddress);
-      const user = mappedUserId ? { id: mappedUserId } : await getUserByEmail(emailAddress);
+      const mappedUserId = await getUserIdByOauthProviderAccount(
+        "google",
+        emailAddress
+      );
+      const user = mappedUserId
+        ? { id: mappedUserId }
+        : await getUserByEmail(emailAddress);
       if (!user?.id) {
         console.warn("[GmailPush] No user bound to push payload email.");
+        return;
+      }
+
+      if (!isPrivateAllowedUserId(user.id)) {
+        console.warn(
+          "[GmailPush] User not in private-mode allow-list; skipping.",
+          {
+            userId: user.id,
+          }
+        );
         return;
       }
 
       const binding = await getTelegramBinding(user.id);
       const chatId = binding?.telegramId ?? undefined;
       const endHistoryId = payload?.historyId;
-      const suppressTelegramItemNotifications = isRealtimeTelegramSuppressed(user.id);
+      const suppressTelegramItemNotifications = isRealtimeTelegramSuppressed(
+        user.id
+      );
 
       await enqueuePerUser(user.id, async () => {
         const result = endHistoryId
@@ -141,11 +170,12 @@ gmailPushRouter.post("/push", async (req, res) => {
         console.log("[GmailPush] Processed:", {
           userId: user.id,
           historyId: endHistoryId ?? null,
-          mode: endHistoryId ? "incremental" : "fallback-scan",
+          mode: result.mode ?? (endHistoryId ? "incremental" : "scan"),
           suppressTelegramItemNotifications,
           scanned: result.scanned,
           detected: result.detected,
           calendarEvents: result.calendarEvents,
+          telegramSummarySent: result.telegramSummarySent ?? false,
         });
       });
     } catch (err) {

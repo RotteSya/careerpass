@@ -54,36 +54,52 @@ pnpm install
 
 ### 环境变量
 
-创建 `.env` 文件，填入以下配置：
+复制模板：
 
-```env
-# Database
-DATABASE_URL=mysql://user:password@localhost:3306/careerpass
-
-# Auth
-JWT_SECRET=your-jwt-secret
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Telegram
-TELEGRAM_BOT_TOKEN=your-telegram-bot-token
-
-# Email (Resend)
-RESEND_API_KEY=your-resend-api-key
-
-# AI / Web Scraping
-OPENAI_API_KEY=your-openai-api-key
-FIRECRAWL_API_KEY=your-firecrawl-api-key
-TAVILY_API_KEY=your-tavily-api-key
-
-# AWS S3 (optional)
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=ap-northeast-1
-AWS_S3_BUCKET=your-bucket-name
+```bash
+cp .env.example .env
 ```
+
+`.env.example` 列出全部已知变量与默认值。下面只解释关键分组，详细注释见模板本身。
+
+#### 必填
+
+| 变量 | 说明 |
+|------|------|
+| `DATABASE_URL` | MySQL 连接串。|
+| `JWT_SECRET` | 应用 JWT 签名密钥。|
+| `APP_DOMAIN` | 公网 HTTPS 域名，用于生成 Telegram / Gmail Push / Calendar Push 的 webhook URL。|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth（Gmail + Calendar）。|
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot Token。|
+
+#### Gmail Push（实时主路径）
+
+| 变量 | 说明 |
+|------|------|
+| `GMAIL_PUBSUB_TOPIC` | 完整 topic 资源名 `projects/<gcp>/topics/<id>`。|
+| `GMAIL_PUBSUB_SUBSCRIPTION` | Push subscription 名。|
+| `GMAIL_PUBSUB_AUDIENCE` | OIDC audience，需等于 `${APP_DOMAIN}/api/gmail/push`。|
+| `GMAIL_PUBSUB_SERVICE_ACCOUNT` | Push subscription 使用的 OIDC service account。|
+
+#### Gmail Fallback / Bootstrap 策略
+
+Push 为主路径，但 watch 过期、historyId 失效、首次 OAuth 等场景需要受控 fallback。所有开关默认开启（unset 视为 true），设为 `"false"` 即关闭对应分支。
+
+| 变量 | 默认 | 行为 |
+|------|------|------|
+| `GMAIL_BACKGROUND_SCAN_ENABLED` | `true` | 允许 `startBackgroundMailScan` 在后台跑全量初始化扫描。|
+| `GMAIL_OAUTH_BOOTSTRAP_SCAN_ENABLED` | `true` | OAuth 成功后允许一次受控 bootstrap scan。|
+| `GMAIL_HISTORY_EXPIRED_FALLBACK_ENABLED` | `true` | historyId 失效时允许 silent resync，否则只更新 checkpoint 等待 `/rewatch_gmail`。|
+| `GMAIL_FALLBACK_SUPPRESS_ITEM_TELEGRAM` | `true` | Fallback 过程中不发送单条 Telegram 通知。|
+| `GMAIL_FALLBACK_NOTIFY_SUMMARY` | `true` | Fallback 结束后发送一条摘要通知。|
+
+#### Calendar Push（Phase B+）
+
+`CALENDAR_PUSH_ENABLED`、`CALENDAR_WEBHOOK_PATH`、`CALENDAR_CHANNEL_TOKEN` 等控制 Google Calendar `events.watch` 行为，详见模板。
+
+#### Private Mode
+
+`PRIVATE_MODE=true` 用于两人自用：绕过 billing gate，仅放行白名单内的用户/Telegram ID。设为 `false` 时保留 SaaS 行为。
 
 ### 数据库迁移
 

@@ -16,6 +16,14 @@ import {
 } from "./mailMonitoring";
 import { registerGmailPushWatch } from "./gmail";
 import {
+  registerCalendarPushWatch,
+  getCalendarWatchState,
+} from "./calendarWatch";
+import { syncCalendarIncremental } from "./calendarIncremental";
+import { computeTodayTasks } from "./proactive/today";
+import { getGoogleAccountSyncState } from "./db";
+import { privateModeSnapshot } from "./_core/privateMode";
+import {
   sendTelegramMessage,
   sendTelegramBubbles,
   answerTelegramCallbackQuery,
@@ -27,6 +35,7 @@ import { getValidAccessToken, writeToGoogleCalendar } from "./gmail";
 import { createRateLimiter } from "./_core/rateLimit";
 import { createRateLimitMiddleware } from "./_core/rateLimitMiddleware";
 import { assertTelegramWebhookSecret } from "./_core/telegramWebhookAuth";
+import { isPrivateAllowedTelegramId } from "./_core/privateMode";
 import {
   collectTrialNudges,
   manualScanUpsellLine,
@@ -623,6 +632,19 @@ telegramRouter.post("/webhook", async (req, res) => {
     const telegramUsername = message.from?.username ?? null;
     const text: string = message.text ?? "";
 
+    // Private-mode gate: when PRIVATE_MODE=true, only allow-listed Telegram
+    // numeric IDs may interact with the bot. Ack 200 so Telegram doesn't retry.
+    if (!isPrivateAllowedTelegramId(telegramId)) {
+      console.warn(
+        "[Telegram] Telegram ID not in private-mode allow-list; ignoring.",
+        {
+          telegramId,
+        }
+      );
+      res.json({ ok: true });
+      return;
+    }
+
     // Find bound user
     const binding = await getTelegramBindingByTelegramId(telegramId);
     let userId = binding?.userId;
@@ -986,6 +1008,117 @@ telegramRouter.post("/webhook", async (req, res) => {
           chatId,
           "対話を終了し、メインメニューに戻ります。"
         );
+      } else if (text.startsWith("/today")) {
+        const user = await getUserById(uid);
+        const lang = languageOrDefault(user);
+        const tasks = await computeTodayTasks(uid);
+        if (tasks.length === 0) {
+          await sendTelegramMessage(
+            chatId,
+            lang === "zh"
+              ? "今日没有需要立刻推进的事。等邮件/日程有新事件再来叫你。"
+              : lang === "en"
+                ? "Nothing urgent today. I'll ping you when something new comes in."
+                : "今日は急ぎの対応はありません。新しいイベントがあれば改めてお知らせします。"
+          );
+        } else {
+          const header =
+            lang === "zh"
+              ? `今日${tasks.length}件，按优先级排序：`
+              : lang === "en"
+                ? `Top ${tasks.length} for today:`
+                : `今日やるべき${tasks.length}つです。`;
+          const body = tasks
+            .map((t, i) => `${i + 1}. ${t.title}\n${"  "}${t.reason}`)
+            .join("\n\n");
+          await sendTelegramMessage(chatId, `${header}\n\n${body}`);
+        }
+      } else if (text.startsWith("/watch_status")) {
+        const gmailState = await getGoogleAccountSyncState(uid);
+        const calState = await getCalendarWatchState(uid);
+        const pm = privateModeSnapshot();
+        const lines: string[] = [];
+        lines.push("📡 Watch status");
+        lines.push("");
+        lines.push("Gmail:");
+        lines.push(`  lastHistoryId: ${gmailState?.lastHistoryId ?? "—"}`);
+        lines.push(
+          `  watchExpiration: ${gmailState?.watchExpiration?.toISOString() ?? "—"}`
+        );
+        lines.push("");
+        lines.push("Calendar:");
+        if (calState) {
+          lines.push(`  status: ${calState.status}`);
+          lines.push(`  channelId: ${calState.channelId}`);
+          lines.push(`  hasSyncToken: ${calState.syncToken ? "yes" : "no"}`);
+          lines.push(
+            `  expiration: ${calState.expiration?.toISOString() ?? "—"}`
+          );
+        } else {
+          lines.push("  not registered");
+        }
+        lines.push("");
+        lines.push(`Private mode: ${pm.enabled ? "ON" : "off"}`);
+        if (pm.enabled) {
+          lines.push(
+            `  allowed userIds: ${pm.allowedUserIds.join(",") || "(none)"}`
+          );
+        }
+        await sendTelegramMessage(chatId, lines.join("\n"));
+      } else if (text.startsWith("/rewatch_gmail")) {
+        const ok = await registerGmailPushWatch(uid);
+        await sendTelegramMessage(
+          chatId,
+          ok
+            ? "✅ Gmail watch を再登録しました。"
+            : "⚠️ Gmail watch の再登録に失敗しました。サーバーログを確認してください。"
+        );
+      } else if (text.startsWith("/rewatch_calendar")) {
+        const ok = await registerCalendarPushWatch(uid);
+        await sendTelegramMessage(
+          chatId,
+          ok
+            ? "✅ Calendar watch を再登録しました。"
+            : "⚠️ Calendar watch の再登録に失敗しました（CALENDAR_PUSH_ENABLED / CALENDAR_CHANNEL_TOKEN を確認してください）。"
+        );
+      } else if (text.startsWith("/resync_gmail")) {
+        await sendTelegramMessage(chatId, "🔄 Gmail を再同期中…");
+        void (async () => {
+          try {
+            const r = await startMailMonitoringAndCheckmail({
+              userId: uid,
+              telegramChatId: String(chatId),
+              mode: "manual",
+            });
+            await sendTelegramMessage(
+              chatId,
+              `✅ Gmail resync 完了 (scanned=${r.result?.scanned ?? 0}, detected=${r.result?.detected ?? 0})`
+            );
+          } catch (err) {
+            console.error("[Telegram] /resync_gmail failed:", err);
+            await sendTelegramMessage(
+              chatId,
+              "⚠️ Gmail resync に失敗しました。"
+            );
+          }
+        })();
+      } else if (text.startsWith("/resync_calendar")) {
+        await sendTelegramMessage(chatId, "🔄 Calendar を再同期中…");
+        void (async () => {
+          try {
+            const r = await syncCalendarIncremental(uid);
+            await sendTelegramMessage(
+              chatId,
+              `✅ Calendar resync 完了 (mode=${r.mode}, scanned=${r.scanned}, detected=${r.detected})`
+            );
+          } catch (err) {
+            console.error("[Telegram] /resync_calendar failed:", err);
+            await sendTelegramMessage(
+              chatId,
+              "⚠️ Calendar resync に失敗しました。"
+            );
+          }
+        })();
       } else if (
         text.startsWith("/checkmail") ||
         /检查.{0,40}邮箱|查看.{0,40}邮箱|check.{0,40}mail|check.{0,40}inbox/i.test(

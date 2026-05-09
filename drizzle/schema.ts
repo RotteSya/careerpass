@@ -413,3 +413,87 @@ export const deliveredNudges = mysqlTable(
 
 export type DeliveredNudge = typeof deliveredNudges.$inferSelect;
 export type InsertDeliveredNudge = typeof deliveredNudges.$inferInsert;
+
+// ─── Calendar Push: watch / channel state ────────────────────────────────────
+// Tracks Google Calendar `events.watch` channels per (user, provider, calendar)
+// and the rolling syncToken used by incremental sync.
+export const calendarWatchStates = mysqlTable(
+  "calendar_watch_states",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    provider: mysqlEnum("provider", ["google"]).default("google").notNull(),
+    calendarId: varchar("calendarId", { length: 256 })
+      .default("primary")
+      .notNull(),
+    channelId: varchar("channelId", { length: 128 }).notNull(),
+    resourceId: varchar("resourceId", { length: 256 }).notNull(),
+    resourceUri: text("resourceUri"),
+    syncToken: text("syncToken"),
+    expiration: timestamp("expiration"),
+    status: mysqlEnum("status", ["active", "expired", "stopped", "error"])
+      .default("active")
+      .notNull(),
+    lastMessageNumber: varchar("lastMessageNumber", { length: 64 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => {
+    return {
+      userCalendarUnique: uniqueIndex("calendar_watch_user_calendar_unique").on(
+        table.userId,
+        table.provider,
+        table.calendarId
+      ),
+      channelResourceIdx: index("calendar_watch_channel_resource_idx").on(
+        table.channelId,
+        table.resourceId
+      ),
+    };
+  }
+);
+
+export type CalendarWatchState = typeof calendarWatchStates.$inferSelect;
+export type InsertCalendarWatchState = typeof calendarWatchStates.$inferInsert;
+
+// ─── Calendar Push: event ingestion ──────────────────────────────────────────
+// Records calendar events read via push + syncToken. Idempotent on
+// (userId, provider, calendarId, googleEventId). Distinct from
+// `calendar_event_syncs` (which tracks mail → calendar writes).
+export const calendarEventIngestions = mysqlTable(
+  "calendar_event_ingestions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    provider: mysqlEnum("provider", ["google"]).default("google").notNull(),
+    calendarId: varchar("calendarId", { length: 256 }).notNull(),
+    googleEventId: varchar("googleEventId", { length: 512 }).notNull(),
+    status: varchar("status", { length: 64 }),
+    summary: text("summary"),
+    description: text("description"),
+    location: text("location"),
+    startAt: timestamp("startAt"),
+    endAt: timestamp("endAt"),
+    parsedJson: json("parsedJson"),
+    isRelevant: boolean("isRelevant").default(false).notNull(),
+    jobStatusEventId: int("jobStatusEventId"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => {
+    return {
+      userCalendarEventUnique: uniqueIndex(
+        "calendar_ingest_user_event_unique"
+      ).on(table.userId, table.provider, table.calendarId, table.googleEventId),
+      userStartAtIdx: index("calendar_ingest_user_start_idx").on(
+        table.userId,
+        table.startAt
+      ),
+    };
+  }
+);
+
+export type CalendarEventIngestion =
+  typeof calendarEventIngestions.$inferSelect;
+export type InsertCalendarEventIngestion =
+  typeof calendarEventIngestions.$inferInsert;

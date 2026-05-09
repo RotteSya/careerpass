@@ -6,6 +6,7 @@
 import type { Express, Request, Response } from "express";
 import { upsertOauthProviderAccount, upsertOauthToken } from "./db";
 import { registerGmailPushWatch } from "./gmail";
+import { registerCalendarPushWatch } from "./calendarWatch";
 import { startBackgroundMailScan } from "./mailMonitoring";
 import { ENV } from "./_core/env";
 import { verifyOauthSignedState } from "./_core/oauthSignedState";
@@ -35,14 +36,18 @@ async function exchangeGoogleCode(code: string, redirectUri: string) {
   }>;
 }
 
-async function fetchGoogleAccountEmail(accessToken: string): Promise<string | null> {
+async function fetchGoogleAccountEmail(
+  accessToken: string
+): Promise<string | null> {
   try {
     const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { email?: string };
-    return typeof data.email === "string" ? data.email.trim().toLowerCase() : null;
+    return typeof data.email === "string"
+      ? data.email.trim().toLowerCase()
+      : null;
   } catch {
     return null;
   }
@@ -58,12 +63,16 @@ export function registerCalendarOAuthRoute(app: Express) {
 
     if (error) {
       console.error("[CalendarOAuth] Google returned error:", error);
-      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=${encodeURIComponent(error)}`);
+      return res.redirect(
+        `${appDomain}/dashboard?calendar=error&reason=${encodeURIComponent(error)}`
+      );
     }
 
     if (!code || !state) {
       console.error("[CalendarOAuth] Missing code or state.");
-      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=missing_code`);
+      return res.redirect(
+        `${appDomain}/dashboard?calendar=error&reason=missing_code`
+      );
     }
 
     let stateData: { userId: number; provider: string };
@@ -71,10 +80,14 @@ export function registerCalendarOAuthRoute(app: Express) {
       stateData = verifyOauthSignedState(state, ENV.cookieSecret);
     } catch (e) {
       console.error("[CalendarOAuth] State verification failed:", e);
-      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=invalid_state`);
+      return res.redirect(
+        `${appDomain}/dashboard?calendar=error&reason=invalid_state`
+      );
     }
     if (stateData.provider !== "google") {
-      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=invalid_provider`);
+      return res.redirect(
+        `${appDomain}/dashboard?calendar=error&reason=invalid_provider`
+      );
     }
 
     // Must match exactly what was used to generate the auth URL
@@ -82,7 +95,9 @@ export function registerCalendarOAuthRoute(app: Express) {
 
     try {
       const tokenData = await exchangeGoogleCode(code, redirectUri);
-      const expiresAt = new Date(Date.now() + (tokenData.expires_in ?? 3600) * 1000);
+      const expiresAt = new Date(
+        Date.now() + (tokenData.expires_in ?? 3600) * 1000
+      );
       await upsertOauthToken({
         userId: stateData.userId,
         provider: "google",
@@ -91,7 +106,9 @@ export function registerCalendarOAuthRoute(app: Express) {
         expiresAt,
         scope: tokenData.scope ?? null,
       });
-      const accountEmail = await fetchGoogleAccountEmail(tokenData.access_token);
+      const accountEmail = await fetchGoogleAccountEmail(
+        tokenData.access_token
+      );
       if (accountEmail) {
         await upsertOauthProviderAccount({
           userId: stateData.userId,
@@ -100,15 +117,37 @@ export function registerCalendarOAuthRoute(app: Express) {
         });
       }
       await registerGmailPushWatch(stateData.userId);
+      if (
+        (process.env.CALENDAR_PUSH_ENABLED ?? "true").toLowerCase() !== "false"
+      ) {
+        try {
+          await registerCalendarPushWatch(stateData.userId);
+        } catch (watchErr) {
+          console.error(
+            "[CalendarOAuth] Calendar watch registration failed:",
+            watchErr
+          );
+        }
+      }
       // Kick off a background mailbox scan immediately so results are ready
       // by the time the user finishes Telegram binding and reaches the greeting.
+      // (Self-gates on GMAIL_BACKGROUND_SCAN_ENABLED.)
       startBackgroundMailScan(stateData.userId, { forceFullMailboxScan: true });
-      console.log(`[CalendarOAuth] Google calendar linked for user ${stateData.userId}`);
+      console.log(
+        `[CalendarOAuth] Google calendar linked for user ${stateData.userId}`
+      );
       return res.redirect(`${appDomain}/dashboard?calendar=success`);
     } catch (e) {
-      console.error("[CalendarOAuth] Token exchange error:", e instanceof Error ? e.message : String(e));
-      const reason = encodeURIComponent((e as Error).message ?? "token_exchange_failed");
-      return res.redirect(`${appDomain}/dashboard?calendar=error&reason=${reason}`);
+      console.error(
+        "[CalendarOAuth] Token exchange error:",
+        e instanceof Error ? e.message : String(e)
+      );
+      const reason = encodeURIComponent(
+        (e as Error).message ?? "token_exchange_failed"
+      );
+      return res.redirect(
+        `${appDomain}/dashboard?calendar=error&reason=${reason}`
+      );
     }
   });
 }

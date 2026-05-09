@@ -1324,11 +1324,62 @@ export { sendTelegramMessage };
 
 // ─── Main Monitor Function ────────────────────────────────────────────────────
 
+export type GmailSyncMode =
+  | "incremental"
+  | "bootstrap_scan"
+  | "fallback_resync"
+  | "full_scan"
+  | "scan"
+  | "skipped_no_checkpoint"
+  | "skipped_history_expired"
+  | "skipped_no_token";
+
 export interface MonitorResult {
   scanned: number;
   detected: number;
   calendarEvents: number;
   events: EmailEvent[];
+  mode?: GmailSyncMode;
+  telegramSummarySent?: boolean;
+}
+
+function envFlag(name: string, defaultValue: boolean): boolean {
+  const raw = process.env[name];
+  if (raw == null) return defaultValue;
+  const v = raw.trim().toLowerCase();
+  if (v === "false" || v === "0" || v === "no") return false;
+  if (v === "true" || v === "1" || v === "yes") return true;
+  return defaultValue;
+}
+
+async function maybeSendFallbackSummary(params: {
+  userId: number;
+  telegramChatId?: string;
+  mode: GmailSyncMode;
+  detected: number;
+  scanned: number;
+  calendarEvents: number;
+}): Promise<boolean> {
+  if (!envFlag("GMAIL_FALLBACK_NOTIFY_SUMMARY", true)) return false;
+  if (!params.telegramChatId) return false;
+  if (params.detected <= 0) return false;
+  const label =
+    params.mode === "bootstrap_scan"
+      ? "初回同期"
+      : params.mode === "fallback_resync"
+        ? "再同期"
+        : "同期";
+  const text = `[${label}] メール ${params.scanned}件を確認し、${params.detected}件の就活関連情報を検知、${params.calendarEvents}件をカレンダーへ登録しました。`;
+  try {
+    await sendTelegramMessage(params.telegramChatId, text);
+    return true;
+  } catch (err) {
+    console.error("[Gmail] Fallback summary send failed:", {
+      userId: params.userId,
+      err,
+    });
+    return false;
+  }
 }
 
 function buildLatestBoardScreenshotUrl(): string {
@@ -2063,7 +2114,13 @@ export async function monitorGmailAndSync(
 ): Promise<MonitorResult> {
   const accessToken = await getValidAccessToken(userId);
   if (!accessToken) {
-    return { scanned: 0, detected: 0, calendarEvents: 0, events: [] };
+    return {
+      scanned: 0,
+      detected: 0,
+      calendarEvents: 0,
+      events: [],
+      mode: "skipped_no_token",
+    };
   }
 
   const state = await getGoogleAccountSyncState(userId);
@@ -2101,7 +2158,7 @@ export async function monitorGmailAndSync(
     });
   }
 
-  return result;
+  return { ...result, mode: fullMailboxScan ? "full_scan" : "scan" };
 }
 
 export async function syncGmailIncremental(
@@ -2116,18 +2173,44 @@ export async function syncGmailIncremental(
 ): Promise<MonitorResult> {
   const accessToken = await getValidAccessToken(userId);
   if (!accessToken) {
-    return { scanned: 0, detected: 0, calendarEvents: 0, events: [] };
+    return {
+      scanned: 0,
+      detected: 0,
+      calendarEvents: 0,
+      events: [],
+      mode: "skipped_no_token",
+    };
   }
 
   const state = await getGoogleAccountSyncState(userId);
   const startHistoryId = state?.lastHistoryId ?? null;
+  const suppressItem = envFlag("GMAIL_FALLBACK_SUPPRESS_ITEM_TELEGRAM", true);
 
   if (!startHistoryId) {
-    // First push without a prior checkpoint is historical bootstrap, not a
-    // realtime event. Sync the board silently; future pushes will notify.
+    // First push without a prior checkpoint. Either run a controlled bootstrap
+    // scan (default), or just persist the checkpoint and let the next push
+    // run incremental.
+    const bootstrapEnabled = envFlag(
+      "GMAIL_OAUTH_BOOTSTRAP_SCAN_ENABLED",
+      true
+    );
+    if (!bootstrapEnabled) {
+      const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
+      await updateGoogleLastHistoryIdIfNewer(
+        userId,
+        profileHistoryId ?? endHistoryId
+      );
+      return {
+        scanned: 0,
+        detected: 0,
+        calendarEvents: 0,
+        events: [],
+        mode: "skipped_no_checkpoint",
+      };
+    }
     const fallback = await monitorGmailAndSync(userId, telegramChatId, {
       notifyWindowDays: 14,
-      suppressTelegramItemNotifications: true,
+      suppressTelegramItemNotifications: suppressItem,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
       fullMailboxScan: true,
     });
@@ -2137,7 +2220,19 @@ export async function syncGmailIncremental(
     } else {
       await updateGoogleLastHistoryIdIfNewer(userId, endHistoryId);
     }
-    return fallback;
+    const summarySent = await maybeSendFallbackSummary({
+      userId,
+      telegramChatId,
+      mode: "bootstrap_scan",
+      detected: fallback.detected,
+      scanned: fallback.scanned,
+      calendarEvents: fallback.calendarEvents,
+    });
+    return {
+      ...fallback,
+      mode: "bootstrap_scan",
+      telegramSummarySent: summarySent,
+    };
   }
 
   const changes = await listGmailHistoryChanges({
@@ -2145,11 +2240,30 @@ export async function syncGmailIncremental(
     startHistoryId,
   });
   if (!changes) {
-    // History expired or unavailable: resync board state silently to avoid
-    // replaying old mailbox state as a burst of Telegram messages.
+    // History expired or unavailable. Either silently resync the board state
+    // (default, avoids replaying old mailbox as a burst of notifications), or
+    // just refresh the checkpoint and wait for the user to /rewatch_gmail.
+    const resyncEnabled = envFlag(
+      "GMAIL_HISTORY_EXPIRED_FALLBACK_ENABLED",
+      true
+    );
+    if (!resyncEnabled) {
+      const profileHistoryId = await fetchGmailProfileHistoryId(accessToken);
+      await updateGoogleLastHistoryIdIfNewer(
+        userId,
+        profileHistoryId ?? endHistoryId
+      );
+      return {
+        scanned: 0,
+        detected: 0,
+        calendarEvents: 0,
+        events: [],
+        mode: "skipped_history_expired",
+      };
+    }
     const fallback = await monitorGmailAndSync(userId, telegramChatId, {
       notifyWindowDays: 14,
-      suppressTelegramItemNotifications: true,
+      suppressTelegramItemNotifications: suppressItem,
       enableAutoBoardWrite: options?.enableAutoBoardWrite ?? true,
       fullMailboxScan: true,
     });
@@ -2159,7 +2273,19 @@ export async function syncGmailIncremental(
     } else {
       await updateGoogleLastHistoryIdIfNewer(userId, endHistoryId);
     }
-    return fallback;
+    const summarySent = await maybeSendFallbackSummary({
+      userId,
+      telegramChatId,
+      mode: "fallback_resync",
+      detected: fallback.detected,
+      scanned: fallback.scanned,
+      calendarEvents: fallback.calendarEvents,
+    });
+    return {
+      ...fallback,
+      mode: "fallback_resync",
+      telegramSummarySent: summarySent,
+    };
   }
 
   const result = await processGmailMessageIds({
@@ -2178,5 +2304,5 @@ export async function syncGmailIncremental(
     await updateGoogleLastHistoryIdIfNewer(userId, endHistoryId);
   }
 
-  return result;
+  return { ...result, mode: "incremental" };
 }

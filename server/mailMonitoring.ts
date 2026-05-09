@@ -6,7 +6,10 @@ import type { MonitorResult } from "./gmail";
 const POST_SCAN_SUPPRESS_MS = 2 * 60 * 1000;
 const suppressRealtimeTelegramUntil = new Map<number, number>();
 
-export function markRealtimeTelegramSuppressedAfterScan(userId: number, ttlMs = POST_SCAN_SUPPRESS_MS): void {
+export function markRealtimeTelegramSuppressedAfterScan(
+  userId: number,
+  ttlMs = POST_SCAN_SUPPRESS_MS
+): void {
   suppressRealtimeTelegramUntil.set(userId, Date.now() + Math.max(0, ttlMs));
 }
 
@@ -55,10 +58,14 @@ export async function startMailMonitoringAndCheckmail(params: {
   // Scan completion should produce only a digest summary in Telegram flow,
   // not per-mail bubbles; additionally suppress immediate push-trigger bursts.
   markRealtimeTelegramSuppressedAfterScan(params.userId);
-  const result = await monitorGmailAndSync(params.userId, params.telegramChatId, {
-    suppressTelegramItemNotifications: true,
-    enableAutoBoardWrite: access.autoBoardWriteEnabled,
-  });
+  const result = await monitorGmailAndSync(
+    params.userId,
+    params.telegramChatId,
+    {
+      suppressTelegramItemNotifications: true,
+      enableAutoBoardWrite: access.autoBoardWriteEnabled,
+    }
+  );
   return {
     needsOAuth: false as const,
     watchOk,
@@ -90,6 +97,16 @@ export function startBackgroundMailScan(
   userId: number,
   options?: { forceFullMailboxScan?: boolean }
 ): void {
+  const flag = process.env.GMAIL_BACKGROUND_SCAN_ENABLED;
+  const flagDisabled =
+    flag != null && ["false", "0", "no"].includes(flag.trim().toLowerCase());
+  if (flagDisabled) {
+    console.log(
+      `[BackgroundScan] Skipped for user ${userId} (GMAIL_BACKGROUND_SCAN_ENABLED=false)`
+    );
+    return;
+  }
+
   markRealtimeTelegramSuppressedAfterScan(userId);
 
   // Evict stale entries
@@ -141,7 +158,7 @@ export function startBackgroundMailScan(
  * this returns null.
  */
 export async function consumeBackgroundScanResult(
-  userId: number,
+  userId: number
 ): Promise<MonitorResult | null> {
   const entry = backgroundScans.get(userId);
   if (!entry) return null;

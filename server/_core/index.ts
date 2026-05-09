@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { telegramRouter } from "../telegram";
 import { registerTelegramWebhook } from "../telegram";
 import { gmailPushRouter } from "../gmailPush";
+import { calendarPushRouter } from "../calendarPush";
 import { registerGmailPushWatch } from "../gmail";
 import { listUserIdsByOauthProvider } from "../db";
 import { appRouter } from "../routers";
@@ -61,7 +62,9 @@ async function mapWithConcurrency<T, R>(
     }
   };
 
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => run()));
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => run())
+  );
   return results;
 }
 
@@ -83,6 +86,8 @@ async function startServer() {
   app.use("/api/telegram", telegramRouter);
   // Gmail push notifications (Google Pub/Sub push endpoint)
   app.use("/api/gmail", gmailPushRouter);
+  // Google Calendar push notifications (events.watch webhook)
+  app.use("/api/calendar", calendarPushRouter);
 
   // Auto-register Telegram webhook on startup to avoid silent bot inactivity.
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -100,10 +105,16 @@ async function startServer() {
   if (gmailTopic) {
     listUserIdsByOauthProvider("google")
       .then(async userIds => {
-        const concurrency = Number.parseInt(process.env.GMAIL_WATCH_RENEWAL_CONCURRENCY ?? "3", 10);
-        const results = await mapWithConcurrency(userIds, concurrency, userId => registerGmailPushWatch(userId));
+        const concurrency = Number.parseInt(
+          process.env.GMAIL_WATCH_RENEWAL_CONCURRENCY ?? "3",
+          10
+        );
+        const results = await mapWithConcurrency(userIds, concurrency, userId =>
+          registerGmailPushWatch(userId)
+        );
         const okCount = results.filter(
-          (r): r is PromiseFulfilledResult<boolean> => r.status === "fulfilled" && r.value === true
+          (r): r is PromiseFulfilledResult<boolean> =>
+            r.status === "fulfilled" && r.value === true
         ).length;
         const failCount = userIds.length - okCount;
         console.log(
@@ -129,7 +140,7 @@ async function startServer() {
     "/api/trpc",
     createRateLimitMiddleware({
       limiter: trpcLimiter,
-      key: (req) => `ip:${req.ip}`,
+      key: req => `ip:${req.ip}`,
     }),
     createCsrfMiddleware({ allowedOrigins }),
     createExpressMiddleware({
@@ -156,11 +167,21 @@ async function startServer() {
   });
 
   if (process.env.PROACTIVE_CRON_DISABLED !== "true") {
-    const intervalMs = Number.parseInt(process.env.PROACTIVE_CRON_INTERVAL_MS ?? "", 10);
-    const concurrency = Number.parseInt(process.env.PROACTIVE_CRON_CONCURRENCY ?? "", 10);
+    const intervalMs = Number.parseInt(
+      process.env.PROACTIVE_CRON_INTERVAL_MS ?? "",
+      10
+    );
+    const concurrency = Number.parseInt(
+      process.env.PROACTIVE_CRON_CONCURRENCY ?? "",
+      10
+    );
     startProactiveCron({
-      intervalMs: Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : undefined,
-      concurrency: Number.isFinite(concurrency) && concurrency > 0 ? concurrency : undefined,
+      intervalMs:
+        Number.isFinite(intervalMs) && intervalMs > 0 ? intervalMs : undefined,
+      concurrency:
+        Number.isFinite(concurrency) && concurrency > 0
+          ? concurrency
+          : undefined,
     });
   }
 }
